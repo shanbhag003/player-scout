@@ -12,6 +12,8 @@ if not files:
 r = json.load(open(files[-1]))
 print("| | |")
 print("|---|---|")
+if r.get("upstream_snapshot"):
+    print(f"| Upstream snapshot | {r['upstream_snapshot']} |")
 print(f"| Players in the master | {r['identified_players']:,} |")
 print(f"| Found upstream | {r['matched_upstream']:,} |")
 for field, n in (r.get("fields") or {}).items():
@@ -25,4 +27,6 @@ if moves:
     for m in moves[:12]:
         print(f"| {m['player']} | {m['was']} | {m['now']} |")
 else:
-    print("\nNo club changed since the last refresh.")
+    print("\nNo club changed since the last refresh. If you can see a move on the "
+          "live site that is missing here, the upstream dataset has not "
+          "published it yet — it is a periodic scrape, not a live feed.")
