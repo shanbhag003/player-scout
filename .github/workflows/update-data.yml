@@ -1,0 +1,124 @@
+name: Update master data
+
+# Manual only, deliberately. Both collectors read third-party sites, and the
+# master is a set of completed seasons that does not change on its own. Run it
+# when a season ends or when you want to add a league.
+
+on:
+  workflow_dispatch:
+    inputs:
+      leagues:
+        description: 'Leagues, space separated. Keys from config/leagues.yml'
+        type: string
+        default: 'EPL LALIGA BUNDESLIGA SERIEA LIGUE1'
+      seasons:
+        description: 'Seasons by starting year, space separated. 2025 means 2025/26'
+        type: string
+        required: true
+        default: '2025'
+      mode:
+        description: 'What to do with league-seasons the master already holds'
+        type: choice
+        default: add_missing
+        options:
+          - add_missing
+          - refresh
+          - rebuild
+      min_minutes:
+        description: 'Drop players below this many minutes (0 keeps everyone)'
+        type: string
+        default: '0'
+      dry_run:
+        description: 'Report what would change without saving it'
+        type: boolean
+        default: false
+      allow_missing_bio:
+        description: 'Accept seasons with no ages or contracts yet'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-master
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      # Turns the league keys you chose into the codes each source uses, and
+      # stops early if you picked a league with no statistics source.
+      - name: Resolve leagues
+        id: resolve
+        run: |
+          python scripts/resolve_leagues.py \
+            --leagues ${{ inputs.leagues }} \
+            --seasons ${{ inputs.seasons }} >> "$GITHUB_OUTPUT"
+
+      - name: Pull playing statistics
+        run: |
+          python scripts/pull_understat.py \
+            --season ${{ inputs.seasons }} \
+            --leagues ${{ steps.resolve.outputs.understat_codes }} \
+            --min-minutes ${{ inputs.min_minutes }} \
+            --out understat.xlsx
+
+      - name: Pull ages and contracts
+        run: |
+          python scripts/build_squads.py \
+            --seasons ${{ inputs.seasons }} \
+            --leagues ${{ steps.resolve.outputs.transfermarkt_codes }} \
+            --out squads.xlsx
+
+      - name: Match and merge
+        run: |
+          python scripts/merge_master.py \
+            --understat understat.xlsx \
+            --squads squads.xlsx \
+            --mode ${{ inputs.mode }} \
+            --only-seasons ${{ steps.resolve.outputs.season_labels }} \
+            ${{ inputs.dry_run && '--dry-run' || '' }} \
+            ${{ inputs.allow_missing_bio && '--allow-missing-bio' || '' }}
+
+      # The two workbooks are kept for 14 days so you can inspect a run, but
+      # never committed: they are large, they change constantly, and the master
+      # is the thing worth keeping.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: source-workbooks
+          path: |
+            understat.xlsx
+            squads.xlsx
+          retention-days: 14
+
+      - name: Save the master
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git config user.name "player-data-bot"
+          git config user.email "actions@github.com"
+          git add data/master_players.csv data/reports
+          if git diff --staged --quiet; then
+            echo "No change to the master."
+          else
+            git commit -m "Update master: ${{ inputs.leagues }} ${{ inputs.seasons }} (${{ inputs.mode }})"
+            git push
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Master data update" >> "$GITHUB_STEP_SUMMARY"
+          python scripts/summarise_run.py >> "$GITHUB_STEP_SUMMARY"
