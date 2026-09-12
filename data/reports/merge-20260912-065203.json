@@ -1,0 +1,171 @@
+{
+ "mode": "rebuild",
+ "incoming_rows": 13980,
+ "league_seasons": [
+  "Bundesliga 2021/22",
+  "Bundesliga 2022/23",
+  "Bundesliga 2023/24",
+  "Bundesliga 2024/25",
+  "Bundesliga 2025/26",
+  "La Liga 2021/22",
+  "La Liga 2022/23",
+  "La Liga 2023/24",
+  "La Liga 2024/25",
+  "La Liga 2025/26",
+  "Ligue 1 2021/22",
+  "Ligue 1 2022/23",
+  "Ligue 1 2023/24",
+  "Ligue 1 2024/25",
+  "Ligue 1 2025/26",
+  "Premier League 2021/22",
+  "Premier League 2022/23",
+  "Premier League 2023/24",
+  "Premier League 2024/25",
+  "Premier League 2025/26",
+  "Serie A 2021/22",
+  "Serie A 2022/23",
+  "Serie A 2023/24",
+  "Serie A 2024/25",
+  "Serie A 2025/26"
+ ],
+ "existing_rows": 0,
+ "action": "replaced everything",
+ "rows_repaired": 23,
+ "identity_conflicts": [
+  {
+   "player_uid": "us6060",
+   "players": [
+    "Ot\u00e1vio"
+   ],
+   "career_minutes": 1154,
+   "note": "shares a name with another player and every candidate biography was already claimed; add a line to config/aliases.csv to separate them"
+  },
+  {
+   "player_uid": "us10278",
+   "players": [
+    "Alessandro Russo"
+   ],
+   "career_minutes": 25,
+   "note": "shares a name with another player and every candidate biography was already claimed; add a line to config/aliases.csv to separate them"
+  },
+  {
+   "player_uid": "us7724",
+   "players": [
+    "Wesley"
+   ],
+   "career_minutes": 1,
+   "note": "shares a name with another player and every candidate biography was already claimed; add a line to config/aliases.csv to separate them"
+  },
+  {
+   "player_uid": "us11471",
+   "players": [
+    "\u00c1ngel Alarc\u00f3n"
+   ],
+   "career_minutes": 1,
+   "note": "shares a name with another player and every candidate biography was already claimed; add a line to config/aliases.csv to separate them"
+  }
+ ],
+ "built_at": "2026-09-12T06:52:03+00:00",
+ "match_rate": 0.9856,
+ "match_rate_900min": 0.999,
+ "by_pass": {
+  "exact_name": 12566,
+  "club_fuzzy": 991,
+  "unmatched": 202,
+  "cross_season": 111,
+  "token_minutes": 44,
+  "league_fuzzy": 39,
+  "surname_club": 14,
+  "exact_name_minutes": 13
+ },
+ "club_mappings": 128,
+ "date_of_birth_coverage": 0.9861,
+ "contract_coverage": 0.837,
+ "master_rows": 13980,
+ "master_players": 5708,
+ "master_league_seasons": [
+  "Bundesliga 2021/22",
+  "Bundesliga 2022/23",
+  "Bundesliga 2023/24",
+  "Bundesliga 2024/25",
+  "Bundesliga 2025/26",
+  "La Liga 2021/22",
+  "La Liga 2022/23",
+  "La Liga 2023/24",
+  "La Liga 2024/25",
+  "La Liga 2025/26",
+  "Ligue 1 2021/22",
+  "Ligue 1 2022/23",
+  "Ligue 1 2023/24",
+  "Ligue 1 2024/25",
+  "Ligue 1 2025/26",
+  "Premier League 2021/22",
+  "Premier League 2022/23",
+  "Premier League 2023/24",
+  "Premier League 2024/25",
+  "Premier League 2025/26",
+  "Serie A 2021/22",
+  "Serie A 2022/23",
+  "Serie A 2023/24",
+  "Serie A 2024/25",
+  "Serie A 2025/26"
+ ],
+ "unmatched_over_900_minutes": [
+  {
+   "player": "Samu Omorodion",
+   "team": "Granada",
+   "league": "La Liga",
+   "season": "2023/24",
+   "minutes": 2014
+  },
+  {
+   "player": "Agust\u00edn Rogel",
+   "team": "Hertha Berlin",
+   "league": "Bundesliga",
+   "season": "2022/23",
+   "minutes": 1416
+  },
+  {
+   "player": "Jos\u00e9 \u00c1ngel",
+   "team": "Osasuna",
+   "league": "La Liga",
+   "season": "2021/22",
+   "minutes": 1085
+  },
+  {
+   "player": "Rafael Czichos",
+   "team": "FC Cologne",
+   "league": "Bundesliga",
+   "season": "2021/22",
+   "minutes": 1402
+  },
+  {
+   "player": "Adrien Silva",
+   "team": "Sampdoria",
+   "league": "Serie A",
+   "season": "2021/22",
+   "minutes": 1082
+  },
+  {
+   "player": "Jimmy Giraudon",
+   "team": "Troyes",
+   "league": "Ligue 1",
+   "season": "2021/22",
+   "minutes": 1617
+  },
+  {
+   "player": "Jemerson",
+   "team": "Metz",
+   "league": "Ligue 1",
+   "season": "2021/22",
+   "minutes": 1210
+  },
+  {
+   "player": "Laurent Koscielny",
+   "team": "Bordeaux",
+   "league": "Ligue 1",
+   "season": "2021/22",
+   "minutes": 938
+  }
+ ]
+}

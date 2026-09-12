@@ -1,0 +1,9 @@
+# Known name differences between Understat and Transfermarkt.
+# Edit freely: one row per player, applied before any matching happens.
+# Only add a row when you are certain the two names are the same person.
+understat_name,transfermarkt_name
+Bono,Yassine Bounou
+Bote Baku,Ridle Baku
+Amath Diedhiou,Amath Ndiaye
+Franck Zambo,Frank Anguissa
+Ezequiel Ávila,Chimy Ávila

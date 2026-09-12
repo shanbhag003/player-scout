@@ -1,0 +1,87 @@
+# Which leagues exist, and where each one's data comes from.
+#
+# Every league needs two things: a source of playing statistics and a source of
+# biography (date of birth, contract, market value). They are separate slots
+# because they come from different places and cover different competitions.
+#
+# To add a league, add a block here. If `stats.source` is `none`, the update
+# workflow will refuse it and tell you why, rather than producing rows with
+# empty statistics.
+
+leagues:
+
+  - key: EPL
+    name: Premier League
+    country: England
+    stats: {source: understat, code: EPL}
+    bio: {source: transfermarkt, code: GB1}
+
+  - key: LALIGA
+    name: La Liga
+    country: Spain
+    stats: {source: understat, code: La_liga}
+    bio: {source: transfermarkt, code: ES1}
+
+  - key: BUNDESLIGA
+    name: Bundesliga
+    country: Germany
+    stats: {source: understat, code: Bundesliga}
+    bio: {source: transfermarkt, code: L1}
+
+  - key: SERIEA
+    name: Serie A
+    country: Italy
+    stats: {source: understat, code: Serie_A}
+    bio: {source: transfermarkt, code: IT1}
+
+  - key: LIGUE1
+    name: Ligue 1
+    country: France
+    stats: {source: understat, code: Ligue_1}
+    bio: {source: transfermarkt, code: FR1}
+
+  # ---------------------------------------------------------------------------
+  # Leagues below have biography data but no statistics source yet.
+  #
+  # Understat publishes the five leagues above and nothing else, so these
+  # cannot be added by flipping a switch: they need a statistics provider that
+  # covers them. The workflow will refuse to run them until `stats.source` is
+  # something other than `none`, so you cannot accidentally add a league with
+  # ages and contracts but no numbers to compare on.
+  #
+  # Transfermarkt competition codes are as used by dcaribou/transfermarkt-datasets.
+  # Check that repository for the current list before trusting a code below.
+  # ---------------------------------------------------------------------------
+
+  - key: EREDIVISIE
+    name: Eredivisie
+    country: Netherlands
+    stats: {source: none, code: null}
+    bio: {source: transfermarkt, code: NL1}
+
+  - key: PRIMEIRA
+    name: Liga Portugal
+    country: Portugal
+    stats: {source: none, code: null}
+    bio: {source: transfermarkt, code: PO1}
+
+  - key: CHAMPIONSHIP
+    name: Championship
+    country: England
+    stats: {source: none, code: null}
+    bio: {source: transfermarkt, code: GB2}
+
+
+# How the two sources label the same league. Understat and Transfermarkt
+# disagree ("La Liga" against "LaLiga"), so both spellings map to the canonical
+# name used in the master file.
+league_name_aliases:
+  "premier league": Premier League
+  "laliga": La Liga
+  "la liga": La Liga
+  "bundesliga": Bundesliga
+  "serie a": Serie A
+  "ligue 1": Ligue 1
+  "eredivisie": Eredivisie
+  "liga portugal": Liga Portugal
+  "championship": Championship
