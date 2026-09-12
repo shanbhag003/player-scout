@@ -18,6 +18,8 @@ in the master file, and every derived quantity is named after what it measures.
 import argparse
 import json
 import os
+import re
+import unicodedata
 from collections import defaultdict
 from datetime import date, datetime, timezone
 
@@ -431,6 +433,33 @@ def validate(master, players, metrics, effects):
 
 # ── export ───────────────────────────────────────────────────────────────────
 
+CLUB_NOISE = re.compile(
+    r"\b(fc|afc|cf|ac|as|sc|ssc|bc|bsc|us|ud|cd|rc|rcd|sd|sv|tsg|vfb|vfl|fsv|"
+    r"hotspur|balompie|calcio|club|futbol|football|deportivo|societa|sportiva|"
+    r"associazione|olympique|stade|racing|saint|city|united|munchen|muenchen)\b")
+
+
+def same_club(a, b):
+    """Are these two spellings the same club?
+
+    The two sources name clubs differently — Tottenham against Tottenham
+    Hotspur, Sassuolo against US Sassuolo — so a plain comparison reports a
+    transfer every time a suffix differs. Only a genuine difference should
+    surface in the interface.
+    """
+    def key(v):
+        if not isinstance(v, str):
+            return ""
+        v = unicodedata.normalize("NFKD", v).encode("ascii", "ignore").decode().lower()
+        v = re.sub(r"[^a-z0-9 ]", " ", v)
+        v = CLUB_NOISE.sub(" ", v)
+        return re.sub(r"\s+", " ", v).strip()
+    ka, kb = key(a), key(b)
+    if not ka or not kb:
+        return True
+    return ka == kb or ka in kb or kb in ka
+
+
 def age_on(dob, today):
     if not isinstance(dob, str) or len(dob) < 10:
         return None
@@ -576,7 +605,11 @@ def main():
             "alt_name": row["player"],
             "club": row["team"],
             "league": row["league"],
-            "current_club": (None if pd.isna(row["tm_current_club"])
+            # Only carried when the club genuinely differs from the one the
+            # numbers came from, and true as of the last data refresh.
+            "current_club": (None
+                             if pd.isna(row["tm_current_club"])
+                             or same_club(row["tm_current_club"], row["team"])
                              else str(row["tm_current_club"])),
             "last_season": row["season"],
             "active": bool(row["active"]),

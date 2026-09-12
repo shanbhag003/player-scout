@@ -296,7 +296,11 @@ function renderPlayerBar() {
       <button class="ghost primary" id="go-compare" hidden></button>
       ${sourceLink("Understat", "US", state.meta.understat_url.replace("{id}", p.us_id), "understat")}
       ${p.transfermarkt ? sourceLink("Transfermarkt", "TM", p.transfermarkt, "transfermarkt") : ""}
-      <button class="ghost" id="clear-player">Search another player</button>
+      <button class="ghost accent" id="clear-player">
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="btn-icon">
+          <circle cx="10.5" cy="10.5" r="6.4" fill="none" stroke="currentColor" stroke-width="2"/>
+          <path d="M15.4 15.4L20 20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>Search another player</button>
     </div>`;
   $("clear-player").addEventListener("click", clearSelection);
   $("go-compare").addEventListener("click", () => setTab("compare"));
@@ -825,7 +829,9 @@ function renderCompareMetrics(series) {
 function whereLine(p) {
   const base = `${esc(p.position)} · ${esc(p.club)} · ${esc(p.league)}`;
   const moved = p.current_club && p.current_club !== p.club;
-  return base + (moved ? ` <em class="nowat">now at ${esc(p.current_club)}</em>` : "");
+  return base + (moved
+    ? ` <em class="nowat" title="Club as of the last data refresh">since moved to ${
+        esc(p.current_club)}</em>` : "");
 }
 
 function shortName(name) {

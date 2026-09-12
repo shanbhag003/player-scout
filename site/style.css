@@ -847,3 +847,15 @@ body::after{
     border-bottom:0;min-width:0}
   .mcol h3{min-height:0;margin-bottom:.5rem}
 }
+
+/* the way back to the search must be findable at a glance */
+.ghost.accent{border-color:rgba(240,188,99,.5);color:var(--gold);
+  background:rgba(240,188,99,.12);font-weight:500;display:inline-flex;
+  align-items:center;gap:.45rem}
+.ghost.accent:hover{border-color:var(--gold);background:rgba(240,188,99,.2);color:var(--ink)}
+.btn-icon{width:.95rem;height:.95rem;flex:none}
+@media (max-width:680px){
+  .pb-actions{display:grid;grid-template-columns:1fr 1fr;gap:.4rem}
+  .pb-actions .ghost.accent{grid-column:1/-1;justify-content:center;order:-1}
+  .pb-actions .ghost.primary{grid-column:1/-1;justify-content:center;order:-2}
+}
