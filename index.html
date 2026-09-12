@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Player Scout</title>
+<meta name="description" content="Find players whose profile matches the one you are looking at.">
+<meta name="theme-color" content="#101720">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <div class="shell top-inner">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">Player Scout</span>
+    </div>
+    <nav class="sports" id="sports" aria-label="Sport"></nav>
+    <p class="top-note" id="top-note"></p>
+  </div>
+</header>
+
+<main id="main" class="shell">
+
+  <section class="hero" id="hero">
+    <div class="hero-left">
+      <h1>Find the players who look like the one you already know.</h1>
+      <div class="finder" id="finder">
+        <div class="finder-field">
+          <label for="search">Search a player</label>
+          <div class="input-wrap">
+            <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="10.5" cy="10.5" r="6.6" fill="none" stroke="currentColor" stroke-width="1.7"/>
+              <path d="M15.4 15.4L20 20" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+            </svg>
+            <input id="search" type="text" autocomplete="off" spellcheck="false"
+                   role="combobox" aria-expanded="false" aria-controls="suggestions"
+                   aria-autocomplete="list" placeholder="Rayan Cherki, Bukayo Saka, Lamine Yamal...">
+            <button class="clear" id="clear" hidden aria-label="Clear search">&times;</button>
+          </div>
+          <ul class="suggestions" id="suggestions" role="listbox" aria-label="Matching players" hidden></ul>
+        </div>
+      </div>
+      <div class="intro-picks">
+        <span class="intro-picks-label">Or try one</span>
+        <div id="examples"></div>
+      </div>
+
+      <ol class="howto" aria-label="How to use this">
+        <li><b>1</b><span><strong>Search a player</strong> you already have a view
+          on — anyone with 1,800+ minutes in the big five since 2021/22.</span></li>
+        <li><b>2</b><span><strong>Read their profile</strong>: percentile against
+          their own position, season by season, career totals.</span></li>
+        <li><b>3</b><span><strong>See who is closest</strong>, filtered by age,
+          contract and whether they are still in these leagues.</span></li>
+        <li><b>4</b><span><strong>Compare up to five</strong> side by side —
+          shape, every metric, and output across seasons.</span></li>
+      </ol>
+    </div>
+
+    <aside class="hero-right">
+      <div class="cover-card">
+        <h2>What is in here</h2>
+        <div class="bigstats" id="bigstats"></div>
+        <ul class="leaguelist" id="leaguelist"></ul>
+        <div class="posbars" id="posbars"></div>
+      </div>
+      <div class="notes">
+        <p class="note-row"><span class="dot gold"></span>
+          Coverage is attacking metrics &mdash; shooting, chance creation and
+          involvement in possession. Defending and goalkeeping arrive once a
+          reliable source does.</p>
+        <p class="note-row" id="currency"></p>
+      </div>
+    </aside>
+  </section>
+
+  <section class="workspace" id="workspace" hidden>
+
+    <div class="playerbar" id="playerbar"></div>
+
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Player views">
+      <button role="tab" data-tab="profile" aria-selected="true">Profile</button>
+      <button role="tab" data-tab="similar" aria-selected="false">Similar players</button>
+      <button role="tab" data-tab="compare" aria-selected="false" id="tab-compare">Compare</button>
+    </nav>
+
+    <div class="tabpanel" id="panel-profile" role="tabpanel">
+      <div class="profile-grid">
+        <article class="panel radar-panel">
+          <header class="panel-head">
+            <h2 id="radar-title">Profile against position</h2>
+            <p class="panel-sub" id="radar-sub"></p>
+          </header>
+          <div class="radar-wrap" id="radar"></div>
+          <p class="scale-help" id="scale-help"></p>
+        </article>
+
+        <div class="profile-side">
+          <article class="panel">
+            <header class="panel-head"><h2>Percentile detail</h2></header>
+            <div class="radar-key" id="radar-key"></div>
+          </article>
+          <article class="panel">
+            <header class="panel-head">
+              <h2>Career in this window</h2>
+              <p class="panel-sub" id="career-sub"></p>
+            </header>
+            <div class="career" id="career"></div>
+          </article>
+        </div>
+
+        <article class="panel history-panel">
+          <header class="panel-head">
+            <h2>Season by season</h2>
+            <p class="panel-sub" id="history-sub"></p>
+          </header>
+          <div class="history" id="history"></div>
+        </article>
+      </div>
+    </div>
+
+    <div class="tabpanel" id="panel-similar" role="tabpanel" hidden>
+      <header class="results-head">
+        <div>
+          <h2 id="results-title">Closest profiles</h2>
+          <p class="results-note" id="results-note"></p>
+        </div>
+        <div class="results-right">
+          <button class="ghost primary" id="results-jump" hidden></button>
+          <p class="results-count" id="results-count"></p>
+        </div>
+      </header>
+
+      <div class="filters" id="filters">
+        <div class="filter">
+          <span class="filter-label" id="scope-label">Compare against</span>
+          <div class="segmented" role="group" aria-labelledby="scope-label">
+            <button data-scope="position" aria-pressed="true" id="scope-position"></button>
+            <button data-scope="group" aria-pressed="false" id="scope-group"></button>
+          </div>
+        </div>
+        <div class="filter">
+          <span class="filter-label" id="age-label">Age</span>
+          <div class="segmented" role="group" aria-labelledby="age-label">
+            <button data-age="any" aria-pressed="true">Any</button>
+            <button data-age="u21" aria-pressed="false">Under 21</button>
+            <button data-age="u24" aria-pressed="false">Under 24</button>
+            <button data-age="24-28" aria-pressed="false">24&ndash;28</button>
+            <button data-age="29+" aria-pressed="false">29+</button>
+          </div>
+        </div>
+        <div class="filter">
+          <span class="filter-label" id="contract-label">Contract</span>
+          <div class="segmented" role="group" aria-labelledby="contract-label">
+            <button data-contract="any" aria-pressed="true">Any</button>
+            <button data-contract="12" aria-pressed="false">Under a year</button>
+            <button data-contract="24" aria-pressed="false">Under two years</button>
+          </div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="active-only" checked>
+          <span>Only players still in the big five</span>
+        </label>
+      </div>
+
+      <p class="tagkey" id="tagkey"></p>
+      <ol class="matches" id="matches"></ol>
+      <p class="thin" id="thin" hidden></p>
+    </div>
+
+    <div class="tabpanel" id="panel-compare" role="tabpanel" hidden>
+      <div class="tray" id="tray"></div>
+      <div class="compare-grid" id="compare-body">
+        <article class="panel">
+          <header class="panel-head">
+            <h2>Shape against position</h2>
+            <p class="panel-sub" id="cmp-radar-sub"></p>
+          </header>
+          <div class="radar-wrap" id="cmp-radar"></div>
+        </article>
+        <article class="panel trend-panel">
+          <header class="panel-head">
+            <h2>Output by season</h2>
+            <p class="panel-sub" id="cmp-trend-sub"></p>
+          </header>
+          <div id="cmp-trend"></div>
+        </article>
+        <article class="panel cmp-metrics-panel">
+          <header class="panel-head">
+            <h2>Where each is stronger</h2>
+            <p class="panel-sub">Position percentile, after adjusting for league.
+              Values are per 90 minutes.</p>
+          </header>
+          <div class="cmp-metrics" id="cmp-metrics"></div>
+        </article>
+      </div>
+      <p class="thin" id="compare-empty" hidden></p>
+    </div>
+  </section>
+</main>
+
+<footer class="foot shell">
+  <details id="method-wrap">
+    <summary>How these numbers are built</summary>
+    <div class="method-nav" id="method-nav" role="tablist" aria-label="Method sections"></div>
+    <div class="method" id="method"></div>
+  </details>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
