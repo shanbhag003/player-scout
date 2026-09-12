@@ -21,6 +21,10 @@ const SPORTS = [
   { id: "kabaddi", name: "Kabaddi", status: "soon" },
 ];
 
+const isNarrow = () => (typeof window.matchMedia === "function"
+  ? window.matchMedia("(max-width: 680px)").matches
+  : window.innerWidth <= 680);
+
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g,
   (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const norm = (s) => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -289,11 +293,30 @@ function renderPlayerBar() {
       `<div><dt>${esc(k)}</dt><dd>${esc(v)}${sub ? `<small>${esc(sub)}</small>` : ""}</dd></div>`
     ).join("")}</dl>
     <div class="pb-actions">
+      <button class="ghost primary" id="go-compare" hidden></button>
       ${sourceLink("Understat", "US", state.meta.understat_url.replace("{id}", p.us_id), "understat")}
       ${p.transfermarkt ? sourceLink("Transfermarkt", "TM", p.transfermarkt, "transfermarkt") : ""}
       <button class="ghost" id="clear-player">Search another player</button>
     </div>`;
   $("clear-player").addEventListener("click", clearSelection);
+  $("go-compare").addEventListener("click", () => setTab("compare"));
+  syncCompareShortcut();
+}
+
+/* The comparison is worth nothing if people cannot find it, so the count is
+   surfaced wherever a player has just been added. */
+function syncCompareShortcut() {
+  const n = state.compare.length;
+  const btn = $("go-compare");
+  if (btn) {
+    btn.hidden = n === 0;
+    btn.textContent = `Compare ${n + 1} players`;
+  }
+  const jump = $("results-jump");
+  if (jump) {
+    jump.hidden = n === 0;
+    jump.textContent = `See comparison (${n + 1})`;
+  }
 }
 
 function sourceLink(name, mono, href, slug) {
@@ -307,7 +330,11 @@ function sourceLink(name, mono, href, slug) {
 /* ---------- radar drawing ---------- */
 
 function radarSvg(series, metrics, labels, opts = {}) {
-  const size = 300, cx = 150, cy = 150, r = 100, n = metrics.length;
+  // On a phone the full labels overrun the viewBox, so short forms are used and
+  // the box is widened to give the text room.
+  const compact = isNarrow();
+  const pad = compact ? 96 : 62;
+  const size = 300, cx = 150, cy = 150, r = compact ? 88 : 100, n = metrics.length;
   const angle = (i) => (Math.PI * 2 * i) / n - Math.PI / 2;
   const at = (i, f) => [cx + Math.cos(angle(i)) * r * f, cy + Math.sin(angle(i)) * r * f];
   const pts = (get) => metrics.map((m, i) =>
@@ -332,9 +359,11 @@ function radarSvg(series, metrics, labels, opts = {}) {
 
   const text = metrics.map((m, i) => {
     const ang = angle(i);
-    const [lx, ly] = [cx + Math.cos(ang) * (r + 30), cy + Math.sin(ang) * (r + 30)];
+    const [lx, ly] = [cx + Math.cos(ang) * (r + (compact ? 24 : 30)),
+                      cy + Math.sin(ang) * (r + (compact ? 24 : 30))];
     const anchor = Math.abs(Math.cos(ang)) < 0.25 ? "middle" : Math.cos(ang) > 0 ? "start" : "end";
-    const words = wrapLabel(labels[m] || m);
+    const words = wrapLabel(compact
+      ? ((state.meta.metric_short || {})[m] || labels[m] || m) : (labels[m] || m));
     const lines = words.map((w, k) =>
       `<tspan x="${lx.toFixed(1)}" dy="${k === 0 ? 0 : 10}">${esc(w)}</tspan>`).join("");
     const vals = series.map((s) =>
@@ -346,7 +375,7 @@ function radarSvg(series, metrics, labels, opts = {}) {
       y="${(ly + 8 + (words.length - 1) * 10).toFixed(1)}" text-anchor="${anchor}">${vals}</text>`;
   }).join("");
 
-  return `<svg viewBox="-62 -26 ${size + 124} ${size + 52}" role="img"
+  return `<svg viewBox="${-pad} -26 ${size + pad * 2} ${size + 52}" role="img"
     aria-label="${esc(opts.label || "Percentile profile")}">
     ${rings}${spokes}${shapes}${text}</svg>`;
 }
@@ -667,6 +696,12 @@ function renderResults() {
     }));
   $("matches").querySelectorAll(".addbtn").forEach((b) =>
     b.addEventListener("click", () => toggleCompare(b.dataset.add)));
+  const jump = $("results-jump");
+  if (jump && !jump.dataset.wired) {
+    jump.dataset.wired = "1";
+    jump.addEventListener("click", () => setTab("compare"));
+  }
+  syncCompareShortcut();
 }
 
 /* ---------- comparison ---------- */
@@ -682,6 +717,7 @@ function toggleCompare(uid, keep) {
   else return;                       // full: drop someone first, never silently swap
   renderResults();
   renderCompare();
+  syncCompareShortcut();
   writeUrl();
 }
 
@@ -755,11 +791,13 @@ function renderCompare() {
 function renderCompareMetrics(series) {
   const labels = state.meta.metric_labels, notes = state.meta.metric_notes || {};
   // One column per player, so every value sits under its own heading.
+  const legend = `<div class="mlegend">${series.map((s) =>
+    `<span class="lg"><i class="sw ${s.colour}"></i>${esc(s.p.name)}</span>`).join("")}</div>`;
   const head = `<div class="mrow mhead"><span class="mlabel"></span><span></span>
-    ${series.map((s) => `<span class="mv ${s.colour} name">${esc(shortName(s.p.name))}</span>`).join("")}
-    </div>`;
+    ${series.map((s) => `<span class="mv ${s.colour} name"><i class="sw ${s.colour}"></i></span>`)
+      .join("")}</div>`;
   $("cmp-metrics").style.setProperty("--cols", series.length);
-  $("cmp-metrics").innerHTML = head + state.meta.metric_groups.map((g) => `
+  $("cmp-metrics").innerHTML = legend + head + state.meta.metric_groups.map((g) => `
     <div class="mgroup"><h3>${esc(g.name)}</h3>
       ${g.metrics.map((m) => {
         const vals = series.map((s) => ({ ...s, pct: state.detail[s.p.uid].pct[m] ?? 50,
@@ -902,8 +940,7 @@ function renderMethod() {
         <td class="vof">of ${v.players}</td></tr>`).join("");
 
   $("method").innerHTML = `
-    <div class="mcol">
-      <h3>From ${m.similarity_metrics.length} metrics to ${pm.components} numbers</h3>
+    <details class="mcol"><summary><h3>From ${m.similarity_metrics.length} metrics to ${pm.components} numbers</h3></summary>
       <p>Several metrics measure the same thing twice: anyone who shoots often
         also has high non-penalty xG. Comparing all ${m.similarity_metrics.length}
         at once would count that trait repeatedly.</p>
@@ -922,10 +959,9 @@ function renderMethod() {
       <p class="fine">The other ${100 - kept}% sits on axes explaining under 3%
         each — mostly season-to-season noise, so it is left out rather than
         pushing similar players apart at random.</p>
-    </div>
+    </details>
 
-    <div class="mcol">
-      <h3>Same player, different league</h3>
+    <details class="mcol"><summary><h3>Same player, different league</h3></summary>
       <p>A goal is not equally hard to come by everywhere. To compare across the
         big five, every rate is divided by a coefficient for the league it was
         produced in.</p>
@@ -938,10 +974,9 @@ function renderMethod() {
       <p class="fine">Non-penalty xG. <b>1.112</b> in Ligue 1 means the same
         player generates about 11% more there than in an average big-five league,
         so his figure is adjusted down to match.</p>
-    </div>
+    </details>
 
-    <div class="mcol">
-      <h3>Can a player find himself?</h3>
+    <details class="mcol"><summary><h3>Can a player find himself?</h3></summary>
       <p>The honest test of a similarity model: split a player's seasons into two
         halves, build a profile from each, then ask where his own second-half
         profile ranks among every candidate given his first.</p>
@@ -955,10 +990,9 @@ function renderMethod() {
       <p class="fine">Landing 19th of 161 when chance is 81st is real signal, and
         well short of proof. Treat the results as a shortlist to watch, not a
         verdict.</p>
-    </div>
+    </details>
 
-    <div class="mcol">
-      <h3>What this cannot see</h3>
+    <details class="mcol"><summary><h3>What this cannot see</h3></summary>
       <div class="have"><b>${m.similarity_metrics.length}</b>
         <span>attacking metrics — every number here comes from one of them</span></div>
       <ul class="gaps">
@@ -973,7 +1007,17 @@ function renderMethod() {
         ${m.min_minutes.toLocaleString()}+ minutes across
         ${m.seasons[0]}–${m.seasons[m.seasons.length - 1]}.
         Nothing here is modelled from anything except those metrics.</p>
-    </div>`;
+    </details>`;
+  syncMethodPanels();
+}
+
+/* Four dense columns side by side is fine on a laptop and unreadable on a
+   phone, so on narrow screens they become accordions. */
+function syncMethodPanels() {
+  const narrow = isNarrow();
+  document.querySelectorAll(".method .mcol").forEach((el, i) => {
+    el.open = !narrow || i === 0;
+  });
 }
 
 /* ---------- wiring ---------- */
@@ -1008,6 +1052,15 @@ function wire() {
   document.querySelector(".brand").setAttribute("tabindex", "0");
   document.querySelector(".brand").addEventListener("keydown", (e) => {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); clearSelection(); }
+  });
+
+  let wasNarrow = isNarrow();
+  window.addEventListener("resize", () => {
+    const now = isNarrow();
+    if (now === wasNarrow) return;
+    wasNarrow = now;
+    syncMethodPanels();
+    if (state.selected) { renderProfileTab(); renderCompare(); }
   });
 
   $("tabs").addEventListener("click", (e) => {

@@ -717,3 +717,63 @@ button,input{font:inherit;color:inherit}
   .career{grid-template-columns:repeat(2,1fr)}
   .pb-facts{gap:.45rem .9rem}
 }
+
+/* ── first-time steps ─────────────────────────────────── */
+.howto{list-style:none;margin:1.8rem 0 0;padding:1.1rem 0 0;display:grid;gap:.7rem;
+  border-top:1px solid var(--hairline)}
+.howto li{display:grid;grid-template-columns:1.5rem 1fr;gap:.7rem;align-items:start;
+  font-size:.83rem;color:var(--muted);line-height:1.45}
+.howto b{font-family:var(--cond);font-weight:700;font-size:.9rem;color:var(--gold);
+  background:rgba(229,181,103,.1);border:1px solid rgba(229,181,103,.28);
+  border-radius:50%;width:1.5rem;height:1.5rem;display:grid;place-items:center}
+.howto strong{color:var(--ink);font-weight:600}
+
+/* ── shortcut to the comparison ───────────────────────── */
+.results-right{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;justify-content:flex-end}
+.ghost.primary{border-color:rgba(95,168,211,.45);color:var(--blue);
+  background:rgba(95,168,211,.1);font-weight:500}
+.ghost.primary:hover{border-color:var(--blue);color:var(--ink);background:rgba(95,168,211,.18)}
+
+/* ── comparison legend ────────────────────────────────── */
+.mlegend{display:flex;flex-wrap:wrap;gap:.35rem 1.1rem;margin-bottom:.8rem;
+  padding-bottom:.7rem;border-bottom:1px solid var(--hairline-soft);
+  font-size:.79rem;color:var(--muted)}
+.mlegend .sw{width:.85rem;height:.5rem;border-radius:2px;display:inline-block;margin-right:.4rem}
+.mlegend .sw.gold{background:var(--gold)}
+.mlegend .sw.blue{background:var(--blue)}
+.mlegend .sw.green{background:var(--green)}
+.mlegend .sw.violet{background:var(--violet)}
+.mlegend .sw.coral{background:var(--coral)}
+.mv.name{display:flex;justify-content:flex-end}
+.mv.name .sw{width:1.5rem;height:.28rem;border-radius:2px;display:block}
+.mv.name .sw.gold{background:var(--gold)}
+.mv.name .sw.blue{background:var(--blue)}
+.mv.name .sw.green{background:var(--green)}
+.mv.name .sw.violet{background:var(--violet)}
+.mv.name .sw.coral{background:var(--coral)}
+
+/* ── method columns as accordions ─────────────────────── */
+.method .mcol > summary{list-style:none;cursor:pointer;display:flex;align-items:center;
+  justify-content:space-between;gap:.6rem}
+.method .mcol > summary::-webkit-details-marker{display:none}
+.method .mcol > summary h3{min-height:0;margin:0}
+.method .mcol > summary::after{content:"+";font-family:var(--cond);font-weight:600;
+  color:var(--gold);font-size:1.1rem;display:none}
+.method .mcol[open] > summary::after{content:"–"}
+@media (min-width:981px){
+  .method .mcol > summary{cursor:default;pointer-events:none;margin-bottom:.45rem;
+    display:block;min-height:2.2rem}
+}
+@media (max-width:980px){
+  .method .mcol > summary::after{display:block}
+  .method .mcol > summary{padding:.7rem 0}
+  .method .mcol{padding-bottom:0}
+  .method .mcol[open]{padding-bottom:1rem}
+}
+
+@media (max-width:680px){
+  .howto{margin-top:1.4rem}
+  .results-right{width:100%;justify-content:space-between}
+  .pb-actions .ghost.primary{flex-basis:100%}
+  .mlegend{gap:.3rem .8rem;font-size:.75rem}
+}

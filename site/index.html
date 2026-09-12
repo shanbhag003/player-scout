@@ -51,6 +51,17 @@
         <span class="intro-picks-label">Or try one</span>
         <div id="examples"></div>
       </div>
+
+      <ol class="howto" aria-label="How to use this">
+        <li><b>1</b><span><strong>Search a player</strong> you already have a view
+          on — anyone with 1,800+ minutes in the big five since 2021/22.</span></li>
+        <li><b>2</b><span><strong>Read their profile</strong>: percentile against
+          their own position, season by season, career totals.</span></li>
+        <li><b>3</b><span><strong>See who is closest</strong>, filtered by age,
+          contract and whether they are still in these leagues.</span></li>
+        <li><b>4</b><span><strong>Compare up to five</strong> side by side —
+          shape, every metric, and output across seasons.</span></li>
+      </ol>
     </div>
 
     <aside class="hero-right">
@@ -121,7 +132,10 @@
           <h2 id="results-title">Closest profiles</h2>
           <p class="results-note" id="results-note"></p>
         </div>
-        <p class="results-count" id="results-count"></p>
+        <div class="results-right">
+          <button class="ghost primary" id="results-jump" hidden></button>
+          <p class="results-count" id="results-count"></p>
+        </div>
       </header>
 
       <div class="filters" id="filters">
