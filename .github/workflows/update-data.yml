@@ -1,0 +1,115 @@
+name: Update data
+
+# The whole chain in one run: pull the sources, match them, rescore every
+# player, commit. Manual only — both collectors read third-party sites and
+# completed seasons do not change on their own.
+
+on:
+  workflow_dispatch:
+    inputs:
+      leagues:
+        description: 'leagues — space separated keys from config/leagues.yml'
+        type: string
+        default: 'EPL LALIGA BUNDESLIGA SERIEA LIGUE1'
+      seasons:
+        description: 'seasons — starting years, space separated. 2025 means 2025/26'
+        type: string
+        required: true
+        default: '2025'
+      mode:
+        description: 'mode — what to do with league-seasons already in the master'
+        type: choice
+        default: add_missing
+        options: [add_missing, refresh, rebuild]
+      dry_run:
+        description: 'dry_run — report what would change, save nothing'
+        type: boolean
+        default: false
+      allow_missing_bio:
+        description: 'allow_missing_bio — accept seasons with no ages or contracts yet'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      - name: Resolve leagues
+        id: resolve
+        run: |
+          python pipeline/resolve_leagues.py \
+            --leagues ${{ inputs.leagues }} \
+            --seasons ${{ inputs.seasons }} >> "$GITHUB_OUTPUT"
+
+      - name: Pull playing statistics
+        run: |
+          python pipeline/pull_understat.py \
+            --season ${{ inputs.seasons }} \
+            --leagues ${{ steps.resolve.outputs.understat_codes }} \
+            --out understat.xlsx
+
+      - name: Pull ages and contracts
+        run: |
+          python pipeline/build_squads.py \
+            --seasons ${{ inputs.seasons }} \
+            --leagues ${{ steps.resolve.outputs.transfermarkt_codes }} \
+            --out squads.xlsx
+
+      - name: Match and merge into the master
+        run: |
+          python pipeline/merge_master.py \
+            --understat understat.xlsx --squads squads.xlsx \
+            --mode ${{ inputs.mode }} \
+            --only-seasons ${{ steps.resolve.outputs.season_labels }} \
+            ${{ inputs.dry_run && '--dry-run' || '' }} \
+            ${{ inputs.allow_missing_bio && '--allow-missing-bio' || '' }}
+
+      - name: Rescore every player
+        if: ${{ !inputs.dry_run }}
+        run: python pipeline/build_scores.py
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: source-workbooks
+          path: |
+            understat.xlsx
+            squads.xlsx
+          retention-days: 14
+
+      - name: Commit
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git config user.name "player-scout-bot"
+          git config user.email "actions@github.com"
+          git add data site/data
+          if git diff --staged --quiet; then
+            echo "Nothing changed."
+          else
+            git commit -m "Update data: ${{ inputs.leagues }} ${{ inputs.seasons }} (${{ inputs.mode }})"
+            git push
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Data update" >> "$GITHUB_STEP_SUMMARY"
+          python pipeline/merge_report.py >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Scores" >> "$GITHUB_STEP_SUMMARY"
+          python pipeline/score_report.py >> "$GITHUB_STEP_SUMMARY"

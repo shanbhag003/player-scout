@@ -1,0 +1,49 @@
+name: Rebuild scores
+
+# For when the data is fine but the model changed — a different metric set, a
+# new minutes threshold, a tweak to how positions group. Reads the master
+# already in the repository, so nothing is fetched.
+
+on:
+  workflow_dispatch:
+    inputs:
+      min_minutes:
+        description: 'min_minutes — career minutes a player needs to qualify'
+        type: string
+        default: '1800'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data
+  cancel-in-progress: false
+
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python pipeline/build_scores.py --min-minutes ${{ inputs.min_minutes }}
+      - name: Commit
+        run: |
+          git config user.name "player-scout-bot"
+          git config user.email "actions@github.com"
+          git add site/data
+          if git diff --staged --quiet; then
+            echo "Nothing changed."
+          else
+            git commit -m "Rebuild scores (min minutes ${{ inputs.min_minutes }})"
+            git push
+          fi
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Scores" >> "$GITHUB_STEP_SUMMARY"
+          python pipeline/score_report.py >> "$GITHUB_STEP_SUMMARY"
