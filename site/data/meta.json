@@ -1,0 +1,1506 @@
+{
+ "built_at": "2026-09-12T10:35:44+00:00",
+ "pool": 2779,
+ "active_players": 1801,
+ "latest_season": "2025/26",
+ "understat_url": "https://understat.com/player/{id}",
+ "min_minutes": 1800,
+ "seasons": [
+  "2021/22",
+  "2022/23",
+  "2023/24",
+  "2024/25",
+  "2025/26"
+ ],
+ "leagues": [
+  "Bundesliga",
+  "La Liga",
+  "Ligue 1",
+  "Premier League",
+  "Serie A"
+ ],
+ "metric_labels": {
+  "npxG_90": "Non-penalty xG",
+  "xA_90": "Expected assists",
+  "shots_90": "Shots",
+  "key_passes_90": "Key passes",
+  "xGChain_90": "Possession involvement",
+  "xGBuildup_90": "Build-up involvement",
+  "goals_90": "Goals",
+  "assists_90": "Assists",
+  "final_third_90": "Final-third involvement",
+  "npxG_per_shot": "Shot quality",
+  "xA_per_key_pass": "Chance quality created",
+  "finishing_90": "Finishing above expected"
+ },
+ "metric_short": {
+  "npxG_90": "npxG",
+  "xA_90": "xA",
+  "shots_90": "shots",
+  "key_passes_90": "key passes",
+  "xGChain_90": "possession",
+  "xGBuildup_90": "build-up",
+  "goals_90": "goals",
+  "assists_90": "assists",
+  "final_third_90": "final third",
+  "npxG_per_shot": "shot quality",
+  "xA_per_key_pass": "chance quality",
+  "finishing_90": "finishing"
+ },
+ "metric_notes": {
+  "xGChain_90": "Total xG of every possession this player was involved in, per 90 minutes.",
+  "xGBuildup_90": "The same, excluding their own shots and key passes - involvement in building the move rather than finishing it.",
+  "final_third_90": "Possession involvement minus build-up involvement: how much of their contribution comes at the sharp end.",
+  "npxG_per_shot": "Average quality of the chances they get on the ball.",
+  "xA_per_key_pass": "Average quality of the chances they create for others.",
+  "finishing_90": "Non-penalty goals minus non-penalty xG, per 90. Positive means finishing above the quality of chances taken."
+ },
+ "similarity_metrics": [
+  "npxG_90",
+  "xA_90",
+  "shots_90",
+  "key_passes_90",
+  "xGChain_90",
+  "xGBuildup_90",
+  "goals_90",
+  "assists_90",
+  "final_third_90",
+  "npxG_per_shot",
+  "xA_per_key_pass",
+  "finishing_90"
+ ],
+ "radar_metrics": [
+  "npxG_90",
+  "shots_90",
+  "npxG_per_shot",
+  "xA_90",
+  "key_passes_90",
+  "xA_per_key_pass",
+  "xGChain_90",
+  "xGBuildup_90"
+ ],
+ "gk_metrics": [
+  "xGBuildup_90",
+  "xGChain_90",
+  "key_passes_90",
+  "xA_90"
+ ],
+ "metric_groups": [
+  {
+   "name": "Shooting",
+   "metrics": [
+    "npxG_90",
+    "shots_90",
+    "npxG_per_shot",
+    "goals_90",
+    "finishing_90"
+   ]
+  },
+  {
+   "name": "Creating",
+   "metrics": [
+    "xA_90",
+    "key_passes_90",
+    "xA_per_key_pass",
+    "assists_90"
+   ]
+  },
+  {
+   "name": "Involvement",
+   "metrics": [
+    "xGChain_90",
+    "xGBuildup_90",
+    "final_third_90"
+   ]
+  }
+ ],
+ "history_schema": [
+  "season",
+  "league",
+  "team",
+  "minutes",
+  "games",
+  "goals",
+  "assists",
+  "npxG_90",
+  "xA_90",
+  "shots_90",
+  "key_passes_90",
+  "xGChain_90",
+  "xGBuildup_90",
+  "value"
+ ],
+ "rate_metrics": [
+  "npxG_90",
+  "xA_90",
+  "shots_90",
+  "key_passes_90",
+  "xGChain_90",
+  "xGBuildup_90",
+  "goals_90",
+  "assists_90",
+  "final_third_90"
+ ],
+ "league_effects": {
+  "npxG_90": {
+   "Bundesliga": 1.0836,
+   "La Liga": 0.9829,
+   "Ligue 1": 1.1116,
+   "Premier League": 0.9191,
+   "Serie A": 0.9512
+  },
+  "xA_90": {
+   "Bundesliga": 1.0874,
+   "La Liga": 0.9354,
+   "Ligue 1": 1.0294,
+   "Premier League": 0.9144,
+   "Serie A": 1.0704
+  },
+  "shots_90": {
+   "Bundesliga": 1.0667,
+   "La Liga": 0.9379,
+   "Ligue 1": 1.0658,
+   "Premier League": 0.9533,
+   "Serie A": 1.0077
+  },
+  "key_passes_90": {
+   "Bundesliga": 1.1017,
+   "La Liga": 0.8908,
+   "Ligue 1": 0.976,
+   "Premier League": 0.9471,
+   "Serie A": 1.1231
+  },
+  "xGChain_90": {
+   "Bundesliga": 1.0847,
+   "La Liga": 0.9842,
+   "Ligue 1": 1.119,
+   "Premier League": 0.8906,
+   "Serie A": 0.9749
+  },
+  "xGBuildup_90": {
+   "Bundesliga": 1.0788,
+   "La Liga": 0.9702,
+   "Ligue 1": 1.1288,
+   "Premier League": 0.8786,
+   "Serie A": 0.9999
+  },
+  "goals_90": {
+   "Bundesliga": 1.1059,
+   "La Liga": 1.012,
+   "Ligue 1": 1.1448,
+   "Premier League": 0.8496,
+   "Serie A": 0.9612
+  },
+  "assists_90": {
+   "Bundesliga": 1.1097,
+   "La Liga": 1.0134,
+   "Ligue 1": 1.0402,
+   "Premier League": 0.8683,
+   "Serie A": 1.0163
+  },
+  "final_third_90": {
+   "Bundesliga": 1.1264,
+   "La Liga": 0.9786,
+   "Ligue 1": 0.9585,
+   "Premier League": 0.9587,
+   "Serie A": 1.0074
+  }
+ },
+ "league_movers": 624,
+ "positions": {
+  "Attacking Midfield": {
+   "players": 185,
+   "scored": true,
+   "components": 3,
+   "variance": 0.8006,
+   "loadings": [
+    {
+     "component": 1,
+     "variance": 0.5005,
+     "drivers": [
+      {
+       "metric": "xGChain_90",
+       "weight": 0.383
+      },
+      {
+       "metric": "final_third_90",
+       "weight": 0.37
+      },
+      {
+       "metric": "xA_90",
+       "weight": 0.338
+      },
+      {
+       "metric": "npxG_90",
+       "weight": 0.315
+      }
+     ]
+    },
+    {
+     "component": 2,
+     "variance": 0.176,
+     "drivers": [
+      {
+       "metric": "key_passes_90",
+       "weight": 0.464
+      },
+      {
+       "metric": "npxG_90",
+       "weight": -0.409
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": -0.393
+      },
+      {
+       "metric": "assists_90",
+       "weight": 0.349
+      }
+     ]
+    },
+    {
+     "component": 3,
+     "variance": 0.1241,
+     "drivers": [
+      {
+       "metric": "finishing_90",
+       "weight": 0.675
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": -0.412
+      },
+      {
+       "metric": "goals_90",
+       "weight": 0.404
+      },
+      {
+       "metric": "shots_90",
+       "weight": 0.334
+      }
+     ]
+    }
+   ],
+   "median_distance": 3.605,
+   "level": "full",
+   "headline": "Ranked across the full available metric set",
+   "note": "Shot volume and quality, chance creation, and involvement in possession - the areas this dataset covers well for attacking players.",
+   "benchmark": {
+    "metric": "npxG_plus_xA_90",
+    "best": 1.062,
+    "best_player": "Kevin De Bruyne",
+    "best_season": "2023/24",
+    "best_team": "Manchester City",
+    "median": 0.39,
+    "upper_quartile": 0.518,
+    "seasons": 498,
+    "top_npxg": {
+     "value": 0.616,
+     "player": "Aleksey Miranchuk",
+     "season": "2023/24",
+     "team": "Atalanta"
+    },
+    "top_xa": {
+     "value": 0.874,
+     "player": "Kevin De Bruyne",
+     "season": "2023/24",
+     "team": "Manchester City"
+    }
+   }
+  },
+  "Central Midfield": {
+   "players": 365,
+   "scored": true,
+   "components": 4,
+   "variance": 0.8255,
+   "loadings": [
+    {
+     "component": 1,
+     "variance": 0.4439,
+     "drivers": [
+      {
+       "metric": "final_third_90",
+       "weight": 0.382
+      },
+      {
+       "metric": "xGChain_90",
+       "weight": 0.351
+      },
+      {
+       "metric": "xA_90",
+       "weight": 0.348
+      },
+      {
+       "metric": "npxG_90",
+       "weight": 0.331
+      }
+     ]
+    },
+    {
+     "component": 2,
+     "variance": 0.1779,
+     "drivers": [
+      {
+       "metric": "npxG_90",
+       "weight": 0.419
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": 0.414
+      },
+      {
+       "metric": "key_passes_90",
+       "weight": -0.413
+      },
+      {
+       "metric": "xGBuildup_90",
+       "weight": -0.351
+      }
+     ]
+    },
+    {
+     "component": 3,
+     "variance": 0.1072,
+     "drivers": [
+      {
+       "metric": "finishing_90",
+       "weight": 0.833
+      },
+      {
+       "metric": "goals_90",
+       "weight": 0.503
+      },
+      {
+       "metric": "assists_90",
+       "weight": -0.121
+      },
+      {
+       "metric": "xA_per_key_pass",
+       "weight": -0.108
+      }
+     ]
+    },
+    {
+     "component": 4,
+     "variance": 0.0965,
+     "drivers": [
+      {
+       "metric": "xGBuildup_90",
+       "weight": 0.574
+      },
+      {
+       "metric": "xGChain_90",
+       "weight": 0.445
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": 0.41
+      },
+      {
+       "metric": "shots_90",
+       "weight": -0.383
+      }
+     ]
+    }
+   ],
+   "median_distance": 3.83,
+   "level": "attacking_only",
+   "headline": "Ranked on attacking contribution only",
+   "note": "Ball-winning and defensive positioning are not measured here. The comparison covers progression, creation and involvement in possession.",
+   "benchmark": {
+    "metric": "npxG_plus_xA_90",
+    "best": 0.704,
+    "best_player": "Ross Barkley",
+    "best_season": "2022/23",
+    "best_team": "Nice",
+    "median": 0.199,
+    "upper_quartile": 0.284,
+    "seasons": 1007,
+    "top_npxg": {
+     "value": 0.472,
+     "player": "Ilkay G\u00fcndogan",
+     "season": "2021/22",
+     "team": "Manchester City"
+    },
+    "top_xa": {
+     "value": 0.411,
+     "player": "Luka Modric",
+     "season": "2023/24",
+     "team": "Real Madrid"
+    }
+   }
+  },
+  "Centre-Back": {
+   "players": 584,
+   "scored": true,
+   "components": 5,
+   "variance": 0.8564,
+   "loadings": [
+    {
+     "component": 1,
+     "variance": 0.3525,
+     "drivers": [
+      {
+       "metric": "xA_90",
+       "weight": 0.399
+      },
+      {
+       "metric": "key_passes_90",
+       "weight": 0.377
+      },
+      {
+       "metric": "final_third_90",
+       "weight": 0.368
+      },
+      {
+       "metric": "xGChain_90",
+       "weight": 0.33
+      }
+     ]
+    },
+    {
+     "component": 2,
+     "variance": 0.1717,
+     "drivers": [
+      {
+       "metric": "npxG_90",
+       "weight": 0.474
+      },
+      {
+       "metric": "goals_90",
+       "weight": 0.469
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": 0.404
+      },
+      {
+       "metric": "assists_90",
+       "weight": -0.318
+      }
+     ]
+    },
+    {
+     "component": 3,
+     "variance": 0.1266,
+     "drivers": [
+      {
+       "metric": "xGBuildup_90",
+       "weight": 0.616
+      },
+      {
+       "metric": "xGChain_90",
+       "weight": 0.564
+      },
+      {
+       "metric": "xA_per_key_pass",
+       "weight": -0.318
+      },
+      {
+       "metric": "npxG_90",
+       "weight": -0.235
+      }
+     ]
+    },
+    {
+     "component": 4,
+     "variance": 0.112,
+     "drivers": [
+      {
+       "metric": "finishing_90",
+       "weight": 0.827
+      },
+      {
+       "metric": "goals_90",
+       "weight": 0.41
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": -0.288
+      },
+      {
+       "metric": "npxG_90",
+       "weight": -0.199
+      }
+     ]
+    },
+    {
+     "component": 5,
+     "variance": 0.0936,
+     "drivers": [
+      {
+       "metric": "xA_per_key_pass",
+       "weight": 0.6
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": 0.519
+      },
+      {
+       "metric": "shots_90",
+       "weight": -0.428
+      },
+      {
+       "metric": "key_passes_90",
+       "weight": -0.244
+      }
+     ]
+    }
+   ],
+   "median_distance": 3.941,
+   "level": "attacking_only",
+   "headline": "Ranked on attacking contribution only",
+   "note": "No tackles, interceptions, duels or clearances exist in this dataset. These are centre-backs whose progression and chance creation resemble the searched player's - not whose defending does.",
+   "benchmark": {
+    "metric": "npxG_plus_xA_90",
+    "best": 0.352,
+    "best_player": "Marcos Alonso",
+    "best_season": "2021/22",
+    "best_team": "Chelsea",
+    "median": 0.075,
+    "upper_quartile": 0.111,
+    "seasons": 1587,
+    "top_npxg": {
+     "value": 0.241,
+     "player": "Ozan Kabak",
+     "season": "2025/26",
+     "team": "Hoffenheim"
+    },
+    "top_xa": {
+     "value": 0.208,
+     "player": "Marcos Alonso",
+     "season": "2021/22",
+     "team": "Chelsea"
+    }
+   }
+  },
+  "Centre-Forward": {
+   "players": 339,
+   "scored": true,
+   "components": 4,
+   "variance": 0.8437,
+   "loadings": [
+    {
+     "component": 1,
+     "variance": 0.4666,
+     "drivers": [
+      {
+       "metric": "xGChain_90",
+       "weight": 0.409
+      },
+      {
+       "metric": "final_third_90",
+       "weight": 0.382
+      },
+      {
+       "metric": "npxG_90",
+       "weight": 0.344
+      },
+      {
+       "metric": "goals_90",
+       "weight": 0.318
+      }
+     ]
+    },
+    {
+     "component": 2,
+     "variance": 0.1937,
+     "drivers": [
+      {
+       "metric": "key_passes_90",
+       "weight": 0.455
+      },
+      {
+       "metric": "xA_90",
+       "weight": 0.403
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": -0.4
+      },
+      {
+       "metric": "assists_90",
+       "weight": 0.367
+      }
+     ]
+    },
+    {
+     "component": 3,
+     "variance": 0.103,
+     "drivers": [
+      {
+       "metric": "finishing_90",
+       "weight": 0.793
+      },
+      {
+       "metric": "goals_90",
+       "weight": 0.437
+      },
+      {
+       "metric": "xA_per_key_pass",
+       "weight": -0.263
+      },
+      {
+       "metric": "assists_90",
+       "weight": -0.182
+      }
+     ]
+    },
+    {
+     "component": 4,
+     "variance": 0.0804,
+     "drivers": [
+      {
+       "metric": "shots_90",
+       "weight": 0.682
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": -0.57
+      },
+      {
+       "metric": "finishing_90",
+       "weight": -0.336
+      },
+      {
+       "metric": "xA_per_key_pass",
+       "weight": -0.264
+      }
+     ]
+    }
+   ],
+   "median_distance": 3.649,
+   "level": "full",
+   "headline": "Ranked across the full available metric set",
+   "note": "Shot volume and quality, chance creation, and involvement in possession - the areas this dataset covers well for attacking players.",
+   "benchmark": {
+    "metric": "npxG_plus_xA_90",
+    "best": 1.489,
+    "best_player": "Gon\u00e7alo Ramos",
+    "best_season": "2024/25",
+    "best_team": "Paris Saint Germain",
+    "median": 0.49,
+    "upper_quartile": 0.633,
+    "seasons": 855,
+    "top_npxg": {
+     "value": 1.202,
+     "player": "Gon\u00e7alo Ramos",
+     "season": "2024/25",
+     "team": "Paris Saint Germain"
+    },
+    "top_xa": {
+     "value": 0.559,
+     "player": "Ousmane Demb\u00e9l\u00e9",
+     "season": "2021/22",
+     "team": "Barcelona"
+    }
+   }
+  },
+  "Defensive Midfield": {
+   "players": 238,
+   "scored": true,
+   "components": 4,
+   "variance": 0.8348,
+   "loadings": [
+    {
+     "component": 1,
+     "variance": 0.461,
+     "drivers": [
+      {
+       "metric": "final_third_90",
+       "weight": 0.366
+      },
+      {
+       "metric": "xA_90",
+       "weight": 0.363
+      },
+      {
+       "metric": "xGChain_90",
+       "weight": 0.338
+      },
+      {
+       "metric": "key_passes_90",
+       "weight": 0.332
+      }
+     ]
+    },
+    {
+     "component": 2,
+     "variance": 0.1652,
+     "drivers": [
+      {
+       "metric": "npxG_per_shot",
+       "weight": 0.497
+      },
+      {
+       "metric": "npxG_90",
+       "weight": 0.491
+      },
+      {
+       "metric": "xGBuildup_90",
+       "weight": -0.307
+      },
+      {
+       "metric": "key_passes_90",
+       "weight": -0.272
+      }
+     ]
+    },
+    {
+     "component": 3,
+     "variance": 0.1117,
+     "drivers": [
+      {
+       "metric": "finishing_90",
+       "weight": 0.689
+      },
+      {
+       "metric": "goals_90",
+       "weight": 0.471
+      },
+      {
+       "metric": "xA_per_key_pass",
+       "weight": -0.276
+      },
+      {
+       "metric": "xA_90",
+       "weight": -0.251
+      }
+     ]
+    },
+    {
+     "component": 4,
+     "variance": 0.097,
+     "drivers": [
+      {
+       "metric": "xGBuildup_90",
+       "weight": 0.479
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": 0.47
+      },
+      {
+       "metric": "shots_90",
+       "weight": -0.442
+      },
+      {
+       "metric": "xGChain_90",
+       "weight": 0.386
+      }
+     ]
+    }
+   ],
+   "median_distance": 3.517,
+   "level": "attacking_only",
+   "headline": "Ranked on attacking contribution only",
+   "note": "Ball-winning and defensive positioning are not measured here. The comparison covers progression, creation and involvement in possession.",
+   "benchmark": {
+    "metric": "npxG_plus_xA_90",
+    "best": 0.646,
+    "best_player": "Gianluca Gaetano",
+    "best_season": "2024/25",
+    "best_team": "Cagliari",
+    "median": 0.113,
+    "upper_quartile": 0.164,
+    "seasons": 665,
+    "top_npxg": {
+     "value": 0.427,
+     "player": "Gianluca Gaetano",
+     "season": "2024/25",
+     "team": "Cagliari"
+    },
+    "top_xa": {
+     "value": 0.359,
+     "player": "Joshua Kimmich",
+     "season": "2024/25",
+     "team": "Bayern Munich"
+    }
+   }
+  },
+  "Goalkeeper": {
+   "players": 223,
+   "scored": false,
+   "metrics": [
+    "xGBuildup_90",
+    "xGChain_90",
+    "key_passes_90",
+    "xA_90"
+   ],
+   "caveat": "These measure how much of a team's build-up runs through its goalkeeper, which reflects the side's style and possession as much as the keeper. Three of the five most involved keepers here play for Bayern.",
+   "level": "distribution_only",
+   "headline": "Build-up involvement only",
+   "note": "No saves, claims or sweeping actions exist in this dataset, so goalkeepers are not ranked against each other. What can be shown is how involved they are in their team's build-up.",
+   "benchmark": {
+    "metric": "xGBuildup_90",
+    "best": 0.442,
+    "best_player": "Manuel Neuer",
+    "best_season": "2024/25",
+    "best_team": "Bayern Munich",
+    "median": 0.116,
+    "upper_quartile": 0.168,
+    "seasons": 562,
+    "top_npxg": {
+     "value": 0.02,
+     "player": "Finn Dahmen",
+     "season": "2025/26",
+     "team": "Augsburg"
+    },
+    "top_xa": {
+     "value": 0.046,
+     "player": "Ederson",
+     "season": "2024/25",
+     "team": "Manchester City"
+    }
+   }
+  },
+  "Left Winger": {
+   "players": 182,
+   "scored": true,
+   "components": 4,
+   "variance": 0.8318,
+   "loadings": [
+    {
+     "component": 1,
+     "variance": 0.4372,
+     "drivers": [
+      {
+       "metric": "xGChain_90",
+       "weight": 0.413
+      },
+      {
+       "metric": "final_third_90",
+       "weight": 0.405
+      },
+      {
+       "metric": "npxG_90",
+       "weight": 0.369
+      },
+      {
+       "metric": "goals_90",
+       "weight": 0.336
+      }
+     ]
+    },
+    {
+     "component": 2,
+     "variance": 0.204,
+     "drivers": [
+      {
+       "metric": "key_passes_90",
+       "weight": 0.502
+      },
+      {
+       "metric": "xA_90",
+       "weight": 0.436
+      },
+      {
+       "metric": "assists_90",
+       "weight": 0.377
+      },
+      {
+       "metric": "npxG_90",
+       "weight": -0.324
+      }
+     ]
+    },
+    {
+     "component": 3,
+     "variance": 0.1041,
+     "drivers": [
+      {
+       "metric": "finishing_90",
+       "weight": 0.66
+      },
+      {
+       "metric": "xA_per_key_pass",
+       "weight": -0.558
+      },
+      {
+       "metric": "goals_90",
+       "weight": 0.338
+      },
+      {
+       "metric": "xGBuildup_90",
+       "weight": 0.241
+      }
+     ]
+    },
+    {
+     "component": 4,
+     "variance": 0.0866,
+     "drivers": [
+      {
+       "metric": "xA_per_key_pass",
+       "weight": 0.627
+      },
+      {
+       "metric": "finishing_90",
+       "weight": 0.566
+      },
+      {
+       "metric": "shots_90",
+       "weight": -0.348
+      },
+      {
+       "metric": "key_passes_90",
+       "weight": -0.231
+      }
+     ]
+    }
+   ],
+   "median_distance": 3.798,
+   "level": "full",
+   "headline": "Ranked across the full available metric set",
+   "note": "Shot volume and quality, chance creation, and involvement in possession - the areas this dataset covers well for attacking players.",
+   "benchmark": {
+    "metric": "npxG_plus_xA_90",
+    "best": 1.023,
+    "best_player": "Bradley Barcola",
+    "best_season": "2024/25",
+    "best_team": "Paris Saint Germain",
+    "median": 0.4,
+    "upper_quartile": 0.506,
+    "seasons": 472,
+    "top_npxg": {
+     "value": 0.773,
+     "player": "Diogo Jota",
+     "season": "2024/25",
+     "team": "Liverpool"
+    },
+    "top_xa": {
+     "value": 0.463,
+     "player": "Khvicha Kvaratskhelia",
+     "season": "2024/25",
+     "team": "Paris Saint Germain"
+    }
+   }
+  },
+  "Left-Back": {
+   "players": 212,
+   "scored": true,
+   "components": 4,
+   "variance": 0.8298,
+   "loadings": [
+    {
+     "component": 1,
+     "variance": 0.4539,
+     "drivers": [
+      {
+       "metric": "final_third_90",
+       "weight": 0.374
+      },
+      {
+       "metric": "xA_90",
+       "weight": 0.35
+      },
+      {
+       "metric": "xGChain_90",
+       "weight": 0.341
+      },
+      {
+       "metric": "npxG_90",
+       "weight": 0.325
+      }
+     ]
+    },
+    {
+     "component": 2,
+     "variance": 0.1621,
+     "drivers": [
+      {
+       "metric": "npxG_90",
+       "weight": 0.42
+      },
+      {
+       "metric": "goals_90",
+       "weight": 0.397
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": 0.381
+      },
+      {
+       "metric": "assists_90",
+       "weight": -0.351
+      }
+     ]
+    },
+    {
+     "component": 3,
+     "variance": 0.1225,
+     "drivers": [
+      {
+       "metric": "finishing_90",
+       "weight": 0.61
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": -0.495
+      },
+      {
+       "metric": "xGBuildup_90",
+       "weight": -0.286
+      },
+      {
+       "metric": "goals_90",
+       "weight": 0.244
+      }
+     ]
+    },
+    {
+     "component": 4,
+     "variance": 0.0913,
+     "drivers": [
+      {
+       "metric": "xGBuildup_90",
+       "weight": 0.619
+      },
+      {
+       "metric": "xGChain_90",
+       "weight": 0.442
+      },
+      {
+       "metric": "xA_per_key_pass",
+       "weight": -0.355
+      },
+      {
+       "metric": "finishing_90",
+       "weight": 0.327
+      }
+     ]
+    }
+   ],
+   "median_distance": 3.553,
+   "level": "attacking_only",
+   "headline": "Ranked on attacking contribution only",
+   "note": "Defensive actions are not in this dataset. These full-backs match on how they create and join attacks, not on how they defend.",
+   "benchmark": {
+    "metric": "npxG_plus_xA_90",
+    "best": 0.771,
+    "best_player": "Federico Dimarco",
+    "best_season": "2025/26",
+    "best_team": "Inter",
+    "median": 0.158,
+    "upper_quartile": 0.217,
+    "seasons": 592,
+    "top_npxg": {
+     "value": 0.312,
+     "player": "Ali Abdi",
+     "season": "2024/25",
+     "team": "Nice"
+    },
+    "top_xa": {
+     "value": 0.529,
+     "player": "Federico Dimarco",
+     "season": "2025/26",
+     "team": "Inter"
+    }
+   }
+  },
+  "Right Winger": {
+   "players": 191,
+   "scored": true,
+   "components": 4,
+   "variance": 0.8667,
+   "loadings": [
+    {
+     "component": 1,
+     "variance": 0.5042,
+     "drivers": [
+      {
+       "metric": "xGChain_90",
+       "weight": 0.391
+      },
+      {
+       "metric": "final_third_90",
+       "weight": 0.375
+      },
+      {
+       "metric": "npxG_90",
+       "weight": 0.334
+      },
+      {
+       "metric": "xA_90",
+       "weight": 0.331
+      }
+     ]
+    },
+    {
+     "component": 2,
+     "variance": 0.177,
+     "drivers": [
+      {
+       "metric": "npxG_per_shot",
+       "weight": 0.511
+      },
+      {
+       "metric": "key_passes_90",
+       "weight": -0.443
+      },
+      {
+       "metric": "finishing_90",
+       "weight": -0.356
+      },
+      {
+       "metric": "npxG_90",
+       "weight": 0.348
+      }
+     ]
+    },
+    {
+     "component": 3,
+     "variance": 0.1023,
+     "drivers": [
+      {
+       "metric": "finishing_90",
+       "weight": 0.588
+      },
+      {
+       "metric": "goals_90",
+       "weight": 0.543
+      },
+      {
+       "metric": "xA_per_key_pass",
+       "weight": -0.323
+      },
+      {
+       "metric": "shots_90",
+       "weight": 0.318
+      }
+     ]
+    },
+    {
+     "component": 4,
+     "variance": 0.0832,
+     "drivers": [
+      {
+       "metric": "xA_per_key_pass",
+       "weight": 0.692
+      },
+      {
+       "metric": "finishing_90",
+       "weight": 0.5
+      },
+      {
+       "metric": "key_passes_90",
+       "weight": -0.304
+      },
+      {
+       "metric": "shots_90",
+       "weight": -0.288
+      }
+     ]
+    }
+   ],
+   "median_distance": 3.836,
+   "level": "full",
+   "headline": "Ranked across the full available metric set",
+   "note": "Shot volume and quality, chance creation, and involvement in possession - the areas this dataset covers well for attacking players.",
+   "benchmark": {
+    "metric": "npxG_plus_xA_90",
+    "best": 1.115,
+    "best_player": "Michael Olise",
+    "best_season": "2025/26",
+    "best_team": "Bayern Munich",
+    "median": 0.375,
+    "upper_quartile": 0.502,
+    "seasons": 505,
+    "top_npxg": {
+     "value": 0.646,
+     "player": "Mohamed Salah",
+     "season": "2021/22",
+     "team": "Liverpool"
+    },
+    "top_xa": {
+     "value": 0.665,
+     "player": "Michael Olise",
+     "season": "2025/26",
+     "team": "Bayern Munich"
+    }
+   }
+  },
+  "Right-Back": {
+   "players": 260,
+   "scored": true,
+   "components": 4,
+   "variance": 0.8269,
+   "loadings": [
+    {
+     "component": 1,
+     "variance": 0.4854,
+     "drivers": [
+      {
+       "metric": "xA_90",
+       "weight": 0.364
+      },
+      {
+       "metric": "xGChain_90",
+       "weight": 0.359
+      },
+      {
+       "metric": "final_third_90",
+       "weight": 0.358
+      },
+      {
+       "metric": "npxG_90",
+       "weight": 0.32
+      }
+     ]
+    },
+    {
+     "component": 2,
+     "variance": 0.1343,
+     "drivers": [
+      {
+       "metric": "npxG_90",
+       "weight": 0.468
+      },
+      {
+       "metric": "finishing_90",
+       "weight": -0.396
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": 0.361
+      },
+      {
+       "metric": "xGBuildup_90",
+       "weight": -0.337
+      }
+     ]
+    },
+    {
+     "component": 3,
+     "variance": 0.1163,
+     "drivers": [
+      {
+       "metric": "finishing_90",
+       "weight": 0.669
+      },
+      {
+       "metric": "goals_90",
+       "weight": 0.526
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": 0.351
+      },
+      {
+       "metric": "assists_90",
+       "weight": -0.215
+      }
+     ]
+    },
+    {
+     "component": 4,
+     "variance": 0.091,
+     "drivers": [
+      {
+       "metric": "xGBuildup_90",
+       "weight": 0.47
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": 0.452
+      },
+      {
+       "metric": "shots_90",
+       "weight": -0.373
+      },
+      {
+       "metric": "xGChain_90",
+       "weight": 0.337
+      }
+     ]
+    }
+   ],
+   "median_distance": 3.457,
+   "level": "attacking_only",
+   "headline": "Ranked on attacking contribution only",
+   "note": "Defensive actions are not in this dataset. These full-backs match on how they create and join attacks, not on how they defend.",
+   "benchmark": {
+    "metric": "npxG_plus_xA_90",
+    "best": 0.686,
+    "best_player": "Jeremie Frimpong",
+    "best_season": "2023/24",
+    "best_team": "Bayer Leverkusen",
+    "median": 0.134,
+    "upper_quartile": 0.206,
+    "seasons": 701,
+    "top_npxg": {
+     "value": 0.426,
+     "player": "Jeremie Frimpong",
+     "season": "2023/24",
+     "team": "Bayer Leverkusen"
+    },
+    "top_xa": {
+     "value": 0.427,
+     "player": "Julian Ryerson",
+     "season": "2025/26",
+     "team": "Borussia Dortmund"
+    }
+   }
+  }
+ },
+ "groups": {
+  "Attacking Midfield & Wingers": {
+   "players": 558,
+   "components": 4,
+   "variance": 0.8465,
+   "median_distance": 3.774,
+   "positions": [
+    "Attacking Midfield",
+    "Left Winger",
+    "Right Winger"
+   ],
+   "level": "full",
+   "headline": "Ranked across the full available metric set",
+   "note": "Shot volume and quality, chance creation, and involvement in possession - the areas this dataset covers well for attacking players."
+  },
+  "Centre-Back": {
+   "players": 584,
+   "components": 5,
+   "variance": 0.8564,
+   "median_distance": 3.941,
+   "positions": [
+    "Centre-Back"
+   ],
+   "level": "attacking_only",
+   "headline": "Ranked on attacking contribution only",
+   "note": "No tackles, interceptions, duels or clearances exist in this dataset. These are centre-backs whose progression and chance creation resemble the searched player's - not whose defending does."
+  },
+  "Centre-Forward": {
+   "players": 339,
+   "components": 4,
+   "variance": 0.8437,
+   "median_distance": 3.649,
+   "positions": [
+    "Centre-Forward"
+   ],
+   "level": "full",
+   "headline": "Ranked across the full available metric set",
+   "note": "Shot volume and quality, chance creation, and involvement in possession - the areas this dataset covers well for attacking players."
+  },
+  "Full-Back": {
+   "players": 472,
+   "components": 4,
+   "variance": 0.8221,
+   "median_distance": 3.495,
+   "positions": [
+    "Left-Back",
+    "Right-Back"
+   ],
+   "level": "attacking_only",
+   "headline": "Ranked on attacking contribution only",
+   "note": "Defensive actions are not in this dataset. These full-backs match on how they create and join attacks, not on how they defend."
+  },
+  "Midfield": {
+   "players": 603,
+   "components": 4,
+   "variance": 0.8392,
+   "median_distance": 3.756,
+   "positions": [
+    "Central Midfield",
+    "Defensive Midfield"
+   ],
+   "level": "attacking_only",
+   "headline": "Ranked on attacking contribution only",
+   "note": "Ball-winning and defensive positioning are not measured here. The comparison covers progression, creation and involvement in possession."
+  }
+ },
+ "position_groups": {
+  "Goalkeeper": "Goalkeeper",
+  "Centre-Back": "Centre-Back",
+  "Right-Back": "Full-Back",
+  "Left-Back": "Full-Back",
+  "Defensive Midfield": "Midfield",
+  "Central Midfield": "Midfield",
+  "Attacking Midfield": "Attacking Midfield & Wingers",
+  "Right Winger": "Attacking Midfield & Wingers",
+  "Left Winger": "Attacking Midfield & Wingers",
+  "Centre-Forward": "Centre-Forward"
+ },
+ "validation": [
+  {
+   "position": "Attacking Midfield",
+   "players": 161,
+   "ranked_first": 0.093,
+   "top_five": 0.342,
+   "median_rank": 19.0,
+   "chance_median_rank": 81.0
+  },
+  {
+   "position": "Central Midfield",
+   "players": 304,
+   "ranked_first": 0.069,
+   "top_five": 0.194,
+   "median_rank": 33.5,
+   "chance_median_rank": 152.5
+  },
+  {
+   "position": "Centre-Back",
+   "players": 464,
+   "ranked_first": 0.022,
+   "top_five": 0.075,
+   "median_rank": 85.0,
+   "chance_median_rank": 232.5
+  },
+  {
+   "position": "Centre-Forward",
+   "players": 269,
+   "ranked_first": 0.045,
+   "top_five": 0.141,
+   "median_rank": 52.0,
+   "chance_median_rank": 135.0
+  },
+  {
+   "position": "Defensive Midfield",
+   "players": 195,
+   "ranked_first": 0.062,
+   "top_five": 0.138,
+   "median_rank": 33.0,
+   "chance_median_rank": 98.0
+  },
+  {
+   "position": "Goalkeeper",
+   "players": 160,
+   "ranked_first": 0.006,
+   "top_five": 0.031,
+   "median_rank": 61.5,
+   "chance_median_rank": 80.5
+  },
+  {
+   "position": "Left Winger",
+   "players": 150,
+   "ranked_first": 0.06,
+   "top_five": 0.227,
+   "median_rank": 23.0,
+   "chance_median_rank": 75.5
+  },
+  {
+   "position": "Left-Back",
+   "players": 173,
+   "ranked_first": 0.069,
+   "top_five": 0.214,
+   "median_rank": 28.0,
+   "chance_median_rank": 87.0
+  },
+  {
+   "position": "Right Winger",
+   "players": 153,
+   "ranked_first": 0.078,
+   "top_five": 0.216,
+   "median_rank": 27.0,
+   "chance_median_rank": 77.0
+  },
+  {
+   "position": "Right-Back",
+   "players": 206,
+   "ranked_first": 0.073,
+   "top_five": 0.18,
+   "median_rank": 30.0,
+   "chance_median_rank": 103.5
+  }
+ ]
+}

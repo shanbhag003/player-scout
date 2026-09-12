@@ -1,0 +1,8 @@
+{
+  "_note": "Display metadata per league. Logo files are optional: drop a monochrome SVG at assets/leagues/<slug>.svg and it replaces the lettered badge. League marks are trademarked, so none are bundled.",
+  "Premier League": { "slug": "premier-league", "short": "PL", "country": "England" },
+  "La Liga":        { "slug": "la-liga",        "short": "LL", "country": "Spain" },
+  "Bundesliga":     { "slug": "bundesliga",     "short": "BL", "country": "Germany" },
+  "Serie A":        { "slug": "serie-a",        "short": "SA", "country": "Italy" },
+  "Ligue 1":        { "slug": "ligue-1",        "short": "L1", "country": "France" }
+}
