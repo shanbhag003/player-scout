@@ -940,7 +940,7 @@ function renderMethod() {
         <td class="vof">of ${v.players}</td></tr>`).join("");
 
   $("method").innerHTML = `
-    <details class="mcol"><summary><h3>From ${m.similarity_metrics.length} metrics to ${pm.components} numbers</h3></summary>
+    <section class="mcol"><h3>From ${m.similarity_metrics.length} metrics to ${pm.components} numbers</h3>
       <p>Several metrics measure the same thing twice: anyone who shoots often
         also has high non-penalty xG. Comparing all ${m.similarity_metrics.length}
         at once would count that trait repeatedly.</p>
@@ -959,9 +959,9 @@ function renderMethod() {
       <p class="fine">The other ${100 - kept}% sits on axes explaining under 3%
         each — mostly season-to-season noise, so it is left out rather than
         pushing similar players apart at random.</p>
-    </details>
+    </section>
 
-    <details class="mcol"><summary><h3>Same player, different league</h3></summary>
+    <section class="mcol"><h3>Same player, different league</h3>
       <p>A goal is not equally hard to come by everywhere. To compare across the
         big five, every rate is divided by a coefficient for the league it was
         produced in.</p>
@@ -974,9 +974,9 @@ function renderMethod() {
       <p class="fine">Non-penalty xG. <b>1.112</b> in Ligue 1 means the same
         player generates about 11% more there than in an average big-five league,
         so his figure is adjusted down to match.</p>
-    </details>
+    </section>
 
-    <details class="mcol"><summary><h3>Can a player find himself?</h3></summary>
+    <section class="mcol"><h3>Can a player find himself?</h3>
       <p>The honest test of a similarity model: split a player's seasons into two
         halves, build a profile from each, then ask where his own second-half
         profile ranks among every candidate given his first.</p>
@@ -990,9 +990,9 @@ function renderMethod() {
       <p class="fine">Landing 19th of 161 when chance is 81st is real signal, and
         well short of proof. Treat the results as a shortlist to watch, not a
         verdict.</p>
-    </details>
+    </section>
 
-    <details class="mcol"><summary><h3>What this cannot see</h3></summary>
+    <section class="mcol"><h3>What this cannot see</h3>
       <div class="have"><b>${m.similarity_metrics.length}</b>
         <span>attacking metrics — every number here comes from one of them</span></div>
       <ul class="gaps">
@@ -1007,17 +1007,53 @@ function renderMethod() {
         ${m.min_minutes.toLocaleString()}+ minutes across
         ${m.seasons[0]}–${m.seasons[m.seasons.length - 1]}.
         Nothing here is modelled from anything except those metrics.</p>
-    </details>`;
+    </section>`;
   syncMethodPanels();
 }
 
-/* Four dense columns side by side is fine on a laptop and unreadable on a
-   phone, so on narrow screens they become accordions. */
+/* Four dense columns side by side work on a laptop and not on a phone, where
+   they become a swipeable strip: one section at a time, with tabs above.
+   Scrolling and tapping stay in step either way. */
 function syncMethodPanels() {
-  const narrow = isNarrow();
-  document.querySelectorAll(".method .mcol").forEach((el, i) => {
-    el.open = !narrow || i === 0;
-  });
+  const nav = $("method-nav");
+  const cols = [...document.querySelectorAll(".method .mcol")];
+  if (!nav || !cols.length) return;
+  nav.innerHTML = cols.map((c, i) => {
+    const label = c.querySelector("h3")?.textContent || `Part ${i + 1}`;
+    return `<button role="tab" data-step="${i}" aria-selected="${i === 0}">
+      <i>${i + 1}</i>${esc(shortMethodLabel(label))}</button>`;
+  }).join("");
+  nav.querySelectorAll("button").forEach((b) =>
+    b.addEventListener("click", () => {
+      const el = cols[Number(b.dataset.step)];
+      $("method").scrollTo({ left: el.offsetLeft - $("method").offsetLeft, behavior: "smooth" });
+      markMethodStep(Number(b.dataset.step));
+    }));
+  if (!$("method").dataset.wired) {
+    $("method").dataset.wired = "1";
+    let tick;
+    $("method").addEventListener("scroll", () => {
+      clearTimeout(tick);
+      tick = setTimeout(() => {
+        const box = $("method");
+        const i = Math.round(box.scrollLeft / Math.max(1, box.clientWidth));
+        markMethodStep(Math.min(i, cols.length - 1));
+      }, 90);
+    }, { passive: true });
+  }
+  markMethodStep(0);
+}
+
+function markMethodStep(i) {
+  document.querySelectorAll("#method-nav button").forEach((b, k) =>
+    b.setAttribute("aria-selected", String(k === i)));
+}
+
+const METHOD_SHORT = ["The model", "Leagues", "Validation", "Limits"];
+function shortMethodLabel(full) {
+  const i = ["metrics to", "different league", "find himself", "cannot see"]
+    .findIndex((k) => full.includes(k));
+  return i >= 0 ? METHOD_SHORT[i] : full;
 }
 
 /* ---------- wiring ---------- */

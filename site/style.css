@@ -1,19 +1,21 @@
 :root{
-  --ground:#101720;
-  --surface:#161F2A;
-  --raised:#1E2936;
-  --hairline:#26323F;
-  --hairline-soft:#1D2734;
-  --ink:#E7EDF3;
-  --muted:#8695A6;
-  --faint:#5E6E80;
-  --gold:#E5B567;        /* always the player being searched */
-  --blue:#5FA8D3;        /* always the player being compared */
-  --good:#5BB89B;
-  --green:#5BB89B;
-  --violet:#A98BD6;
-  --coral:#DE8A76;
-  --warn:#D08A72;
+  --ground:#080C13;
+  --surface:#0F1621;
+  --raised:#17202D;
+  --hairline:#22303F;
+  --hairline-soft:#18222E;
+  --ink:#EAF1F8;
+  --muted:#8EA1B6;
+  --faint:#5D7086;
+  --gold:#F0BC63;        /* always the player being searched */
+  --blue:#57B4EC;        /* always the player being compared */
+  --good:#4FC2A2;
+  --green:#4FC2A2;
+  --violet:#A98BEA;
+  --coral:#EF8D72;
+  --warm:rgba(240,188,99,.09);
+  --cool:rgba(87,180,236,.10);
+  --warn:#E0917A;
   --sans:"Barlow",system-ui,-apple-system,sans-serif;
   --cond:"Barlow Condensed","Barlow",system-ui,sans-serif;
   --radius:10px;
@@ -25,6 +27,7 @@
 html{-webkit-text-size-adjust:100%}
 body{
   margin:0;background:var(--ground);color:var(--ink);
+  position:relative;min-height:100vh;
   font-family:var(--sans);font-size:15px;line-height:1.5;
   font-variant-numeric:tabular-nums;
   -webkit-font-smoothing:antialiased;
@@ -776,4 +779,71 @@ button,input{font:inherit;color:inherit}
   .results-right{width:100%;justify-content:space-between}
   .pb-actions .ghost.primary{flex-basis:100%}
   .mlegend{gap:.3rem .8rem;font-size:.75rem}
+}
+
+
+/* ── ambient light ────────────────────────────────────────
+   Three wide, very low-opacity pools of colour, fixed behind the page. Fixed
+   rather than scrolling so panels move across the light instead of dragging it
+   along, which is what makes it read as depth rather than as a texture. */
+body::before{
+  content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
+  background:
+    radial-gradient(58rem 34rem at 8% -8%, var(--warm), transparent 62%),
+    radial-gradient(52rem 34rem at 92% 4%, var(--cool), transparent 64%),
+    radial-gradient(64rem 44rem at 50% 104%, rgba(87,180,236,.055), transparent 66%);
+}
+/* A slow vignette keeps the edges from feeling lit. */
+body::after{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(3,6,11,.55) 100%);
+}
+
+/* ── panels catch the light ───────────────────────────── */
+.panel,.dossier,.cover-card,.playerbar,.filters,.tray,.match-btn,.suggestions{
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.030), rgba(255,255,255,0) 46%),
+    var(--surface);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.045), 0 1px 2px rgba(0,0,0,.35);
+}
+.panel,.cover-card,.playerbar{box-shadow:inset 0 1px 0 rgba(255,255,255,.05),
+  0 10px 26px -18px rgba(0,0,0,.9)}
+.match-btn:hover{box-shadow:inset 0 1px 0 rgba(255,255,255,.07),
+  0 8px 20px -14px rgba(0,0,0,.9)}
+
+/* Panel headings get a hairline rule, the way a broadcast card does. */
+.panel-head{position:relative;padding-bottom:.7rem;
+  border-bottom:1px solid var(--hairline-soft)}
+.panel-head::after{content:"";position:absolute;left:0;bottom:-1px;width:2.2rem;height:1px;
+  background:var(--gold);opacity:.8}
+.panel-head h2{letter-spacing:.002em}
+
+.top{background:linear-gradient(180deg, rgba(8,12,19,.94), rgba(8,12,19,.78));
+  backdrop-filter:blur(10px) saturate(120%)}
+.brand-mark{box-shadow:0 0 14px rgba(240,188,99,.45)}
+.tabs button[aria-selected=true]{text-shadow:0 0 18px rgba(240,188,99,.25)}
+.score-num{text-shadow:0 0 16px rgba(87,180,236,.28)}
+.bigstats b{text-shadow:0 0 20px rgba(240,188,99,.22)}
+
+/* ── method: four columns, or a swipeable strip ───────── */
+.method-nav{display:none}
+@media (max-width:980px){
+  .method-nav{display:flex;gap:.3rem;overflow-x:auto;scrollbar-width:none;
+    margin:1rem 0 .8rem;padding-bottom:.2rem}
+  .method-nav::-webkit-scrollbar{display:none}
+  .method-nav button{display:flex;align-items:center;gap:.4rem;white-space:nowrap;
+    border:1px solid var(--hairline);background:var(--surface);color:var(--muted);
+    border-radius:99px;padding:.35rem .7rem;font-size:.8rem;cursor:pointer}
+  .method-nav button[aria-selected=true]{border-color:rgba(240,188,99,.45);
+    color:var(--gold);background:rgba(240,188,99,.1)}
+  .method-nav button i{font-style:normal;font-family:var(--cond);font-weight:700;
+    font-size:.72rem;opacity:.65}
+
+  .method{display:flex!important;grid-template-columns:none!important;
+    overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;
+    gap:0;margin-top:0;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .method::-webkit-scrollbar{display:none}
+  .mcol{flex:0 0 100%;scroll-snap-align:start;padding:0 .1rem;border-left:0;
+    border-bottom:0;min-width:0}
+  .mcol h3{min-height:0;margin-bottom:.5rem}
 }
