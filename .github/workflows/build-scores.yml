@@ -1,0 +1,77 @@
+name: Build scores
+
+# Reads the master data, runs the model, and commits the JSON the site reads.
+# Run this after updating data in the player-data repository.
+
+on:
+  workflow_dispatch:
+    inputs:
+      master_url:
+        description: 'master_url — where to fetch master_players.csv from'
+        type: string
+        default: 'https://raw.githubusercontent.com/shanbhag003/player-data/main/data/master_players.csv'
+      min_minutes:
+        description: 'min_minutes — career minutes a player needs to qualify'
+        type: string
+        default: '1800'
+  schedule:
+    # 05:30 UTC daily. Exits in seconds unless the master has changed.
+    - cron: "30 5 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-scores
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Fetch the master data
+        id: fetch
+        run: |
+          URL="${{ inputs.master_url || 'https://raw.githubusercontent.com/shanbhag003/player-data/main/data/master_players.csv' }}"
+          curl -fsSL "$URL" -o pipeline/master_players.csv
+          NEW=$(sha256sum pipeline/master_players.csv | cut -d' ' -f1)
+          OLD=$(cat .master.sha 2>/dev/null || echo none)
+          echo "new=$NEW" >> "$GITHUB_OUTPUT"
+          echo "changed=$([ "$NEW" = "$OLD" ] && echo false || echo true)" >> "$GITHUB_OUTPUT"
+          echo "master checksum $NEW (previous $OLD)"
+
+      - name: Score every player
+        if: steps.fetch.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
+        run: |
+          python pipeline/build_scores.py \
+            --min-minutes ${{ inputs.min_minutes || '1800' }}
+          echo "${{ steps.fetch.outputs.new }}" > .master.sha
+
+      - name: Commit the site data
+        if: steps.fetch.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
+        run: |
+          git config user.name "player-scout-bot"
+          git config user.email "actions@github.com"
+          git add site/data .master.sha
+          if git diff --staged --quiet; then
+            echo "Nothing changed."
+          else
+            git commit -m "Rebuild scores from master data"
+            git push
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Build scores" >> "$GITHUB_STEP_SUMMARY"
+          python pipeline/summarise.py >> "$GITHUB_STEP_SUMMARY"
