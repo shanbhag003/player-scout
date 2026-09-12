@@ -28,13 +28,8 @@ from scipy.sparse.linalg import lsqr
 from sklearn.decomposition import PCA
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MASTER = os.path.join(HERE, "pipeline", "master_players.csv")
+MASTER = os.path.join(HERE, "data", "master_players.csv")
 OUT = os.path.join(HERE, "site", "data")
-
-# The master lives in its own repository so collection and presentation stay
-# separate. Point this at yours; it is public, so no token is needed.
-MASTER_URL = ("https://raw.githubusercontent.com/shanbhag003/player-data"
-              "/main/data/master_players.csv")
 
 MIN_MINUTES = 1800
 UNDERSTAT_URL = "https://understat.com/player/{id}"
@@ -448,16 +443,8 @@ def main():
     ap.add_argument("--min-minutes", type=int, default=MIN_MINUTES)
     ap.add_argument("--report", action="store_true")
     ap.add_argument("--master", default=MASTER, help="path to master_players.csv")
-    ap.add_argument("--master-url", default=MASTER_URL,
-                    help="downloaded when the local file is absent")
     args = ap.parse_args()
     today = date.today()
-
-    if not os.path.exists(args.master) and args.master_url:
-        import urllib.request
-        log(f"fetching master from {args.master_url}")
-        os.makedirs(os.path.dirname(args.master), exist_ok=True)
-        urllib.request.urlretrieve(args.master_url, args.master)
 
     master = pd.read_csv(args.master, low_memory=False)
     log(f"master: {len(master):,} rows")
