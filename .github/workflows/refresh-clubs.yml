@@ -1,0 +1,67 @@
+name: Refresh clubs
+
+# Where a player plays changes between seasons; what they did last season does
+# not. This updates the club, market value and contract on every player already
+# in the master, then rebuilds the site data so the interface reflects it.
+# Nothing derived from match data is recalculated — a transfer is not a reason
+# to rescore anyone.
+#
+# The source is an open, versioned dataset published on a schedule, so unlike
+# the seasonal collection this is safe to automate.
+
+on:
+  schedule:
+    # 06:00 UTC on the 1st and 15th — fortnightly, and always just after the
+    # main European transfer windows shut.
+    - cron: "0 6 1,15 * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'dry_run — report what would change, save nothing'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      - name: Refresh clubs, values and contracts
+        run: python pipeline/refresh_clubs.py ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      - name: Rebuild the site data
+        if: ${{ !inputs.dry_run }}
+        run: python pipeline/build_scores.py
+
+      - name: Commit
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git config user.name "player-scout-bot"
+          git config user.email "actions@github.com"
+          git add data site/data
+          if git diff --staged --quiet; then
+            echo "No club changed."
+          else
+            git commit -m "Refresh current clubs and contracts"
+            git push
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Club refresh" >> "$GITHUB_STEP_SUMMARY"
+          python pipeline/club_report.py >> "$GITHUB_STEP_SUMMARY"
