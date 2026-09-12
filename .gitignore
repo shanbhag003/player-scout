@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+understat.xlsx
+squads.xlsx
+*.tmp
