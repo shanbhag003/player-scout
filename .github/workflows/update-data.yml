@@ -8,16 +8,16 @@ on:
   workflow_dispatch:
     inputs:
       leagues:
-        description: 'Leagues, space separated. Keys from config/leagues.yml'
+        description: 'leagues — space separated keys from config/leagues.yml'
         type: string
         default: 'EPL LALIGA BUNDESLIGA SERIEA LIGUE1'
       seasons:
-        description: 'Seasons by starting year, space separated. 2025 means 2025/26'
+        description: 'seasons — starting years, space separated. 2025 means 2025/26'
         type: string
         required: true
         default: '2025'
       mode:
-        description: 'What to do with league-seasons the master already holds'
+        description: 'mode — what to do with league-seasons the master already holds'
         type: choice
         default: add_missing
         options:
@@ -25,15 +25,15 @@ on:
           - refresh
           - rebuild
       min_minutes:
-        description: 'Drop players below this many minutes (0 keeps everyone)'
+        description: 'min_minutes — drop players below this many minutes (0 keeps everyone)'
         type: string
         default: '0'
       dry_run:
-        description: 'Report what would change without saving it'
+        description: 'dry_run — report what would change, save nothing'
         type: boolean
         default: false
       allow_missing_bio:
-        description: 'Accept seasons with no ages or contracts yet'
+        description: 'allow_missing_bio — accept seasons with no ages or contracts yet'
         type: boolean
         default: false
 
