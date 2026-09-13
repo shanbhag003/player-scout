@@ -51,16 +51,16 @@ button,input{font:inherit;color:inherit}
   -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
   position:-webkit-sticky;position:sticky;top:0;z-index:30}
 .top-inner{display:flex;align-items:center;gap:.9rem;flex-wrap:nowrap;
-  padding:calc(.7rem + env(safe-area-inset-top)) 0 .7rem;overflow-x:auto;
-  scrollbar-width:none}
-.top-inner::-webkit-scrollbar{display:none}
+  padding:calc(.7rem + env(safe-area-inset-top)) 0 .7rem}
 .brand{display:flex;align-items:center;gap:.5rem;flex:none}
 .brand-mark{width:.7rem;height:1.15rem;background:var(--gold);
   clip-path:polygon(0 0,100% 18%,100% 82%,0 100%)}
 .brand-name{font-family:var(--cond);font-weight:700;font-size:1.3rem;
   letter-spacing:.01em;white-space:nowrap}
 
-.sports{display:flex;gap:.15rem;margin-left:.3rem;flex:none}
+.sports{display:flex;gap:.15rem;margin-left:.3rem;flex:none;
+  overflow-x:auto;scrollbar-width:none;max-width:40vw}
+.sports::-webkit-scrollbar{display:none}
 .sport{
   border:0;background:none;cursor:pointer;padding:.3rem .55rem;border-radius:6px;
   font-family:var(--cond);font-weight:600;font-size:.98rem;color:var(--faint);
@@ -298,7 +298,7 @@ button,input{font:inherit;color:inherit}
 }
 @media (max-width:900px){
   .profile{grid-template-columns:1fr}
-  .top-inner{flex-wrap:wrap;gap:.7rem 1rem}
+  /* superseded: the masthead now stays on one line at every width */
   .pool{width:100%;text-align:left;margin-left:0;order:3}
   .sports{margin-left:auto}
 }
