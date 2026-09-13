@@ -96,7 +96,7 @@ function renderSports() {
   $("sports").innerHTML = SPORTS.map((s) => `
     <button class="sport" data-sport="${s.id}" ${s.status === "live" ? "" : "disabled"}
             aria-current="${s.status === "live"}">
-      ${esc(s.name)}${s.status === "live" ? "" : '<span class="soon">soon</span>'}
+      ${esc(s.name)}
     </button>`).join("");
 }
 
@@ -897,8 +897,8 @@ function toggleShortlist(uid) {
   else state.shortlist.push(uid);
   store.write("ps.shortlist", state.shortlist);
   renderShortlist();
-  if (state.selected) renderResults();
-  renderPlayerBarSave();
+  if (state.selected) { renderResults(); renderPlayerBarSave(); }
+  if (state.compare.length || state.tab === "compare") renderCompare();
 }
 
 function renderShortlist() {
@@ -951,7 +951,10 @@ function shortlistCsv() {
       return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     }).join(",");
   });
-  const blob = new Blob([[head, ...rows].join("\n")], { type: "text/csv;charset=utf-8" });
+  // A BOM is what makes Excel treat the file as UTF-8 instead of guessing
+  // Windows-1252, which is what turned "Désiré" into "DÃ©sirÃ©".
+  const csv = "\uFEFF" + [head, ...rows].join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -1020,13 +1023,20 @@ function renderCompare() {
 
   $("tray").innerHTML = series.map((s, i) => {
     const sc = i === 0 ? null : matchScore(base, s.p);
+    const saved = state.shortlist.includes(s.p.uid);
+    const saveBtn = `<button class="traysave${saved ? " on" : ""}" data-tsave="${s.p.uid}"
+      aria-pressed="${saved}" title="${saved ? "Remove from shortlist" : "Save to shortlist"}">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v16l-5-4-5 4z"
+        fill="${saved ? "currentColor" : "none"}" stroke="currentColor" stroke-width="1.8"
+        stroke-linejoin="round"/></svg></button>`;
     return `<span class="trayitem ${s.colour}">
       <i class="swatch"></i>${flagHtml(s.p.nationality)}
       <b>${esc(s.p.name)}</b>
-      ${i === 0 ? '<span class="base-tag">searched</span>'
+      ${i === 0 ? '<span class="base-tag">searched</span>' + saveBtn
         : `<span class="tray-score" title="Match score against ${esc(base.name)}">${
              sc == null ? "—" : sc.toFixed(0)}</span>
            <button class="traybtn" data-scout="${s.p.uid}">Scout instead</button>
+           ${saveBtn}
            <button class="dropbtn" data-drop="${s.p.uid}" aria-label="Remove">&times;</button>`}
     </span>`;
   }).join("") +
@@ -1037,6 +1047,8 @@ function renderCompare() {
     b.addEventListener("click", () => toggleCompare(b.dataset.drop)));
   $("tray").querySelectorAll("[data-scout]").forEach((b) =>
     b.addEventListener("click", () => select(b.dataset.scout)));
+  $("tray").querySelectorAll("[data-tsave]").forEach((b) =>
+    b.addEventListener("click", () => toggleShortlist(b.dataset.tsave)));
 
   const room = MAX_COMPARE - 1 - state.compare.length;
   $("cmp-add-note").textContent = room > 0

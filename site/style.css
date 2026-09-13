@@ -50,25 +50,25 @@ button,input{font:inherit;color:inherit}
 .top{border-bottom:1px solid var(--hairline);background:rgba(16,23,32,.92);
   -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
   position:-webkit-sticky;position:sticky;top:0;z-index:30}
-.top-inner{display:flex;align-items:center;gap:1.6rem;
-  padding:calc(.85rem + env(safe-area-inset-top)) 0 .85rem}
-.brand{display:flex;align-items:center;gap:.55rem}
+.top-inner{display:flex;align-items:center;gap:.9rem;flex-wrap:nowrap;
+  padding:calc(.7rem + env(safe-area-inset-top)) 0 .7rem;overflow-x:auto;
+  scrollbar-width:none}
+.top-inner::-webkit-scrollbar{display:none}
+.brand{display:flex;align-items:center;gap:.5rem;flex:none}
 .brand-mark{width:.7rem;height:1.15rem;background:var(--gold);
   clip-path:polygon(0 0,100% 18%,100% 82%,0 100%)}
-.brand-name{font-family:var(--cond);font-weight:700;font-size:1.3rem;letter-spacing:.01em}
+.brand-name{font-family:var(--cond);font-weight:700;font-size:1.3rem;
+  letter-spacing:.01em;white-space:nowrap}
 
-.sports{display:flex;gap:.2rem;margin-left:.6rem}
+.sports{display:flex;gap:.15rem;margin-left:.3rem;flex:none}
 .sport{
-  border:0;background:none;cursor:pointer;padding:.35rem .7rem;border-radius:6px;
-  font-family:var(--cond);font-weight:600;font-size:1.02rem;color:var(--faint);
-  display:inline-flex;align-items:baseline;gap:.4rem;
+  border:0;background:none;cursor:pointer;padding:.3rem .55rem;border-radius:6px;
+  font-family:var(--cond);font-weight:600;font-size:.98rem;color:var(--faint);
+  white-space:nowrap;
 }
 .sport[aria-current=true]{background:rgba(229,181,103,.12);color:var(--gold)}
 .sport:disabled{cursor:default}
-.sport:disabled{opacity:.55}
-.sport .soon{font-family:var(--sans);font-size:.62rem;font-weight:500;
-  letter-spacing:.02em;color:var(--faint);opacity:.8}
-.sport .soon::before{content:"·";margin-right:.3rem;opacity:.6}
+.sport:disabled{opacity:.42;cursor:default}
 .top-note{margin-left:auto;font-size:.78rem;color:var(--faint);white-space:nowrap}
 
 /* ── hero ─────────────────────────────────────────────── */
@@ -666,12 +666,15 @@ button,input{font:inherit;color:inherit}
 
 /* ── narrow screens ───────────────────────────────────── */
 @media (max-width:680px){
-  .top-inner{gap:.5rem .8rem}
-  .brand-name{font-size:1.15rem}
-  .sports{margin-left:0}
-  .sport{padding:.3rem .5rem;font-size:.95rem}
+  .top-inner{gap:.5rem;flex-wrap:nowrap}
+  .brand-name{font-size:1.05rem}
+  .sports{gap:.05rem;margin-left:.15rem}
+  .sport{padding:.28rem .4rem;font-size:.86rem}
+  #short-count{font-size:0}
+  #short-btn.has #short-count{font-size:.7rem}
+  .fresh-btn .fresh-word{display:none}
 
-  .hero{margin:1.4rem 0 2rem}
+.hero{margin:1.4rem 0 2rem}
   .hero-left h1{font-size:1.75rem;margin-bottom:1.1rem}
   .bigstats b{font-size:1.4rem}
   .posrow{grid-template-columns:6.8rem 1fr 1.9rem;font-size:.74rem}
@@ -905,9 +908,9 @@ body::after{
 
 /* ── when this was last updated ───────────────────────── */
 .freshness{margin-left:auto;position:relative}
-.fresh-btn{display:inline-flex;align-items:center;gap:.45rem;cursor:pointer;
+.fresh-btn{display:inline-flex;align-items:center;gap:.4rem;cursor:pointer;
   border:1px solid var(--hairline);background:var(--surface);color:var(--muted);
-  border-radius:99px;padding:.28rem .7rem;font-size:.76rem}
+  border-radius:99px;padding:.26rem .6rem;font-size:.73rem;white-space:nowrap;flex:none}
 @media (hover:hover){.fresh-btn:hover{border-color:var(--gold);color:var(--gold)}}
 .fresh-dot{width:.42rem;height:.42rem;border-radius:50%;background:var(--good);
   box-shadow:0 0 8px rgba(79,194,162,.7);flex:none}
@@ -975,10 +978,15 @@ input,button{border-radius:inherit}
 .inline-plus{color:var(--gold);font-weight:700}
 
 /* ── shortlist ────────────────────────────────────────── */
-.shortlist-wrap{position:relative;margin-left:auto}
-.freshness{margin-left:.5rem}
+.shortlist-wrap{position:relative;flex:none;margin-left:auto}
+.freshness{flex:none}
 #short-btn.has{border-color:rgba(240,188,99,.45);color:var(--gold);background:rgba(240,188,99,.1)}
-.short-panel{width:min(25rem,88vw)}
+/* Its own anchor and its own dimensions - it was inheriting .fresh-panel's
+   right:0 against the wrong parent and rendering as a clipped sliver. */
+.short-panel{
+  position:absolute;top:calc(100% + .5rem);right:0;left:auto;z-index:40;
+  width:min(25rem,88vw);max-width:90vw;
+}
 .short-actions{display:flex;gap:.35rem}
 .short-actions .ghost{padding:.24rem .5rem;font-size:.72rem}
 .short-list{list-style:none;margin:0;padding:0;display:grid;gap:.1rem;
@@ -1040,3 +1048,10 @@ input,button{border-radius:inherit}
 @media (min-width:981px){
   .routes{grid-template-columns:1fr 1fr;gap:2rem}
 }
+
+/* shortlist toggle inside the compare tray */
+.traysave{border:0;background:none;color:var(--faint);cursor:pointer;
+  display:inline-flex;align-items:center;padding:0 .1rem}
+.traysave svg{width:.95rem;height:.95rem}
+.traysave.on{color:var(--gold)}
+.traysave:hover{color:var(--gold)}
