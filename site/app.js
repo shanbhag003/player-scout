@@ -108,6 +108,9 @@ function sinceText(iso) {
 
 function renderFreshness() {
   const m = state.meta;
+  // Rendered from markup that may be a version behind if only some files were
+  // updated. Missing nodes are skipped rather than thrown on.
+  if (!$("fresh-list") || !$("fresh-label")) return;
   const runs = m.last_runs || {};
   const tz = state.tz;
 
@@ -136,9 +139,11 @@ function renderFreshness() {
     </li>`).join("");
 
   const newest = items.map((i) => i.at).filter(Boolean).sort().pop();
+  // The word is hidden on narrow screens, so there must always be something
+  // beside it or the chip renders as an empty box.
   $("fresh-label").innerHTML = newest
     ? `<span class="fresh-word">Updated </span>${esc(sinceText(newest))}`
-    : `<span class="fresh-word">Updated</span>`;
+    : `<span class="fresh-word">Updated </span><span>unknown</span>`;
   $("fresh-btn").title = newest ? fmtStamp(newest, tz) : "";
   $("fresh-foot").textContent =
     `Seasons ${m.seasons[0]} to ${m.seasons[m.seasons.length - 1]} are complete. ` +
@@ -150,7 +155,7 @@ function renderFreshness() {
 function renderCoverCard() {
   const m = state.meta;
   const last = m.seasons[m.seasons.length - 1];
-  renderFreshness();
+  try { renderFreshness(); } catch (e) { console.warn("freshness panel:", e); }
 
   $("bigstats").innerHTML = [
     [m.pool.toLocaleString(), "players"],
@@ -1207,7 +1212,7 @@ function wire() {
     if (!e.target.closest(".finder")) $("suggestions").hidden = true;
   });
 
-  $("fresh-btn").addEventListener("click", () => {
+  if ($("fresh-btn")) $("fresh-btn").addEventListener("click", () => {
     const open = $("fresh-panel").hidden;
     $("fresh-panel").hidden = !open;
     $("fresh-btn").setAttribute("aria-expanded", String(open));

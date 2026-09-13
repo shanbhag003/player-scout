@@ -1,5 +1,5 @@
 {
- "built_at": "2026-09-13T04:55:08+00:00",
+ "built_at": "2026-09-13T04:19:48+00:00",
  "last_runs": {
   "data": {
    "at": "2026-09-13T04:19:37+00:00",
@@ -31,17 +31,6 @@
     "Serie A 2025/26"
    ],
    "rows": 13980
-  },
-  "clubs": {
-   "at": "2026-09-13T04:54:59+00:00",
-   "upstream_snapshot": null,
-   "club_moves": 0,
-   "fields": {
-    "tm_current_club": 0,
-    "tm_market_value_eur": 0,
-    "tm_contract_expires": 0,
-    "tm_transfermarkt_url": 0
-   }
   }
  },
  "pool": 2779,
