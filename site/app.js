@@ -16,6 +16,27 @@ const MAX_COMPARE = 6;   // the searched player plus five
 const MIN_SEASON_MINUTES = 270;                       // the searched player plus four
 const SERIES = ["gold", "blue", "green", "violet", "coral", "mint"];
 
+/* ---------- analytics ----------
+   One thin wrapper over GA4. Every event goes through track(), so if the tag
+   is absent (local file, ad-blocker, preview) nothing throws and the app runs
+   exactly as before. No names, emails or free text are ever sent - only the
+   internal player uid, position, and the control that was used, none of which
+   identifies the person using the tool. */
+function track(event, params) {
+  try {
+    if (typeof window.gtag === "function") {
+      window.gtag("event", event, params || {});
+    }
+    // Clarity gets a lightweight tag so its session recordings can be filtered
+    // by what the user did, not just where they clicked.
+    if (typeof window.clarity === "function" && params) {
+      const label = params.player_position || params.filter || params.tab || event;
+      window.clarity("set", event, String(label));
+    }
+  } catch { /* analytics must never break the app */ }
+}
+
+
 const SPORTS = [
   { id: "football", name: "Football", status: "live" },
   { id: "cricket", name: "Cricket", status: "soon" },
@@ -300,6 +321,13 @@ function readUrl() {
 function select(uid, opts = {}) {
   const p = state.byUid.get(uid);
   if (!p) return;
+  track("select_player", {
+    player_uid: p.uid,
+    player_position: p.position,
+    player_league: p.league,
+    active: p.active,
+    via: opts.silent ? "deep_link" : (opts.via || "search"),
+  });
   state.selected = p;
   state.compare = [];
   $("search").value = p.name;
@@ -320,6 +348,7 @@ function select(uid, opts = {}) {
 }
 
 function clearSelection() {
+  if (state.selected) track("clear_player", { from_tab: state.tab });
   setTab("profile");
   state.selected = null;
   state.compare = [];
@@ -333,6 +362,9 @@ function clearSelection() {
 }
 
 function setTab(tab) {
+  if (tab !== state.tab && state.selected) {
+    track("view_tab", { tab, player_position: state.selected.position });
+  }
   state.tab = tab;
   document.querySelectorAll("#tabs [role=tab]").forEach((b) =>
     b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
@@ -895,8 +927,11 @@ function loadShortlist() {
 
 function toggleShortlist(uid) {
   const i = state.shortlist.indexOf(uid);
+  const adding = i < 0;
   if (i >= 0) state.shortlist.splice(i, 1);
   else state.shortlist.push(uid);
+  track(adding ? "shortlist_add" : "shortlist_remove",
+        { shortlist_size: state.shortlist.length });
   store.write("ps.shortlist", state.shortlist);
   renderShortlist();
   if (state.selected) { renderResults(); renderPlayerBarSave(); }
@@ -925,7 +960,7 @@ function renderShortlist() {
     </li>`;
   }).join("");
   list.querySelectorAll("[data-open]").forEach((b) =>
-    b.addEventListener("click", () => { select(b.dataset.open); $("short-panel").hidden = true; }));
+    b.addEventListener("click", () => { select(b.dataset.open, { via: "shortlist" }); $("short-panel").hidden = true; }));
   list.querySelectorAll("[data-unsave]").forEach((b) =>
     b.addEventListener("click", () => toggleShortlist(b.dataset.unsave)));
 }
@@ -940,6 +975,7 @@ function renderPlayerBarSave() {
 }
 
 function shortlistCsv() {
+  track("export_csv", { shortlist_size: state.shortlist.length });
   const cols = ["name", "position", "club", "league", "age", "contract",
                 "value", "minutes", "seasons", "nationality", "transfermarkt"];
   const head = ["Player", "Position", "Club", "League", "Age", "Contract expires",
@@ -997,9 +1033,14 @@ function compareFull() {
 
 function toggleCompare(uid, keep) {
   const i = state.compare.indexOf(uid);
+  const adding = i < 0;
   if (i >= 0) { if (!keep) state.compare.splice(i, 1); }
   else if (!compareFull()) state.compare.push(uid);
   else return;                       // full: drop someone first, never silently swap
+  track(adding ? "compare_add" : "compare_remove", {
+    compare_count: state.compare.length + 1,
+    base_position: state.selected?.position,
+  });
   renderResults();
   renderCompare();
   syncCompareShortcut();
@@ -1048,7 +1089,7 @@ function renderCompare() {
   $("tray").querySelectorAll("[data-drop]").forEach((b) =>
     b.addEventListener("click", () => toggleCompare(b.dataset.drop)));
   $("tray").querySelectorAll("[data-scout]").forEach((b) =>
-    b.addEventListener("click", () => select(b.dataset.scout)));
+    b.addEventListener("click", () => select(b.dataset.scout, { via: "scout_instead" })));
   $("tray").querySelectorAll("[data-tsave]").forEach((b) =>
     b.addEventListener("click", () => toggleShortlist(b.dataset.tsave)));
 
@@ -1467,6 +1508,8 @@ function wire() {
     const key = b.dataset.scope ? "scope" : b.dataset.age ? "age"
       : b.dataset.mins ? "minutes" : "contract";
     state.filters[key] = key === "minutes" ? Number(b.dataset.mins) : b.dataset[key];
+    track("use_filter", { filter: key, value: String(state.filters[key]),
+                          player_position: state.selected?.position });
     b.parentElement.querySelectorAll("button").forEach((x) =>
       x.setAttribute("aria-pressed", String(x === b)));
     renderResults();
@@ -1515,6 +1558,8 @@ function wire() {
 
   $("active-only").addEventListener("change", (e) => {
     state.filters.activeOnly = e.target.checked;
+    track("use_filter", { filter: "active_only", value: String(e.target.checked),
+                          player_position: state.selected?.position });
     renderResults();
   });
 }
