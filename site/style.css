@@ -416,7 +416,8 @@ button,input{font:inherit;color:inherit}
   border:1px solid var(--hairline);border-radius:var(--radius);padding:.65rem .85rem;
   display:grid;align-items:center;gap:.85rem;min-height:3.8rem;
   grid-template-columns:1.3rem 3.2rem minmax(0,1fr) 2.8rem 6.2rem 4.2rem minmax(9rem,14rem)}
-@media (hover:hover){.match-btn:hover{border-color:var(--gold);background:var(--raised)}}
+@media (hover:hover){.match-btn:hover{border-color:var(--gold);background:var(--raised)}
+.mhead,.mmeta{display:contents}}
 .match.is-open .match-btn{border-color:var(--blue)}
 .addbtn{border:1px solid var(--hairline);background:var(--surface);color:var(--muted);
   border-radius:var(--radius);cursor:pointer;font-size:1.2rem;line-height:1;
@@ -709,13 +710,27 @@ button,input{font:inherit;color:inherit}
   .segmented{width:100%;overflow-x:auto;scrollbar-width:none}
   .segmented::-webkit-scrollbar{display:none}
 
-  /* results: score, name, then facts on their own line */
-  .match{grid-template-columns:1fr 2.2rem;gap:.35rem}
-  .match-btn{grid-template-columns:2.9rem minmax(0,1fr);gap:.45rem .6rem;padding:.6rem .65rem}
-  .meta-cell{font-size:.8rem;font-family:var(--sans);font-weight:500}
-  .meta-cell:nth-of-type(1){grid-column:1/2}
-  .who-sub{white-space:normal}
-  .nowat{display:inline-block;margin:.15rem 0 0 0}
+  /* Grouped in markup as .mhead (score+name) and .mmeta (age/contract/value),
+     so this is a plain flex column instead of fighting the desktop grid. */
+  .match{grid-template-columns:1fr 2.2rem;gap:.3rem}
+  .match-btn{
+    display:flex;flex-direction:column;gap:.3rem;
+    min-height:0;padding:.55rem .65rem;
+  }
+  .mhead{display:flex!important;align-items:center;gap:.5rem}
+  .score{flex:none}
+  .score-track{width:2.2rem}
+  .who{min-width:0;flex:1}
+  .who-sub{white-space:normal;font-size:.74rem;line-height:1.3}
+  .nowat{display:inline-block;margin:0 0 0 .2rem}
+
+  .mmeta{display:flex!important;flex-wrap:wrap;gap:0 .9rem}
+  .meta-cell{font-size:.78rem;font-family:var(--sans);font-weight:500;
+    display:flex;align-items:baseline;gap:.3rem}
+  .meta-cell i{margin:0}
+
+  .reads{margin-top:0}
+  .why{margin-top:0}
 
   /* comparison table drops the track and keeps the columns legible */
   .mrow{grid-template-columns:1fr repeat(var(--cols),2.7rem);gap:.25rem .4rem}
