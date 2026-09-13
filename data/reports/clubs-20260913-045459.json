@@ -1,0 +1,15 @@
+{
+ "upstream_snapshot": null,
+ "refreshed_at": "2026-09-13T04:54:59+00:00",
+ "rows": 13980,
+ "identified_players": 5520,
+ "matched_upstream": 5520,
+ "fields": {
+  "tm_current_club": 0,
+  "tm_market_value_eur": 0,
+  "tm_contract_expires": 0,
+  "tm_transfermarkt_url": 0
+ },
+ "skipped_fields": [],
+ "club_moves": []
+}
