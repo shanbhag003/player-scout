@@ -1,5 +1,5 @@
 {
- "built_at": "2026-09-12T18:35:15+00:00",
+ "built_at": "2026-09-13T03:56:55+00:00",
  "pool": 2779,
  "active_players": 1801,
  "latest_season": "2025/26",
@@ -31,7 +31,21 @@
   "final_third_90": "Final-third involvement",
   "npxG_per_shot": "Shot quality",
   "xA_per_key_pass": "Chance quality created",
-  "finishing_90": "Finishing above expected"
+  "finishing_90": "Finishing above expected",
+  "involvement_share": "Share of team threat",
+  "buildup_share": "Share of team build-up"
+ },
+ "team_context": [
+  "ppda",
+  "npxGA_per_match",
+  "deep_allowed_per_match",
+  "rank_by_pts"
+ ],
+ "team_labels": {
+  "ppda": "Opposition passes per defensive action",
+  "npxGA_per_match": "Non-penalty xG conceded per match",
+  "deep_allowed_per_match": "Deep entries allowed per match",
+  "rank_by_pts": "League finish"
  },
  "metric_short": {
   "npxG_90": "npxG",
@@ -45,9 +59,13 @@
   "final_third_90": "final third",
   "npxG_per_shot": "shot quality",
   "xA_per_key_pass": "chance quality",
-  "finishing_90": "finishing"
+  "finishing_90": "finishing",
+  "involvement_share": "team share",
+  "buildup_share": "build-up share"
  },
  "metric_notes": {
+  "involvement_share": "Of all the threat this player's team generated while he was on the pitch, the share he was involved in. Separates a side's main outlet from one contributor among many.",
+  "buildup_share": "The same, counting only involvement before the shot or the pass that created it.",
   "xGChain_90": "Total xG of every possession this player was involved in, per 90 minutes.",
   "xGBuildup_90": "The same, excluding their own shots and key passes - involvement in building the move rather than finishing it.",
   "final_third_90": "Possession involvement minus build-up involvement: how much of their contribution comes at the sharp end.",
@@ -67,7 +85,9 @@
   "final_third_90",
   "npxG_per_shot",
   "xA_per_key_pass",
-  "finishing_90"
+  "finishing_90",
+  "involvement_share",
+  "buildup_share"
  ],
  "radar_metrics": [
   "npxG_90",
@@ -211,77 +231,165 @@
   "Attacking Midfield": {
    "players": 185,
    "scored": true,
-   "components": 3,
-   "variance": 0.8006,
+   "components": 7,
+   "variance": 0.9671,
    "loadings": [
     {
      "component": 1,
-     "variance": 0.5005,
+     "variance": 0.4803,
      "drivers": [
       {
        "metric": "xGChain_90",
-       "weight": 0.383
+       "weight": 0.365
       },
       {
        "metric": "final_third_90",
-       "weight": 0.37
+       "weight": 0.343
       },
       {
        "metric": "xA_90",
-       "weight": 0.338
+       "weight": 0.322
       },
       {
-       "metric": "npxG_90",
-       "weight": 0.315
+       "metric": "involvement_share",
+       "weight": 0.312
       }
      ]
     },
     {
      "component": 2,
-     "variance": 0.176,
+     "variance": 0.18,
      "drivers": [
       {
-       "metric": "key_passes_90",
-       "weight": 0.464
+       "metric": "buildup_share",
+       "weight": 0.452
       },
       {
        "metric": "npxG_90",
-       "weight": -0.409
+       "weight": -0.394
+      },
+      {
+       "metric": "key_passes_90",
+       "weight": 0.357
       },
       {
        "metric": "npxG_per_shot",
-       "weight": -0.393
-      },
-      {
-       "metric": "assists_90",
-       "weight": 0.349
+       "weight": -0.33
       }
      ]
     },
     {
      "component": 3,
-     "variance": 0.1241,
+     "variance": 0.1076,
      "drivers": [
       {
        "metric": "finishing_90",
-       "weight": 0.675
+       "weight": 0.65
       },
       {
        "metric": "npxG_per_shot",
-       "weight": -0.412
+       "weight": -0.452
       },
       {
        "metric": "goals_90",
-       "weight": 0.404
+       "weight": 0.372
       },
       {
        "metric": "shots_90",
-       "weight": 0.334
+       "weight": 0.327
+      }
+     ]
+    },
+    {
+     "component": 4,
+     "variance": 0.0714,
+     "drivers": [
+      {
+       "metric": "buildup_share",
+       "weight": 0.482
+      },
+      {
+       "metric": "finishing_90",
+       "weight": 0.429
+      },
+      {
+       "metric": "xGBuildup_90",
+       "weight": 0.341
+      },
+      {
+       "metric": "key_passes_90",
+       "weight": -0.295
+      }
+     ]
+    },
+    {
+     "component": 5,
+     "variance": 0.0549,
+     "drivers": [
+      {
+       "metric": "shots_90",
+       "weight": 0.514
+      },
+      {
+       "metric": "finishing_90",
+       "weight": -0.419
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": -0.354
+      },
+      {
+       "metric": "involvement_share",
+       "weight": 0.345
+      }
+     ]
+    },
+    {
+     "component": 6,
+     "variance": 0.0424,
+     "drivers": [
+      {
+       "metric": "xA_per_key_pass",
+       "weight": 0.691
+      },
+      {
+       "metric": "key_passes_90",
+       "weight": -0.501
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": -0.379
+      },
+      {
+       "metric": "shots_90",
+       "weight": 0.192
+      }
+     ]
+    },
+    {
+     "component": 7,
+     "variance": 0.0307,
+     "drivers": [
+      {
+       "metric": "involvement_share",
+       "weight": 0.689
+      },
+      {
+       "metric": "xGBuildup_90",
+       "weight": -0.48
+      },
+      {
+       "metric": "xA_per_key_pass",
+       "weight": 0.306
+      },
+      {
+       "metric": "xGChain_90",
+       "weight": -0.295
       }
      ]
     }
    ],
-   "median_distance": 3.605,
+   "median_distance": 4.556,
    "level": "full",
    "headline": "Ranked across the full available metric set",
    "note": "Shot volume and quality, chance creation, and involvement in possession - the areas this dataset covers well for attacking players.",
@@ -311,99 +419,165 @@
   "Central Midfield": {
    "players": 365,
    "scored": true,
-   "components": 4,
-   "variance": 0.8255,
+   "components": 7,
+   "variance": 0.9588,
    "loadings": [
     {
      "component": 1,
-     "variance": 0.4439,
+     "variance": 0.4338,
      "drivers": [
       {
-       "metric": "final_third_90",
-       "weight": 0.382
+       "metric": "xGChain_90",
+       "weight": 0.353
       },
       {
-       "metric": "xGChain_90",
-       "weight": 0.351
+       "metric": "final_third_90",
+       "weight": 0.339
+      },
+      {
+       "metric": "involvement_share",
+       "weight": 0.335
       },
       {
        "metric": "xA_90",
-       "weight": 0.348
-      },
-      {
-       "metric": "npxG_90",
-       "weight": 0.331
+       "weight": 0.326
       }
      ]
     },
     {
      "component": 2,
-     "variance": 0.1779,
+     "variance": 0.1868,
      "drivers": [
       {
+       "metric": "buildup_share",
+       "weight": 0.466
+      },
+      {
        "metric": "npxG_90",
-       "weight": 0.419
-      },
-      {
-       "metric": "npxG_per_shot",
-       "weight": 0.414
-      },
-      {
-       "metric": "key_passes_90",
-       "weight": -0.413
+       "weight": -0.404
       },
       {
        "metric": "xGBuildup_90",
-       "weight": -0.351
+       "weight": 0.38
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": -0.334
       }
      ]
     },
     {
      "component": 3,
-     "variance": 0.1072,
+     "variance": 0.1045,
      "drivers": [
       {
-       "metric": "finishing_90",
-       "weight": 0.833
+       "metric": "xA_90",
+       "weight": 0.407
       },
       {
-       "metric": "goals_90",
-       "weight": 0.503
+       "metric": "key_passes_90",
+       "weight": 0.404
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": -0.396
       },
       {
        "metric": "assists_90",
-       "weight": -0.121
-      },
-      {
-       "metric": "xA_per_key_pass",
-       "weight": -0.108
+       "weight": 0.366
       }
      ]
     },
     {
      "component": 4,
-     "variance": 0.0965,
+     "variance": 0.0916,
      "drivers": [
       {
-       "metric": "xGBuildup_90",
-       "weight": 0.574
+       "metric": "finishing_90",
+       "weight": 0.83
       },
       {
-       "metric": "xGChain_90",
-       "weight": 0.445
+       "metric": "goals_90",
+       "weight": 0.506
       },
       {
        "metric": "npxG_per_shot",
-       "weight": 0.41
+       "weight": -0.115
+      },
+      {
+       "metric": "xGChain_90",
+       "weight": -0.106
+      }
+     ]
+    },
+    {
+     "component": 5,
+     "variance": 0.0632,
+     "drivers": [
+      {
+       "metric": "xA_per_key_pass",
+       "weight": 0.736
       },
       {
        "metric": "shots_90",
-       "weight": -0.383
+       "weight": -0.476
+      },
+      {
+       "metric": "key_passes_90",
+       "weight": -0.253
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": 0.224
+      }
+     ]
+    },
+    {
+     "component": 6,
+     "variance": 0.0506,
+     "drivers": [
+      {
+       "metric": "npxG_per_shot",
+       "weight": 0.534
+      },
+      {
+       "metric": "shots_90",
+       "weight": -0.5
+      },
+      {
+       "metric": "xA_per_key_pass",
+       "weight": -0.455
+      },
+      {
+       "metric": "key_passes_90",
+       "weight": 0.377
+      }
+     ]
+    },
+    {
+     "component": 7,
+     "variance": 0.0283,
+     "drivers": [
+      {
+       "metric": "involvement_share",
+       "weight": 0.617
+      },
+      {
+       "metric": "xGBuildup_90",
+       "weight": -0.439
+      },
+      {
+       "metric": "assists_90",
+       "weight": -0.387
+      },
+      {
+       "metric": "xGChain_90",
+       "weight": -0.3
       }
      ]
     }
    ],
-   "median_distance": 3.83,
+   "median_distance": 4.603,
    "level": "attacking_only",
    "headline": "Ranked on attacking contribution only",
    "note": "Ball-winning and defensive positioning are not measured here. The comparison covers progression, creation and involvement in possession.",
@@ -433,121 +607,187 @@
   "Centre-Back": {
    "players": 584,
    "scored": true,
-   "components": 5,
-   "variance": 0.8564,
+   "components": 8,
+   "variance": 0.969,
    "loadings": [
     {
      "component": 1,
-     "variance": 0.3525,
+     "variance": 0.3578,
      "drivers": [
       {
-       "metric": "xA_90",
-       "weight": 0.399
+       "metric": "xGChain_90",
+       "weight": 0.381
+      },
+      {
+       "metric": "involvement_share",
+       "weight": 0.358
+      },
+      {
+       "metric": "xGBuildup_90",
+       "weight": 0.352
       },
       {
        "metric": "key_passes_90",
-       "weight": 0.377
-      },
-      {
-       "metric": "final_third_90",
-       "weight": 0.368
-      },
-      {
-       "metric": "xGChain_90",
-       "weight": 0.33
+       "weight": 0.321
       }
      ]
     },
     {
      "component": 2,
-     "variance": 0.1717,
+     "variance": 0.1749,
      "drivers": [
       {
-       "metric": "npxG_90",
-       "weight": 0.474
+       "metric": "buildup_share",
+       "weight": 0.437
       },
       {
-       "metric": "goals_90",
-       "weight": 0.469
+       "metric": "xGBuildup_90",
+       "weight": 0.34
       },
       {
-       "metric": "npxG_per_shot",
-       "weight": 0.404
+       "metric": "involvement_share",
+       "weight": 0.331
       },
       {
-       "metric": "assists_90",
-       "weight": -0.318
+       "metric": "xA_90",
+       "weight": -0.31
       }
      ]
     },
     {
      "component": 3,
-     "variance": 0.1266,
+     "variance": 0.147,
      "drivers": [
       {
-       "metric": "xGBuildup_90",
-       "weight": 0.616
-      },
-      {
-       "metric": "xGChain_90",
-       "weight": 0.564
-      },
-      {
-       "metric": "xA_per_key_pass",
-       "weight": -0.318
-      },
-      {
        "metric": "npxG_90",
-       "weight": -0.235
+       "weight": 0.503
+      },
+      {
+       "metric": "goals_90",
+       "weight": 0.491
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": 0.413
+      },
+      {
+       "metric": "assists_90",
+       "weight": -0.295
       }
      ]
     },
     {
      "component": 4,
-     "variance": 0.112,
+     "variance": 0.0961,
      "drivers": [
       {
        "metric": "finishing_90",
-       "weight": 0.827
+       "weight": 0.83
       },
       {
        "metric": "goals_90",
-       "weight": 0.41
+       "weight": 0.4
       },
       {
        "metric": "npxG_per_shot",
-       "weight": -0.288
+       "weight": -0.3
       },
       {
        "metric": "npxG_90",
-       "weight": -0.199
+       "weight": -0.213
       }
      ]
     },
     {
      "component": 5,
-     "variance": 0.0936,
+     "variance": 0.0806,
      "drivers": [
       {
        "metric": "xA_per_key_pass",
-       "weight": 0.6
+       "weight": 0.636
       },
       {
        "metric": "npxG_per_shot",
-       "weight": 0.519
+       "weight": 0.523
       },
       {
        "metric": "shots_90",
-       "weight": -0.428
+       "weight": -0.408
       },
       {
        "metric": "key_passes_90",
-       "weight": -0.244
+       "weight": -0.25
+      }
+     ]
+    },
+    {
+     "component": 6,
+     "variance": 0.0583,
+     "drivers": [
+      {
+       "metric": "xA_per_key_pass",
+       "weight": 0.518
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": -0.487
+      },
+      {
+       "metric": "shots_90",
+       "weight": 0.448
+      },
+      {
+       "metric": "key_passes_90",
+       "weight": -0.364
+      }
+     ]
+    },
+    {
+     "component": 7,
+     "variance": 0.0324,
+     "drivers": [
+      {
+       "metric": "assists_90",
+       "weight": 0.773
+      },
+      {
+       "metric": "final_third_90",
+       "weight": -0.525
+      },
+      {
+       "metric": "xA_per_key_pass",
+       "weight": -0.255
+      },
+      {
+       "metric": "involvement_share",
+       "weight": -0.145
+      }
+     ]
+    },
+    {
+     "component": 8,
+     "variance": 0.0219,
+     "drivers": [
+      {
+       "metric": "final_third_90",
+       "weight": 0.536
+      },
+      {
+       "metric": "key_passes_90",
+       "weight": -0.51
+      },
+      {
+       "metric": "assists_90",
+       "weight": 0.376
+      },
+      {
+       "metric": "xA_90",
+       "weight": -0.355
       }
      ]
     }
    ],
-   "median_distance": 3.941,
+   "median_distance": 4.611,
    "level": "attacking_only",
    "headline": "Ranked on attacking contribution only",
    "note": "No tackles, interceptions, duels or clearances exist in this dataset. These are centre-backs whose progression and chance creation resemble the searched player's - not whose defending does.",
@@ -577,99 +817,165 @@
   "Centre-Forward": {
    "players": 339,
    "scored": true,
-   "components": 4,
-   "variance": 0.8437,
+   "components": 7,
+   "variance": 0.9607,
    "loadings": [
     {
      "component": 1,
-     "variance": 0.4666,
+     "variance": 0.439,
      "drivers": [
       {
        "metric": "xGChain_90",
-       "weight": 0.409
+       "weight": 0.389
       },
       {
        "metric": "final_third_90",
-       "weight": 0.382
+       "weight": 0.356
       },
       {
        "metric": "npxG_90",
-       "weight": 0.344
+       "weight": 0.314
       },
       {
-       "metric": "goals_90",
-       "weight": 0.318
+       "metric": "xA_90",
+       "weight": 0.303
       }
      ]
     },
     {
      "component": 2,
-     "variance": 0.1937,
+     "variance": 0.1925,
      "drivers": [
       {
-       "metric": "key_passes_90",
-       "weight": 0.455
+       "metric": "buildup_share",
+       "weight": 0.409
       },
       {
-       "metric": "xA_90",
-       "weight": 0.403
+       "metric": "key_passes_90",
+       "weight": 0.389
       },
       {
        "metric": "npxG_per_shot",
-       "weight": -0.4
+       "weight": -0.369
       },
       {
-       "metric": "assists_90",
-       "weight": 0.367
+       "metric": "npxG_90",
+       "weight": -0.364
       }
      ]
     },
     {
      "component": 3,
-     "variance": 0.103,
+     "variance": 0.0898,
      "drivers": [
       {
        "metric": "finishing_90",
-       "weight": 0.793
+       "weight": 0.75
       },
       {
        "metric": "goals_90",
-       "weight": 0.437
+       "weight": 0.445
       },
       {
        "metric": "xA_per_key_pass",
-       "weight": -0.263
+       "weight": -0.301
       },
       {
        "metric": "assists_90",
-       "weight": -0.182
+       "weight": -0.231
       }
      ]
     },
     {
      "component": 4,
-     "variance": 0.0804,
+     "variance": 0.0805,
+     "drivers": [
+      {
+       "metric": "xA_per_key_pass",
+       "weight": 0.504
+      },
+      {
+       "metric": "buildup_share",
+       "weight": -0.456
+      },
+      {
+       "metric": "involvement_share",
+       "weight": -0.314
+      },
+      {
+       "metric": "assists_90",
+       "weight": 0.277
+      }
+     ]
+    },
+    {
+     "component": 5,
+     "variance": 0.0692,
      "drivers": [
       {
        "metric": "shots_90",
-       "weight": 0.682
+       "weight": 0.667
       },
       {
        "metric": "npxG_per_shot",
        "weight": -0.57
       },
       {
-       "metric": "finishing_90",
-       "weight": -0.336
+       "metric": "xA_per_key_pass",
+       "weight": -0.316
       },
       {
+       "metric": "finishing_90",
+       "weight": -0.306
+      }
+     ]
+    },
+    {
+     "component": 6,
+     "variance": 0.0498,
+     "drivers": [
+      {
        "metric": "xA_per_key_pass",
-       "weight": -0.264
+       "weight": 0.587
+      },
+      {
+       "metric": "key_passes_90",
+       "weight": -0.495
+      },
+      {
+       "metric": "buildup_share",
+       "weight": 0.364
+      },
+      {
+       "metric": "involvement_share",
+       "weight": 0.363
+      }
+     ]
+    },
+    {
+     "component": 7,
+     "variance": 0.0398,
+     "drivers": [
+      {
+       "metric": "involvement_share",
+       "weight": 0.744
+      },
+      {
+       "metric": "xGBuildup_90",
+       "weight": -0.486
+      },
+      {
+       "metric": "key_passes_90",
+       "weight": 0.227
+      },
+      {
+       "metric": "finishing_90",
+       "weight": 0.227
       }
      ]
     }
    ],
-   "median_distance": 3.649,
+   "median_distance": 4.409,
    "level": "full",
    "headline": "Ranked across the full available metric set",
    "note": "Shot volume and quality, chance creation, and involvement in possession - the areas this dataset covers well for attacking players.",
@@ -699,99 +1005,165 @@
   "Defensive Midfield": {
    "players": 238,
    "scored": true,
-   "components": 4,
-   "variance": 0.8348,
+   "components": 7,
+   "variance": 0.96,
    "loadings": [
     {
      "component": 1,
-     "variance": 0.461,
+     "variance": 0.4572,
      "drivers": [
       {
-       "metric": "final_third_90",
-       "weight": 0.366
+       "metric": "xGChain_90",
+       "weight": 0.343
       },
       {
        "metric": "xA_90",
-       "weight": 0.363
+       "weight": 0.33
       },
       {
-       "metric": "xGChain_90",
-       "weight": 0.338
+       "metric": "involvement_share",
+       "weight": 0.327
       },
       {
-       "metric": "key_passes_90",
-       "weight": 0.332
+       "metric": "final_third_90",
+       "weight": 0.319
       }
      ]
     },
     {
      "component": 2,
-     "variance": 0.1652,
+     "variance": 0.1721,
      "drivers": [
       {
-       "metric": "npxG_per_shot",
-       "weight": 0.497
+       "metric": "npxG_90",
+       "weight": 0.456
       },
       {
-       "metric": "npxG_90",
-       "weight": 0.491
+       "metric": "buildup_share",
+       "weight": -0.424
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": 0.388
       },
       {
        "metric": "xGBuildup_90",
-       "weight": -0.307
-      },
-      {
-       "metric": "key_passes_90",
-       "weight": -0.272
+       "weight": -0.325
       }
      ]
     },
     {
      "component": 3,
-     "variance": 0.1117,
+     "variance": 0.1043,
      "drivers": [
       {
-       "metric": "finishing_90",
-       "weight": 0.689
-      },
-      {
-       "metric": "goals_90",
-       "weight": 0.471
-      },
-      {
-       "metric": "xA_per_key_pass",
-       "weight": -0.276
-      },
-      {
        "metric": "xA_90",
-       "weight": -0.251
+       "weight": 0.406
+      },
+      {
+       "metric": "assists_90",
+       "weight": 0.387
+      },
+      {
+       "metric": "key_passes_90",
+       "weight": 0.369
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": -0.332
       }
      ]
     },
     {
      "component": 4,
-     "variance": 0.097,
+     "variance": 0.091,
      "drivers": [
       {
-       "metric": "xGBuildup_90",
-       "weight": 0.479
+       "metric": "finishing_90",
+       "weight": 0.632
       },
       {
        "metric": "npxG_per_shot",
-       "weight": 0.47
+       "weight": -0.421
+      },
+      {
+       "metric": "goals_90",
+       "weight": 0.398
       },
       {
        "metric": "shots_90",
-       "weight": -0.442
+       "weight": 0.312
+      }
+     ]
+    },
+    {
+     "component": 5,
+     "variance": 0.07,
+     "drivers": [
+      {
+       "metric": "xA_per_key_pass",
+       "weight": 0.674
+      },
+      {
+       "metric": "finishing_90",
+       "weight": 0.469
+      },
+      {
+       "metric": "shots_90",
+       "weight": -0.342
+      },
+      {
+       "metric": "involvement_share",
+       "weight": -0.213
+      }
+     ]
+    },
+    {
+     "component": 6,
+     "variance": 0.0402,
+     "drivers": [
+      {
+       "metric": "shots_90",
+       "weight": 0.531
+      },
+      {
+       "metric": "xA_per_key_pass",
+       "weight": 0.53
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": -0.428
+      },
+      {
+       "metric": "assists_90",
+       "weight": -0.28
+      }
+     ]
+    },
+    {
+     "component": 7,
+     "variance": 0.0251,
+     "drivers": [
+      {
+       "metric": "involvement_share",
+       "weight": 0.551
+      },
+      {
+       "metric": "xGBuildup_90",
+       "weight": -0.486
       },
       {
        "metric": "xGChain_90",
-       "weight": 0.386
+       "weight": -0.355
+      },
+      {
+       "metric": "buildup_share",
+       "weight": 0.285
       }
      ]
     }
    ],
-   "median_distance": 3.517,
+   "median_distance": 4.305,
    "level": "attacking_only",
    "headline": "Ranked on attacking contribution only",
    "note": "Ball-winning and defensive positioning are not measured here. The comparison covers progression, creation and involvement in possession.",
@@ -857,99 +1229,165 @@
   "Left Winger": {
    "players": 182,
    "scored": true,
-   "components": 4,
-   "variance": 0.8318,
+   "components": 7,
+   "variance": 0.9561,
    "loadings": [
     {
      "component": 1,
-     "variance": 0.4372,
+     "variance": 0.413,
      "drivers": [
       {
        "metric": "xGChain_90",
-       "weight": 0.413
+       "weight": 0.396
       },
       {
        "metric": "final_third_90",
-       "weight": 0.405
+       "weight": 0.381
       },
       {
        "metric": "npxG_90",
-       "weight": 0.369
+       "weight": 0.343
       },
       {
        "metric": "goals_90",
-       "weight": 0.336
+       "weight": 0.313
       }
      ]
     },
     {
      "component": 2,
-     "variance": 0.204,
+     "variance": 0.2023,
      "drivers": [
       {
        "metric": "key_passes_90",
-       "weight": 0.502
+       "weight": 0.433
+      },
+      {
+       "metric": "buildup_share",
+       "weight": 0.421
+      },
+      {
+       "metric": "xGBuildup_90",
+       "weight": 0.353
       },
       {
        "metric": "xA_90",
-       "weight": 0.436
-      },
-      {
-       "metric": "assists_90",
-       "weight": 0.377
-      },
-      {
-       "metric": "npxG_90",
-       "weight": -0.324
+       "weight": 0.332
       }
      ]
     },
     {
      "component": 3,
-     "variance": 0.1041,
+     "variance": 0.1053,
      "drivers": [
       {
-       "metric": "finishing_90",
-       "weight": 0.66
-      },
-      {
        "metric": "xA_per_key_pass",
-       "weight": -0.558
+       "weight": 0.477
       },
       {
-       "metric": "goals_90",
-       "weight": 0.338
+       "metric": "buildup_share",
+       "weight": -0.43
       },
       {
-       "metric": "xGBuildup_90",
-       "weight": 0.241
+       "metric": "xA_90",
+       "weight": 0.385
+      },
+      {
+       "metric": "assists_90",
+       "weight": 0.309
       }
      ]
     },
     {
      "component": 4,
-     "variance": 0.0866,
+     "variance": 0.0797,
+     "drivers": [
+      {
+       "metric": "finishing_90",
+       "weight": 0.79
+      },
+      {
+       "metric": "goals_90",
+       "weight": 0.394
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": -0.233
+      },
+      {
+       "metric": "buildup_share",
+       "weight": -0.227
+      }
+     ]
+    },
+    {
+     "component": 5,
+     "variance": 0.0737,
      "drivers": [
       {
        "metric": "xA_per_key_pass",
-       "weight": 0.627
-      },
-      {
-       "metric": "finishing_90",
-       "weight": 0.566
+       "weight": 0.615
       },
       {
        "metric": "shots_90",
-       "weight": -0.348
+       "weight": -0.495
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": 0.387
+      },
+      {
+       "metric": "finishing_90",
+       "weight": 0.354
+      }
+     ]
+    },
+    {
+     "component": 6,
+     "variance": 0.0452,
+     "drivers": [
+      {
+       "metric": "npxG_per_shot",
+       "weight": 0.521
+      },
+      {
+       "metric": "involvement_share",
+       "weight": -0.484
+      },
+      {
+       "metric": "xA_per_key_pass",
+       "weight": -0.353
+      },
+      {
+       "metric": "shots_90",
+       "weight": -0.352
+      }
+     ]
+    },
+    {
+     "component": 7,
+     "variance": 0.0368,
+     "drivers": [
+      {
+       "metric": "involvement_share",
+       "weight": 0.681
+      },
+      {
+       "metric": "xGBuildup_90",
+       "weight": -0.46
       },
       {
        "metric": "key_passes_90",
-       "weight": -0.231
+       "weight": 0.326
+      },
+      {
+       "metric": "xGChain_90",
+       "weight": -0.262
       }
      ]
     }
    ],
-   "median_distance": 3.798,
+   "median_distance": 4.602,
    "level": "full",
    "headline": "Ranked across the full available metric set",
    "note": "Shot volume and quality, chance creation, and involvement in possession - the areas this dataset covers well for attacking players.",
@@ -979,99 +1417,165 @@
   "Left-Back": {
    "players": 212,
    "scored": true,
-   "components": 4,
-   "variance": 0.8298,
+   "components": 7,
+   "variance": 0.9577,
    "loadings": [
     {
      "component": 1,
-     "variance": 0.4539,
+     "variance": 0.4484,
      "drivers": [
       {
+       "metric": "xGChain_90",
+       "weight": 0.346
+      },
+      {
+       "metric": "involvement_share",
+       "weight": 0.332
+      },
+      {
        "metric": "final_third_90",
-       "weight": 0.374
+       "weight": 0.33
       },
       {
        "metric": "xA_90",
-       "weight": 0.35
-      },
-      {
-       "metric": "xGChain_90",
-       "weight": 0.341
-      },
-      {
-       "metric": "npxG_90",
-       "weight": 0.325
+       "weight": 0.322
       }
      ]
     },
     {
      "component": 2,
-     "variance": 0.1621,
+     "variance": 0.1662,
      "drivers": [
       {
-       "metric": "npxG_90",
-       "weight": 0.42
+       "metric": "buildup_share",
+       "weight": 0.448
       },
       {
        "metric": "goals_90",
-       "weight": 0.397
+       "weight": -0.397
       },
       {
-       "metric": "npxG_per_shot",
-       "weight": 0.381
+       "metric": "npxG_90",
+       "weight": -0.392
       },
       {
-       "metric": "assists_90",
-       "weight": -0.351
+       "metric": "xGBuildup_90",
+       "weight": 0.356
       }
      ]
     },
     {
      "component": 3,
-     "variance": 0.1225,
+     "variance": 0.1157,
      "drivers": [
       {
-       "metric": "finishing_90",
-       "weight": 0.61
-      },
-      {
        "metric": "npxG_per_shot",
-       "weight": -0.495
+       "weight": 0.495
       },
       {
-       "metric": "xGBuildup_90",
-       "weight": -0.286
+       "metric": "key_passes_90",
+       "weight": -0.447
       },
       {
-       "metric": "goals_90",
-       "weight": 0.244
+       "metric": "xA_90",
+       "weight": -0.373
+      },
+      {
+       "metric": "assists_90",
+       "weight": -0.292
       }
      ]
     },
     {
      "component": 4,
-     "variance": 0.0913,
+     "variance": 0.0949,
      "drivers": [
       {
-       "metric": "xGBuildup_90",
-       "weight": 0.619
-      },
-      {
-       "metric": "xGChain_90",
-       "weight": 0.442
+       "metric": "finishing_90",
+       "weight": 0.629
       },
       {
        "metric": "xA_per_key_pass",
-       "weight": -0.355
+       "weight": -0.403
+      },
+      {
+       "metric": "goals_90",
+       "weight": 0.32
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": -0.3
+      }
+     ]
+    },
+    {
+     "component": 5,
+     "variance": 0.0586,
+     "drivers": [
+      {
+       "metric": "xA_per_key_pass",
+       "weight": 0.646
       },
       {
        "metric": "finishing_90",
-       "weight": 0.327
+       "weight": 0.516
+      },
+      {
+       "metric": "shots_90",
+       "weight": -0.412
+      },
+      {
+       "metric": "key_passes_90",
+       "weight": -0.25
+      }
+     ]
+    },
+    {
+     "component": 6,
+     "variance": 0.0451,
+     "drivers": [
+      {
+       "metric": "npxG_per_shot",
+       "weight": 0.558
+      },
+      {
+       "metric": "shots_90",
+       "weight": -0.478
+      },
+      {
+       "metric": "xA_per_key_pass",
+       "weight": -0.464
+      },
+      {
+       "metric": "key_passes_90",
+       "weight": 0.387
+      }
+     ]
+    },
+    {
+     "component": 7,
+     "variance": 0.0288,
+     "drivers": [
+      {
+       "metric": "assists_90",
+       "weight": 0.578
+      },
+      {
+       "metric": "involvement_share",
+       "weight": -0.548
+      },
+      {
+       "metric": "xGBuildup_90",
+       "weight": 0.343
+      },
+      {
+       "metric": "final_third_90",
+       "weight": -0.3
       }
      ]
     }
    ],
-   "median_distance": 3.553,
+   "median_distance": 4.346,
    "level": "attacking_only",
    "headline": "Ranked on attacking contribution only",
    "note": "Defensive actions are not in this dataset. These full-backs match on how they create and join attacks, not on how they defend.",
@@ -1101,99 +1605,165 @@
   "Right Winger": {
    "players": 191,
    "scored": true,
-   "components": 4,
-   "variance": 0.8667,
+   "components": 7,
+   "variance": 0.9661,
    "loadings": [
     {
      "component": 1,
-     "variance": 0.5042,
+     "variance": 0.4858,
      "drivers": [
       {
        "metric": "xGChain_90",
-       "weight": 0.391
+       "weight": 0.37
       },
       {
        "metric": "final_third_90",
-       "weight": 0.375
-      },
-      {
-       "metric": "npxG_90",
-       "weight": 0.334
+       "weight": 0.346
       },
       {
        "metric": "xA_90",
-       "weight": 0.331
+       "weight": 0.314
+      },
+      {
+       "metric": "involvement_share",
+       "weight": 0.312
       }
      ]
     },
     {
      "component": 2,
-     "variance": 0.177,
+     "variance": 0.1773,
      "drivers": [
       {
        "metric": "npxG_per_shot",
-       "weight": 0.511
+       "weight": 0.446
+      },
+      {
+       "metric": "buildup_share",
+       "weight": -0.429
       },
       {
        "metric": "key_passes_90",
-       "weight": -0.443
-      },
-      {
-       "metric": "finishing_90",
-       "weight": -0.356
+       "weight": -0.372
       },
       {
        "metric": "npxG_90",
-       "weight": 0.348
+       "weight": 0.35
       }
      ]
     },
     {
      "component": 3,
-     "variance": 0.1023,
+     "variance": 0.0925,
      "drivers": [
       {
        "metric": "finishing_90",
-       "weight": 0.588
+       "weight": 0.633
       },
       {
        "metric": "goals_90",
-       "weight": 0.543
-      },
-      {
-       "metric": "xA_per_key_pass",
-       "weight": -0.323
+       "weight": 0.506
       },
       {
        "metric": "shots_90",
-       "weight": 0.318
+       "weight": 0.302
+      },
+      {
+       "metric": "buildup_share",
+       "weight": -0.28
       }
      ]
     },
     {
      "component": 4,
-     "variance": 0.0832,
+     "variance": 0.0744,
      "drivers": [
       {
        "metric": "xA_per_key_pass",
-       "weight": 0.692
+       "weight": 0.722
       },
       {
-       "metric": "finishing_90",
-       "weight": 0.5
+       "metric": "assists_90",
+       "weight": 0.308
       },
       {
-       "metric": "key_passes_90",
-       "weight": -0.304
+       "metric": "xA_90",
+       "weight": 0.294
       },
       {
        "metric": "shots_90",
-       "weight": -0.288
+       "weight": -0.258
+      }
+     ]
+    },
+    {
+     "component": 5,
+     "variance": 0.0637,
+     "drivers": [
+      {
+       "metric": "finishing_90",
+       "weight": 0.458
+      },
+      {
+       "metric": "buildup_share",
+       "weight": 0.441
+      },
+      {
+       "metric": "key_passes_90",
+       "weight": -0.391
+      },
+      {
+       "metric": "npxG_per_shot",
+       "weight": 0.311
+      }
+     ]
+    },
+    {
+     "component": 6,
+     "variance": 0.0425,
+     "drivers": [
+      {
+       "metric": "npxG_per_shot",
+       "weight": 0.583
+      },
+      {
+       "metric": "shots_90",
+       "weight": -0.496
+      },
+      {
+       "metric": "xA_per_key_pass",
+       "weight": -0.396
+      },
+      {
+       "metric": "key_passes_90",
+       "weight": 0.368
+      }
+     ]
+    },
+    {
+     "component": 7,
+     "variance": 0.0299,
+     "drivers": [
+      {
+       "metric": "involvement_share",
+       "weight": 0.735
+      },
+      {
+       "metric": "xGBuildup_90",
+       "weight": -0.504
+      },
+      {
+       "metric": "xGChain_90",
+       "weight": -0.265
+      },
+      {
+       "metric": "key_passes_90",
+       "weight": 0.19
       }
      ]
     }
    ],
-   "median_distance": 3.836,
+   "median_distance": 4.547,
    "level": "full",
    "headline": "Ranked across the full available metric set",
    "note": "Shot volume and quality, chance creation, and involvement in possession - the areas this dataset covers well for attacking players.",
@@ -1223,99 +1793,165 @@
   "Right-Back": {
    "players": 260,
    "scored": true,
-   "components": 4,
-   "variance": 0.8269,
+   "components": 7,
+   "variance": 0.9579,
    "loadings": [
     {
      "component": 1,
-     "variance": 0.4854,
+     "variance": 0.4826,
      "drivers": [
       {
-       "metric": "xA_90",
-       "weight": 0.364
+       "metric": "xGChain_90",
+       "weight": 0.348
       },
       {
-       "metric": "xGChain_90",
-       "weight": 0.359
+       "metric": "xA_90",
+       "weight": 0.335
+      },
+      {
+       "metric": "involvement_share",
+       "weight": 0.325
       },
       {
        "metric": "final_third_90",
-       "weight": 0.358
-      },
-      {
-       "metric": "npxG_90",
-       "weight": 0.32
+       "weight": 0.319
       }
      ]
     },
     {
      "component": 2,
-     "variance": 0.1343,
+     "variance": 0.1398,
      "drivers": [
       {
+       "metric": "buildup_share",
+       "weight": 0.478
+      },
+      {
        "metric": "npxG_90",
-       "weight": 0.468
-      },
-      {
-       "metric": "finishing_90",
-       "weight": -0.396
-      },
-      {
-       "metric": "npxG_per_shot",
-       "weight": 0.361
+       "weight": -0.438
       },
       {
        "metric": "xGBuildup_90",
-       "weight": -0.337
+       "weight": 0.39
+      },
+      {
+       "metric": "shots_90",
+       "weight": -0.324
       }
      ]
     },
     {
      "component": 3,
-     "variance": 0.1163,
+     "variance": 0.1004,
      "drivers": [
       {
        "metric": "finishing_90",
-       "weight": 0.669
+       "weight": 0.691
       },
       {
        "metric": "goals_90",
-       "weight": 0.526
+       "weight": 0.542
       },
       {
        "metric": "npxG_per_shot",
-       "weight": 0.351
+       "weight": 0.32
       },
       {
        "metric": "assists_90",
-       "weight": -0.215
+       "weight": -0.183
       }
      ]
     },
     {
      "component": 4,
-     "variance": 0.091,
+     "variance": 0.0923,
      "drivers": [
       {
-       "metric": "xGBuildup_90",
-       "weight": 0.47
+       "metric": "npxG_per_shot",
+       "weight": 0.501
       },
       {
-       "metric": "npxG_per_shot",
-       "weight": 0.452
+       "metric": "key_passes_90",
+       "weight": -0.457
+      },
+      {
+       "metric": "finishing_90",
+       "weight": -0.359
+      },
+      {
+       "metric": "xA_90",
+       "weight": -0.307
+      }
+     ]
+    },
+    {
+     "component": 5,
+     "variance": 0.0565,
+     "drivers": [
+      {
+       "metric": "xA_per_key_pass",
+       "weight": 0.851
+      },
+      {
+       "metric": "key_passes_90",
+       "weight": -0.357
+      },
+      {
+       "metric": "finishing_90",
+       "weight": 0.224
       },
       {
        "metric": "shots_90",
-       "weight": -0.373
+       "weight": -0.145
+      }
+     ]
+    },
+    {
+     "component": 6,
+     "variance": 0.0514,
+     "drivers": [
+      {
+       "metric": "shots_90",
+       "weight": 0.569
       },
       {
-       "metric": "xGChain_90",
-       "weight": 0.337
+       "metric": "npxG_per_shot",
+       "weight": -0.563
+      },
+      {
+       "metric": "key_passes_90",
+       "weight": -0.333
+      },
+      {
+       "metric": "xA_90",
+       "weight": -0.248
+      }
+     ]
+    },
+    {
+     "component": 7,
+     "variance": 0.0349,
+     "drivers": [
+      {
+       "metric": "assists_90",
+       "weight": 0.614
+      },
+      {
+       "metric": "involvement_share",
+       "weight": -0.538
+      },
+      {
+       "metric": "xGBuildup_90",
+       "weight": 0.328
+      },
+      {
+       "metric": "final_third_90",
+       "weight": -0.282
       }
      ]
     }
    ],
-   "median_distance": 3.457,
+   "median_distance": 4.287,
    "level": "attacking_only",
    "headline": "Ranked on attacking contribution only",
    "note": "Defensive actions are not in this dataset. These full-backs match on how they create and join attacks, not on how they defend.",
@@ -1346,9 +1982,9 @@
  "groups": {
   "Attacking Midfield & Wingers": {
    "players": 558,
-   "components": 4,
-   "variance": 0.8465,
-   "median_distance": 3.774,
+   "components": 7,
+   "variance": 0.9627,
+   "median_distance": 4.543,
    "positions": [
     "Attacking Midfield",
     "Left Winger",
@@ -1360,9 +1996,9 @@
   },
   "Centre-Back": {
    "players": 584,
-   "components": 5,
-   "variance": 0.8564,
-   "median_distance": 3.941,
+   "components": 8,
+   "variance": 0.969,
+   "median_distance": 4.611,
    "positions": [
     "Centre-Back"
    ],
@@ -1372,9 +2008,9 @@
   },
   "Centre-Forward": {
    "players": 339,
-   "components": 4,
-   "variance": 0.8437,
-   "median_distance": 3.649,
+   "components": 7,
+   "variance": 0.9607,
+   "median_distance": 4.409,
    "positions": [
     "Centre-Forward"
    ],
@@ -1384,9 +2020,9 @@
   },
   "Full-Back": {
    "players": 472,
-   "components": 4,
-   "variance": 0.8221,
-   "median_distance": 3.495,
+   "components": 7,
+   "variance": 0.9573,
+   "median_distance": 4.317,
    "positions": [
     "Left-Back",
     "Right-Back"
@@ -1397,9 +2033,9 @@
   },
   "Midfield": {
    "players": 603,
-   "components": 4,
-   "variance": 0.8392,
-   "median_distance": 3.756,
+   "components": 7,
+   "variance": 0.9611,
+   "median_distance": 4.519,
    "positions": [
     "Central Midfield",
     "Defensive Midfield"
@@ -1425,82 +2061,92 @@
   {
    "position": "Attacking Midfield",
    "players": 161,
-   "ranked_first": 0.093,
-   "top_five": 0.342,
-   "median_rank": 19.0,
-   "chance_median_rank": 81.0
+   "ranked_first": 0.106,
+   "top_five": 0.329,
+   "median_rank": 18.0,
+   "chance_median_rank": 81.0,
+   "components": 7
   },
   {
    "position": "Central Midfield",
    "players": 304,
-   "ranked_first": 0.069,
-   "top_five": 0.194,
-   "median_rank": 33.5,
-   "chance_median_rank": 152.5
+   "ranked_first": 0.062,
+   "top_five": 0.204,
+   "median_rank": 37.0,
+   "chance_median_rank": 152.5,
+   "components": 7
   },
   {
    "position": "Centre-Back",
    "players": 464,
-   "ranked_first": 0.022,
-   "top_five": 0.075,
-   "median_rank": 85.0,
-   "chance_median_rank": 232.5
+   "ranked_first": 0.024,
+   "top_five": 0.071,
+   "median_rank": 84.0,
+   "chance_median_rank": 232.5,
+   "components": 8
   },
   {
    "position": "Centre-Forward",
    "players": 269,
-   "ranked_first": 0.045,
-   "top_five": 0.141,
-   "median_rank": 52.0,
-   "chance_median_rank": 135.0
+   "ranked_first": 0.074,
+   "top_five": 0.134,
+   "median_rank": 56.0,
+   "chance_median_rank": 135.0,
+   "components": 7
   },
   {
    "position": "Defensive Midfield",
    "players": 195,
-   "ranked_first": 0.062,
-   "top_five": 0.138,
-   "median_rank": 33.0,
-   "chance_median_rank": 98.0
+   "ranked_first": 0.067,
+   "top_five": 0.169,
+   "median_rank": 38.0,
+   "chance_median_rank": 98.0,
+   "components": 7
   },
   {
    "position": "Goalkeeper",
    "players": 160,
    "ranked_first": 0.006,
-   "top_five": 0.031,
-   "median_rank": 61.5,
-   "chance_median_rank": 80.5
+   "top_five": 0.044,
+   "median_rank": 57.0,
+   "chance_median_rank": 80.5,
+   "components": 7
   },
   {
    "position": "Left Winger",
    "players": 150,
-   "ranked_first": 0.06,
-   "top_five": 0.227,
-   "median_rank": 23.0,
-   "chance_median_rank": 75.5
+   "ranked_first": 0.073,
+   "top_five": 0.247,
+   "median_rank": 24.5,
+   "chance_median_rank": 75.5,
+   "components": 7
   },
   {
    "position": "Left-Back",
    "players": 173,
-   "ranked_first": 0.069,
+   "ranked_first": 0.075,
    "top_five": 0.214,
-   "median_rank": 28.0,
-   "chance_median_rank": 87.0
+   "median_rank": 25.0,
+   "chance_median_rank": 87.0,
+   "components": 7
   },
   {
    "position": "Right Winger",
    "players": 153,
    "ranked_first": 0.078,
-   "top_five": 0.216,
-   "median_rank": 27.0,
-   "chance_median_rank": 77.0
+   "top_five": 0.235,
+   "median_rank": 23.0,
+   "chance_median_rank": 77.0,
+   "components": 7
   },
   {
    "position": "Right-Back",
    "players": 206,
-   "ranked_first": 0.073,
-   "top_five": 0.18,
+   "ranked_first": 0.058,
+   "top_five": 0.204,
    "median_rank": 30.0,
-   "chance_median_rank": 103.5
+   "chance_median_rank": 103.5,
+   "components": 7
   }
  ]
 }

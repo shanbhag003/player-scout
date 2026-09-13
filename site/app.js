@@ -440,7 +440,41 @@ function renderProfileTab() {
           <b>${Math.round(d.pct[m] ?? 0)}</b></span></div>`).join("");
   }
   renderCareer(p);
+  renderTeamContext(p);
   renderHistory(p);
+}
+
+/* What the side was like, never what the player was like. Kept out of the
+   similarity model entirely: PPDA is one number for eleven people, so putting
+   it in would make every player at the same club look alike. */
+function renderTeamContext(p) {
+  const d = state.detail?.[p.uid];
+  const ctx = d?.team;
+  const fields = state.meta.team_context || [];
+  const labels = state.meta.team_labels || {};
+  const panel = $("team-panel");
+  if (!ctx || !fields.some((f) => ctx[f] != null)) { panel.hidden = true; return; }
+  panel.hidden = false;
+
+  const press = ctx.ppda;
+  const style = press == null ? null
+    : press < 10.5 ? "a high press"
+    : press < 14 ? "a moderate press"
+    : "a low block";
+  $("team-sub").innerHTML =
+    `Weighted by minutes across his ${p.seasons} season${p.seasons > 1 ? "s" : ""}. ` +
+    `This describes the team, not the player — it is not part of the match score.`;
+
+  const rows = fields.filter((f) => ctx[f] != null).map((f) => {
+    const v = ctx[f];
+    const shown = f === "rank_by_pts" ? v.toFixed(1) : v.toFixed(2);
+    const note = f === "ppda" && style ? style : "";
+    return `<div class="tcrow">
+      <span class="tclabel">${esc(labels[f] || f)}</span>
+      <span class="tcval">${shown}</span>
+      <span class="tcnote">${esc(note)}</span></div>`;
+  }).join("");
+  $("teamctx").innerHTML = rows;
 }
 
 function renderCareer(p) {
@@ -826,12 +860,16 @@ function renderCompareMetrics(series) {
 /* Where the numbers came from, and where the player is now. Those are often
    different places — Cancelo's figures are Barcelona's, but he plays in Saudi
    Arabia — so pairing a current club with an old league invents a fact. */
+/* Lead with where the player is now, because that is what a scout needs first.
+   The club the numbers came from follows, since those are often different
+   places and conflating them would invent a fact. */
 function whereLine(p) {
-  const base = `${esc(p.position)} · ${esc(p.club)} · ${esc(p.league)}`;
-  const moved = p.current_club && p.current_club !== p.club;
-  return base + (moved
-    ? ` <em class="nowat" title="Club as of the last data refresh">since moved to ${
-        esc(p.current_club)}</em>` : "");
+  const now = p.current_club || p.club;
+  const moved = Boolean(p.current_club);
+  return `${esc(p.position)} · <b class="clubnow">${esc(now)}</b>` +
+    (moved
+      ? ` <em class="nowat" title="Club as of the last data refresh. The figures below are from ${esc(p.club)}.">was ${esc(p.club)}, ${esc(p.league)}</em>`
+      : ` · ${esc(p.league)}`);
 }
 
 function shortName(name) {
@@ -926,15 +964,18 @@ function renderMethod() {
       <td class="dr">${c.drivers.slice(0, 3)
         .map((x) => esc(short[x.metric] || x.metric)).join(", ")}</td></tr>`).join("");
 
-  const eff = m.league_effects["npxG_90"] || {};
-  const span = Math.max(...m.leagues.map((l) => Math.abs((eff[l] ?? 1) - 1)), 0.02);
-  const leagueBars = m.leagues.map((l) => ({ l, v: eff[l] ?? 1 }))
-    .sort((a, b) => b.v - a.v).map(({ l, v }) => `
-      <div class="dvrow"><span class="dvlabel">${esc(l)}</span>
-        <span class="dvtrack"><span class="dvmid"></span>
-          <span class="dvbar ${v >= 1 ? "right" : "left"}"
-            style="width:${((Math.abs(v - 1) / span) * 46).toFixed(1)}%"></span></span>
-        <b class="dvval">${v.toFixed(3)}</b></div>`).join("");
+  // One coefficient per metric per league, not one per league. A league that
+  // inflates shooting can suppress creation, and the table shows it.
+  const shownMetrics = ["npxG_90", "xA_90", "shots_90", "key_passes_90"];
+  const leagueTable = `<table class="lgtable">
+    <thead><tr><th>League</th>${shownMetrics.map((x) =>
+      `<th>${esc((m.metric_short || {})[x] || x)}</th>`).join("")}</tr></thead>
+    <tbody>${m.leagues.map((l) => `<tr><td class="lgname">${esc(l)}</td>${
+      shownMetrics.map((x) => {
+        const v = (m.league_effects[x] || {})[l] ?? 1;
+        const cls = v >= 1.03 ? "up" : v <= 0.97 ? "down" : "";
+        return `<td class="lgval ${cls}">${v.toFixed(3)}</td>`;
+      }).join("")}</tr>`).join("")}</tbody></table>`;
 
   const valRows = (m.validation || []).filter((v) => v.players > 100)
     .sort((a, b) => (a.median_rank / a.players) - (b.median_rank / b.players))
@@ -962,24 +1003,26 @@ function renderMethod() {
         <tfoot><tr><td class="ax">All</td><td class="sh"><b>${kept}%</b></td>
           <td class="dr">of what separates ${esc(role)}</td></tr></tfoot>
       </table>
-      <p class="fine">The other ${100 - kept}% sits on axes explaining under 3%
-        each — mostly season-to-season noise, so it is left out rather than
-        pushing similar players apart at random.</p>
+      <p class="fine">How many axes to keep was decided by testing, not by
+        picking a round number. Holding back at 80% of the variation cost real
+        accuracy — right wingers found themselves at median rank 34 on four
+        axes and 23 on seven. A small share of the variation is not the same
+        thing as noise. Performance stops improving around eight, which is
+        where this sits.</p>
     </section>
 
     <section class="mcol"><h3>Same player, different league</h3>
-      <p>A goal is not equally hard to come by everywhere. To compare across the
-        big five, every rate is divided by a coefficient for the league it was
-        produced in.</p>
-      <p>Those coefficients come from the <b>${m.league_movers}</b> players who
-        appear in more than one league, measuring the same person before and
-        after a move. Comparing whole leagues instead would only reveal which
-        has the better players.</p>
-      <div class="dvhead"><span>Harder</span><span>Easier</span></div>
-      <div class="dvchart">${leagueBars}</div>
-      <p class="fine">Non-penalty xG. <b>1.112</b> in Ligue 1 means the same
-        player generates about 11% more there than in an average big-five league,
-        so his figure is adjusted down to match.</p>
+      <p>A goal is not equally hard to come by everywhere, and no league is
+        uniformly harder. One coefficient is fitted <b>per metric per
+        league</b>: Ligue 1 inflates expected goals but suppresses key passes,
+        Serie A does the reverse.</p>
+      <p>Each is fitted from the <b>${m.league_movers}</b> players who appear in
+        more than one league, measuring the same person before and after a move.
+        Comparing whole leagues instead would only reveal which has the better
+        players.</p>
+      ${leagueTable}
+      <p class="fine">Above 1.000 means output inflates there and is adjusted
+        down. Twelve metrics are fitted; four are shown.</p>
     </section>
 
     <section class="mcol"><h3>Can a player find himself?</h3>

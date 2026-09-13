@@ -40,6 +40,12 @@ CLUB_NOISE = re.compile(
     r"societa|societe|olympique|stade|racing|real|athletic|atletico|"
     r"eintracht|hertha|werder|bayer|bayern|union|fussballclub|fussball)\b")
 
+# Team-season rows travel alongside the player master. They describe the side a
+# player was part of, never the player: PPDA is one number for eleven people.
+TEAM_COLUMNS = ["league", "season", "team", "matches", "rank_by_pts", "pts",
+                "npxG", "npxGA", "ppda", "ppda_allowed",
+                "npxGA_per_match", "npxG_per_match", "deep_allowed_per_match"]
+
 BIO_COLUMNS = ["player", "club", "position", "sub_position", "date_of_birth",
                "citizenship", "foot", "height_cm", "contract_expires",
                "market_value_eur", "highest_market_value_eur", "current_club",
@@ -424,6 +430,33 @@ def report(master, incoming, log, club_map, path):
     return log
 
 
+def merge_teams(path, incoming, config, mode):
+    """Keep data/team_seasons.csv in step with the player master."""
+    canon = config.get("league_name_aliases", {})
+    incoming = incoming.copy()
+    incoming["league"] = incoming["league"].map(
+        lambda v: canon.get(norm_name(v).replace(" ", ""), canon.get(norm_name(v), v)))
+    incoming = incoming[[c for c in TEAM_COLUMNS if c in incoming.columns]]
+
+    if os.path.exists(path) and mode != "rebuild":
+        existing = pd.read_csv(path)
+        keys = set(zip(incoming["league"], incoming["season"]))
+        if mode == "add_missing":
+            have = set(zip(existing["league"], existing["season"]))
+            incoming = incoming[[k not in have for k in
+                                 zip(incoming["league"], incoming["season"])]]
+            combined = pd.concat([existing, incoming], ignore_index=True)
+        else:
+            keep = [k not in keys for k in zip(existing["league"], existing["season"])]
+            combined = pd.concat([existing[keep], incoming], ignore_index=True)
+    else:
+        combined = incoming
+    combined = combined.drop_duplicates(subset=["league", "season", "team"], keep="last")
+    combined = combined.sort_values(["season", "league", "team"])
+    combined.to_csv(path, index=False)
+    return len(combined)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--understat", required=True)
@@ -446,9 +479,15 @@ def main():
     aliases = load_aliases(args.aliases)
     stats = pd.read_excel(args.understat, "All players")
     bio = pd.read_excel(args.squads, "Squads")
+    try:
+        teams = pd.read_excel(args.understat, "Teams season")
+    except Exception:
+        teams = None
     if args.only_seasons:
         stats = stats[stats["season"].isin(args.only_seasons)]
         bio = bio[bio["season_label"].isin(args.only_seasons)]
+        if teams is not None:
+            teams = teams[teams["season"].isin(args.only_seasons)]
     stats, bio = prepare(stats, bio, config, aliases)
     print(f"incoming statistics : {len(stats):,} player-seasons")
     print(f"incoming biography  : {len(bio):,} player-seasons")
@@ -507,6 +546,10 @@ def main():
     else:
         combined.to_csv(args.master, index=False)
         print(f"\nwrote {args.master}")
+        if teams is not None and not teams.empty:
+            team_path = os.path.join(os.path.dirname(args.master), "team_seasons.csv")
+            n = merge_teams(team_path, teams, config, args.mode)
+            print(f"wrote {team_path}: {n:,} team-seasons")
     print(f"report: {report_path}")
 
 

@@ -859,3 +859,24 @@ body::after{
   .pb-actions .ghost.accent{grid-column:1/-1;justify-content:center;order:-1}
   .pb-actions .ghost.primary{grid-column:1/-1;justify-content:center;order:-2}
 }
+
+/* the side a player turned out for — context, never a rating */
+.teamctx{display:grid;gap:.1rem}
+.tcrow{display:grid;grid-template-columns:1fr 3.2rem minmax(0,6.4rem);gap:.6rem;
+  align-items:center;padding:.36rem 0;border-bottom:1px solid var(--hairline-soft);
+  font-size:.8rem;color:var(--muted)}
+.tcrow:last-child{border-bottom:0}
+.tcval{font-family:var(--cond);font-weight:600;font-size:1rem;color:var(--ink);text-align:right}
+.tcnote{font-size:.72rem;color:var(--faint)}
+.clubnow{font-weight:600;color:var(--ink)}
+
+/* league coefficients, one per metric per league */
+.lgtable{width:100%;border-collapse:collapse;font-size:.71rem;margin:.1rem 0 .7rem}
+.lgtable th{color:var(--faint);font-weight:500;text-align:right;padding:0 0 .3rem .35rem;
+  border-bottom:1px solid var(--hairline)}
+.lgtable th:first-child{text-align:left}
+.lgtable td{padding:.26rem 0 .26rem .35rem;border-bottom:1px solid var(--hairline-soft);
+  text-align:right;color:var(--muted);font-family:var(--cond);font-size:.82rem}
+.lgname{text-align:left!important;font-family:var(--sans)!important;font-size:.73rem!important}
+.lgval.up{color:var(--blue)}
+.lgval.down{color:var(--warn)}
