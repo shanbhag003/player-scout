@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=e016ce0c">
+<link rel="stylesheet" href="style.css?v=07371973">
 </head>
 <body>
 
@@ -22,6 +22,26 @@
       <span class="brand-name">Player Scout</span>
     </div>
     <nav class="sports" id="sports" aria-label="Sport"></nav>
+    <div class="shortlist-wrap">
+      <button class="fresh-btn" id="short-btn" aria-expanded="false" aria-controls="short-panel">
+        <svg viewBox="0 0 24 24" class="btn-icon" aria-hidden="true">
+          <path d="M7 4h10v16l-5-4-5 4z" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linejoin="round"/></svg>
+        <span id="short-count">Shortlist</span>
+      </button>
+      <div class="fresh-panel short-panel" id="short-panel" hidden>
+        <div class="fresh-head">
+          <h2>Your shortlist</h2>
+          <div class="short-actions">
+            <button class="ghost" id="short-csv">Export CSV</button>
+            <button class="ghost" id="short-clear">Clear</button>
+          </div>
+        </div>
+        <ul class="short-list" id="short-list"></ul>
+        <p class="fresh-foot">Saved in this browser only. Nothing leaves your device.</p>
+      </div>
+    </div>
+
     <div class="freshness">
       <button class="fresh-btn" id="fresh-btn" aria-expanded="false" aria-controls="fresh-panel">
         <span class="fresh-dot" aria-hidden="true"></span>
@@ -68,16 +88,32 @@
         <div id="examples"></div>
       </div>
 
-      <ol class="howto" aria-label="How to use this">
-        <li><b>1</b><span><strong>Search a player</strong> you already have a view
-          on — anyone with 1,800+ minutes in the big five since 2021/22.</span></li>
-        <li><b>2</b><span><strong>Read their profile</strong>: percentile against
-          their own position, season by season, career totals.</span></li>
-        <li><b>3</b><span><strong>See who is closest</strong>, filtered by age,
-          contract and whether they are still in these leagues.</span></li>
-        <li><b>4</b><span><strong>Compare up to five</strong> side by side —
-          shape, every metric, and output across seasons.</span></li>
-      </ol>
+      <div class="routes">
+        <div class="route">
+          <span class="route-tag">Find someone new</span>
+          <ol class="howto">
+            <li><b>1</b><span><strong>Search a player</strong> you already have a
+              view on.</span></li>
+            <li><b>2</b><span><strong>Read their profile</strong> — percentile
+              against their own position, season by season.</span></li>
+            <li><b>3</b><span><strong>See who is closest</strong>, filtered by
+              age, contract and availability.</span></li>
+            <li><b>4</b><span><strong>Add any of them</strong> to the comparison
+              with the <b class="inline-plus">+</b> button.</span></li>
+          </ol>
+        </div>
+        <div class="route">
+          <span class="route-tag alt">Compare players you already have in mind</span>
+          <ol class="howto">
+            <li><b>1</b><span><strong>Search the first player</strong>, then open
+              the <strong>Compare</strong> tab.</span></li>
+            <li><b>2</b><span><strong>Search for anyone else</strong> there — they
+              do not have to appear in the similar list.</span></li>
+            <li><b>3</b><span><strong>Line up to six</strong> side by side: shape,
+              every metric, output across seasons.</span></li>
+          </ol>
+        </div>
+      </div>
     </div>
 
     <aside class="hero-right">
@@ -190,6 +226,13 @@
             <button data-contract="24" aria-pressed="false">Under two years</button>
           </div>
         </div>
+        <div class="filter">
+          <span class="filter-label" id="mins-label">Minutes played</span>
+          <div class="segmented" role="group" aria-labelledby="mins-label">
+            <button data-mins="1800" aria-pressed="true">1,800+</button>
+            <button data-mins="1200" aria-pressed="false">Include 1,200+</button>
+          </div>
+        </div>
         <label class="switch">
           <input type="checkbox" id="active-only" checked>
           <span>Only players still in the big five</span>
@@ -202,6 +245,19 @@
     </div>
 
     <div class="tabpanel" id="panel-compare" role="tabpanel" hidden>
+      <div class="cmp-add">
+        <label for="cmp-search">Add any player to this comparison</label>
+        <div class="input-wrap">
+          <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="10.5" cy="10.5" r="6.6" fill="none" stroke="currentColor" stroke-width="1.7"/>
+            <path d="M15.4 15.4L20 20" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+          </svg>
+          <input id="cmp-search" type="text" autocomplete="off" spellcheck="false"
+                 placeholder="Search anyone — they need not be in the similar list">
+        </div>
+        <ul class="suggestions" id="cmp-suggestions" role="listbox" hidden></ul>
+        <p class="cmp-add-note" id="cmp-add-note"></p>
+      </div>
       <div class="tray" id="tray"></div>
       <div class="compare-grid" id="compare-body">
         <article class="panel">
@@ -233,6 +289,19 @@
 </main>
 
 <footer class="foot shell">
+  <p class="repo-line">
+    <a href="https://github.com/shanbhag003/player-scout" target="_blank" rel="noopener noreferrer">
+      <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+        <path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8a8 8 0 0 0 5.47 7.59c.4.07.55-.17.55-.38
+        0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01
+        1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95
+        0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.4 7.4 0 0 1 2-.27c.68 0
+        1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0
+        3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01
+        8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      Source and method on GitHub
+    </a>
+  </p>
   <details id="method-wrap">
     <summary>How these numbers are built</summary>
     <div class="method-nav" id="method-nav" role="tablist" aria-label="Method sections"></div>
@@ -240,6 +309,6 @@
   </details>
 </footer>
 
-<script src="app.js?v=e016ce0c"></script>
+<script src="app.js?v=07371973"></script>
 </body>
 </html>

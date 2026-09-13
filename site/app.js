@@ -5,15 +5,16 @@ const $ = (id) => document.getElementById(id);
 const state = {
   meta: null, index: [], byUid: new Map(), detail: null,
   countries: {}, leagues: {}, selected: null, highlight: -1,
-  filters: { scope: "position", age: "any", contract: "any", activeOnly: true },
+  filters: { scope: "position", age: "any", contract: "any", activeOnly: true, minutes: 1800 },
+  shortlist: [], cmpHighlight: -1,
   compare: [], tab: "profile", tz: "IST",
 };
 
-const MAX_COMPARE = 5;
+const MAX_COMPARE = 6;   // the searched player plus five
 // Three matches. Below this a per-90 rate is arithmetic, not information:
 // Lamine Yamal's two-minute cameo in 2022/23 works out at 19.38 per 90.
 const MIN_SEASON_MINUTES = 270;                       // the searched player plus four
-const SERIES = ["gold", "blue", "green", "violet", "coral"];
+const SERIES = ["gold", "blue", "green", "violet", "coral", "mint"];
 
 const SPORTS = [
   { id: "football", name: "Football", status: "live" },
@@ -24,6 +25,23 @@ const SPORTS = [
 const isNarrow = () => (typeof window.matchMedia === "function"
   ? window.matchMedia("(max-width: 680px)").matches
   : window.innerWidth <= 680);
+
+/* Some browsers throw on localStorage — Safari in private mode, sandboxed
+   frames — so every access falls back to memory rather than taking the page
+   down with it. */
+const store = {
+  mem: {},
+  read(key, fallback) {
+    try {
+      const raw = window.localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch { return key in this.mem ? this.mem[key] : fallback; }
+  },
+  write(key, value) {
+    this.mem[key] = value;
+    try { window.localStorage.setItem(key, JSON.stringify(value)); } catch { /* memory only */ }
+  },
+};
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g,
   (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -60,6 +78,7 @@ async function boot() {
   renderExamples();
   renderMethod();
   wire();
+  loadShortlist();
 
   // Detail arrives after the index in the deployed build, so a deep link waits
   // for it rather than rendering half a profile.
@@ -370,6 +389,10 @@ function renderPlayerBar() {
       <button class="ghost primary" id="go-compare" hidden></button>
       ${sourceLink("Understat", "US", state.meta.understat_url.replace("{id}", p.us_id), "understat")}
       ${p.transfermarkt ? sourceLink("Transfermarkt", "TM", p.transfermarkt, "transfermarkt") : ""}
+      <button class="ghost save" id="save-player" aria-pressed="false">
+        <svg viewBox="0 0 24 24" class="btn-icon" aria-hidden="true">
+          <path d="M7 4h10v16l-5-4-5 4z" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linejoin="round"/></svg><span> Save to shortlist</span></button>
       <button class="ghost accent" id="clear-player">
         <svg viewBox="0 0 24 24" aria-hidden="true" class="btn-icon">
           <circle cx="10.5" cy="10.5" r="6.4" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -378,6 +401,8 @@ function renderPlayerBar() {
     </div>`;
   $("clear-player").addEventListener("click", clearSelection);
   $("go-compare").addEventListener("click", () => setTab("compare"));
+  $("save-player").addEventListener("click", () => toggleShortlist(state.selected.uid));
+  renderPlayerBarSave();
   syncCompareShortcut();
 }
 
@@ -640,6 +665,7 @@ function renderHistory(p) {
 
 function passesFilters(c) {
   const f = state.filters;
+  if (c.minutes < f.minutes) return false;
   if (f.activeOnly && !c.active) return false;
   if (f.age !== "any") {
     const a = c.age;
@@ -695,6 +721,35 @@ function rank(p) {
   return { scope: s, eligible,
     rows: rows.slice(0, 10).map((r) => ({ ...r,
       score: 100 * Math.exp((-Math.LN2 * r.d) / s.meta.median_distance) })) };
+}
+
+/* A score says two players are close. This says what they are close on, by
+   reading where each sits on the axes the model actually compares them across. */
+function matchReason(a, b) {
+  const pos = state.meta.positions[a.position];
+  const loadings = pos?.loadings;
+  if (!loadings || !a.axis?.length || !b.axis?.length) return "";
+  const labels = state.meta.metric_short || {};
+  const name = (m) => labels[m] || (state.meta.metric_labels[m] || m).toLowerCase();
+
+  const shared = loadings
+    .map((c, i) => ({
+      i, c,
+      gap: Math.abs((a.axis[i] ?? 50) - (b.axis[i] ?? 50)),
+      level: ((a.axis[i] ?? 50) + (b.axis[i] ?? 50)) / 2,
+      weight: c.variance,
+    }))
+    .filter((x) => x.gap < 22 && Math.abs(x.level - 50) > 18)
+    .sort((x, y) => y.weight - x.weight)[0];
+  if (!shared) return "";
+
+  const high = shared.level > 50;
+  const traits = (high ? shared.c.high : (shared.c.low.length ? shared.c.low : shared.c.high));
+  const words = traits.slice(0, 2).map(name).join(" and ");
+  const direction = high
+    ? (shared.c.low.length ? "high" : "high")
+    : (shared.c.low.length ? "high" : "low");
+  return `Both ${direction} for ${words}`;
 }
 
 function chipsFor(a, b) {
@@ -776,6 +831,8 @@ function renderResults() {
 
   $("matches").innerHTML = rows.map((r, i) => {
     const c = r.c, chips = chipsFor(p, c), inCmp = state.compare.includes(c.uid);
+    const reason = matchReason(p, c);
+    const saved = state.shortlist.includes(c.uid);
     return `<li class="match${inCmp ? " is-open" : ""}">
       <button class="match-btn" data-uid="${c.uid}">
         <span class="rank">${i + 1}</span>
@@ -791,12 +848,19 @@ function renderResults() {
         <span class="meta-cell"><i>Value</i>${esc(fmtValue(c.value) || "—")}</span>
         <span class="reads">${chips.map((x) =>
           `<em class="tag ${x.cls}">${esc(x.text)}</em>`).join("")}</span>
+        ${reason ? `<span class="why">${esc(reason)}</span>` : ""}
       </button>
+      <span class="rowacts">
+      <button class="savebtn${saved ? " on" : ""}" data-save="${c.uid}"
+        aria-pressed="${saved}" title="${saved ? "Remove from shortlist" : "Save to shortlist"}">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v16l-5-4-5 4z"
+          fill="${saved ? "currentColor" : "none"}" stroke="currentColor" stroke-width="1.8"
+          stroke-linejoin="round"/></svg></button>
       <button class="addbtn${inCmp ? " on" : ""}" data-add="${c.uid}"
         aria-pressed="${inCmp}" ${!inCmp && full ? "disabled" : ""}
         title="${inCmp ? "Remove from comparison"
                 : full ? `Comparison is full — remove someone first`
-                : "Add to comparison"}">${inCmp ? "&minus;" : "+"}</button>
+                : "Add to comparison"}">${inCmp ? "&minus;" : "+"}</button></span>
     </li>`;
   }).join("");
 
@@ -808,12 +872,116 @@ function renderResults() {
     }));
   $("matches").querySelectorAll(".addbtn").forEach((b) =>
     b.addEventListener("click", () => toggleCompare(b.dataset.add)));
+  $("matches").querySelectorAll(".savebtn").forEach((b) =>
+    b.addEventListener("click", () => toggleShortlist(b.dataset.save)));
+  wireResultKeys();
   const jump = $("results-jump");
   if (jump && !jump.dataset.wired) {
     jump.dataset.wired = "1";
     jump.addEventListener("click", () => setTab("compare"));
   }
   syncCompareShortcut();
+}
+
+/* ---------- shortlist ---------- */
+
+function loadShortlist() {
+  state.shortlist = (store.read("ps.shortlist", []) || [])
+    .filter((uid) => state.byUid.has(uid));
+  renderShortlist();
+}
+
+function toggleShortlist(uid) {
+  const i = state.shortlist.indexOf(uid);
+  if (i >= 0) state.shortlist.splice(i, 1);
+  else state.shortlist.push(uid);
+  store.write("ps.shortlist", state.shortlist);
+  renderShortlist();
+  if (state.selected) renderResults();
+  renderPlayerBarSave();
+}
+
+function renderShortlist() {
+  const n = state.shortlist.length;
+  $("short-count").textContent = n ? `Shortlist ${n}` : "Shortlist";
+  $("short-btn").classList.toggle("has", n > 0);
+  const list = $("short-list");
+  if (!n) {
+    list.innerHTML = `<li class="short-empty">Nothing saved yet. Use the
+      bookmark on any result to keep it for later.</li>`;
+    return;
+  }
+  list.innerHTML = state.shortlist.map((uid) => {
+    const p = state.byUid.get(uid);
+    return `<li>
+      <button class="short-open" data-open="${uid}">
+        ${flagHtml(p.nationality)}
+        <span><b>${esc(p.name)}</b>
+          <em>${esc(p.position)} · ${esc(p.current_club || p.club)} · ${p.age ?? "—"}</em></span>
+      </button>
+      <button class="dropbtn" data-unsave="${uid}" aria-label="Remove">&times;</button>
+    </li>`;
+  }).join("");
+  list.querySelectorAll("[data-open]").forEach((b) =>
+    b.addEventListener("click", () => { select(b.dataset.open); $("short-panel").hidden = true; }));
+  list.querySelectorAll("[data-unsave]").forEach((b) =>
+    b.addEventListener("click", () => toggleShortlist(b.dataset.unsave)));
+}
+
+function renderPlayerBarSave() {
+  const btn = $("save-player");
+  if (!btn || !state.selected) return;
+  const saved = state.shortlist.includes(state.selected.uid);
+  btn.setAttribute("aria-pressed", String(saved));
+  btn.classList.toggle("on", saved);
+  btn.lastChild.textContent = saved ? " Saved" : " Save to shortlist";
+}
+
+function shortlistCsv() {
+  const cols = ["name", "position", "club", "league", "age", "contract",
+                "value", "minutes", "seasons", "nationality", "transfermarkt"];
+  const head = ["Player", "Position", "Club", "League", "Age", "Contract expires",
+                "Market value (EUR)", "Minutes", "Seasons", "Nationality",
+                "Profile"].join(",");
+  const rows = state.shortlist.map((uid) => {
+    const p = state.byUid.get(uid);
+    return cols.map((c) => {
+      const v = c === "club" ? (p.current_club || p.club) : p[c];
+      const s = v == null ? "" : String(v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    }).join(",");
+  });
+  const blob = new Blob([[head, ...rows].join("\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `player-scout-shortlist-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/* Arrow keys walk the list, Enter opens the comparison, S saves. Without this
+   the whole ranking is mouse-only. */
+function wireResultKeys() {
+  const rows = [...$("matches").querySelectorAll(".match-btn")];
+  rows.forEach((btn, i) => {
+    btn.setAttribute("tabindex", "0");
+    btn.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        const next = rows[i + (e.key === "ArrowDown" ? 1 : -1)];
+        if (next) next.focus();
+      } else if (e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        toggleShortlist(btn.dataset.uid);
+      } else if (e.key === "+" || e.key === "=") {
+        e.preventDefault();
+        toggleCompare(btn.dataset.uid);
+      }
+    });
+  });
 }
 
 /* ---------- comparison ---------- */
@@ -863,12 +1031,19 @@ function renderCompare() {
     </span>`;
   }).join("") +
     (state.compare.length < MAX_COMPARE - 1
-      ? `<span class="trayhint">Add up to ${MAX_COMPARE - 1 - state.compare.length} more from
+      ? `<span class="trayhint">or pick from
          <button class="linkish" data-goto="similar">Similar players</button></span>` : "");
   $("tray").querySelectorAll("[data-drop]").forEach((b) =>
     b.addEventListener("click", () => toggleCompare(b.dataset.drop)));
   $("tray").querySelectorAll("[data-scout]").forEach((b) =>
     b.addEventListener("click", () => select(b.dataset.scout)));
+
+  const room = MAX_COMPARE - 1 - state.compare.length;
+  $("cmp-add-note").textContent = room > 0
+    ? `Room for ${room} more. Anyone in the pool can be added — they do not have `
+      + `to appear in the similar list.`
+    : "The comparison is full. Remove someone to add another.";
+  $("cmp-search").disabled = room <= 0;
   $("tray").querySelectorAll("[data-goto]").forEach((b) =>
     b.addEventListener("click", () => setTab("similar")));
 
@@ -1017,6 +1192,28 @@ function renderTrend(series) {
     `<span class="lg"><i class="sw ${s.colour}"></i>${esc(s.p.name)}</span>`).join("")}</div>`;
 }
 
+function renderCmpSuggestions(list) {
+  const box = $("cmp-suggestions");
+  if (!list.length) { box.hidden = true; box.innerHTML = ""; return; }
+  box.hidden = false;
+  box.innerHTML = list.map((p, i) => `
+    <li role="option" data-uid="${p.uid}" aria-selected="${i === state.cmpHighlight}">
+      ${flagHtml(p.nationality)}
+      <span class="sug-name">${esc(p.name)}</span>
+      <span class="sug-meta">${esc(p.position)} · ${esc(p.current_club || p.club)}</span>
+    </li>`).join("");
+  [...box.children].forEach((li) =>
+    li.addEventListener("mousedown", (e) => { e.preventDefault(); addToCompare(li.dataset.uid); }));
+}
+
+function addToCompare(uid) {
+  $("cmp-search").value = "";
+  $("cmp-suggestions").hidden = true;
+  state.cmpHighlight = -1;
+  if (uid === state.selected?.uid || state.compare.includes(uid)) return;
+  toggleCompare(uid);
+}
+
 /* ---------- method ---------- */
 
 function renderMethod() {
@@ -1100,19 +1297,21 @@ function renderMethod() {
     </section>
 
     <section class="mcol"><h3>Can a player find himself?</h3>
-      <p>The honest test of a similarity model: split a player's seasons into two
-        halves, build a profile from each, then ask where his own second-half
-        profile ranks among every candidate given his first.</p>
-      <p>A model reading noise would not find him. Numbers below are the median
-        rank a player achieves — lower is better, and longer bars mean further
-        ahead of chance.</p>
+      <p>If a tool claims two players are alike, the first thing to check is
+        whether it can spot the most obvious case of all: a player and himself.</p>
+      <p>So each player is split in two — his early seasons and his later ones —
+        and treated as two strangers. Hand the tool the early version and ask it
+        to rank everyone. Where does the later version come out?</p>
+      <p>An attacking midfielder lands <b>18th out of 161</b>. Guessing at random
+        would put him 81st. The tool has never seen the two halves as the same
+        person; it simply recognises the way he plays.</p>
       <table class="vtable">
         <thead><tr><th>Position</th><th></th><th colspan="2">Median rank</th></tr></thead>
         <tbody>${valRows}</tbody>
       </table>
-      <p class="fine">Landing 19th of 161 when chance is 81st is real signal, and
-        well short of proof. Treat the results as a shortlist to watch, not a
-        verdict.</p>
+      <p class="fine">Well ahead of chance everywhere, and nowhere near certain.
+        Centre-backs do worst because the data holds nothing about defending.
+        Treat any result as a shortlist worth watching, never a verdict.</p>
     </section>
 
     <section class="mcol"><h3>What this cannot see</h3>
@@ -1248,14 +1447,58 @@ function wire() {
   });
 
   $("filters").addEventListener("click", (e) => {
-    const b = e.target.closest("button[data-scope],button[data-age],button[data-contract]");
+    const b = e.target.closest(
+      "button[data-scope],button[data-age],button[data-contract],button[data-mins]");
     if (!b) return;
-    const key = b.dataset.scope ? "scope" : b.dataset.age ? "age" : "contract";
-    state.filters[key] = b.dataset[key];
+    const key = b.dataset.scope ? "scope" : b.dataset.age ? "age"
+      : b.dataset.mins ? "minutes" : "contract";
+    state.filters[key] = key === "minutes" ? Number(b.dataset.mins) : b.dataset[key];
     b.parentElement.querySelectorAll("button").forEach((x) =>
       x.setAttribute("aria-pressed", String(x === b)));
     renderResults();
   });
+  const cmpBox = $("cmp-search");
+  cmpBox.addEventListener("input", () => {
+    state.cmpHighlight = -1;
+    renderCmpSuggestions(search(cmpBox.value)
+      .filter((p) => p.uid !== state.selected?.uid && !state.compare.includes(p.uid)));
+  });
+  cmpBox.addEventListener("keydown", (e) => {
+    const items = [...$("cmp-suggestions").children];
+    if (!items.length) return;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      state.cmpHighlight = (state.cmpHighlight + (e.key === "ArrowDown" ? 1 : -1)
+        + items.length) % items.length;
+      items.forEach((li, i) => li.setAttribute("aria-selected", String(i === state.cmpHighlight)));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      addToCompare(items[Math.max(0, state.cmpHighlight)].dataset.uid);
+    } else if (e.key === "Escape") $("cmp-suggestions").hidden = true;
+  });
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".cmp-add")) $("cmp-suggestions").hidden = true;
+  });
+
+  $("short-btn").addEventListener("click", () => {
+    const open = $("short-panel").hidden;
+    $("short-panel").hidden = !open;
+    $("short-btn").setAttribute("aria-expanded", String(open));
+  });
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".shortlist-wrap")) {
+      $("short-panel").hidden = true;
+      $("short-btn").setAttribute("aria-expanded", "false");
+    }
+  });
+  $("short-csv").addEventListener("click", shortlistCsv);
+  $("short-clear").addEventListener("click", () => {
+    state.shortlist = [];
+    store.write("ps.shortlist", []);
+    renderShortlist();
+    if (state.selected) { renderResults(); renderPlayerBarSave(); }
+  });
+
   $("active-only").addEventListener("change", (e) => {
     state.filters.activeOnly = e.target.checked;
     renderResults();

@@ -34,7 +34,12 @@ MASTER = os.path.join(HERE, "data", "master_players.csv")
 TEAMS = os.path.join(HERE, "data", "team_seasons.csv")
 OUT = os.path.join(HERE, "site", "data")
 
-MIN_MINUTES = 1800
+# The pool floor is lower than the default the interface shows. Building at
+# 1,200 keeps players who are close to qualifying - a nineteen-year-old in his
+# first full season - inside the model, so the interface can offer to include
+# them rather than pretending they do not exist.
+MIN_MINUTES = 1200
+DEFAULT_MIN_MINUTES = 1800
 UNDERSTAT_URL = "https://understat.com/player/{id}"
 
 # Counting stats summed across seasons, then divided by total minutes. Summing
@@ -398,15 +403,32 @@ def score_position(group, metrics):
         order = raw[:, j].argsort().argsort()
         pct[metric] = 100.0 * order / max(1, len(group) - 1)
 
-    loadings = [{
-        "component": i + 1,
-        "variance": round(float(pca.explained_variance_ratio_[i]), 4),
-        "drivers": [{"metric": metrics[j], "weight": round(float(pca.components_[i][j]), 3)}
-                    for j in np.argsort(-np.abs(pca.components_[i]))[:4]],
-    } for i in range(keep)]
+    # Where each player sits on each axis, as a percentile. A score on its own
+    # says two players are close; this says what they are close on.
+    axis_pct = np.zeros_like(coords)
+    for i in range(keep):
+        rank = coords[:, i].argsort().argsort()
+        axis_pct[:, i] = 100.0 * rank / max(1, len(group) - 1)
+
+    loadings = []
+    for i in range(keep):
+        order_j = np.argsort(-np.abs(pca.components_[i]))[:4]
+        drivers = [{"metric": metrics[j], "weight": round(float(pca.components_[i][j]), 3)}
+                   for j in order_j]
+        # The axis has no inherent direction, so describe both ends by the sign
+        # of the loadings. High on this axis means more of the positive drivers.
+        pos = [d["metric"] for d in drivers if d["weight"] > 0][:2]
+        neg = [d["metric"] for d in drivers if d["weight"] < 0][:2]
+        loadings.append({
+            "component": i + 1,
+            "variance": round(float(pca.explained_variance_ratio_[i]), 4),
+            "drivers": drivers,
+            "high": pos or [drivers[0]["metric"]],
+            "low": neg,
+        })
 
     return {"z": z, "coords": coords, "dist": dist, "median": median,
-            "percentiles": pct, "components": keep,
+            "percentiles": pct, "axis_pct": axis_pct, "components": keep,
             "variance": round(float(cumulative[keep - 1]), 4), "loadings": loadings}
 
 
@@ -628,7 +650,7 @@ def main():
                 for j, metric in enumerate(GK_METRICS):
                     order = sub[:, j].argsort().argsort()
                     pct[metric] = int(round(100.0 * order[i] / max(1, len(members) - 1)))
-                payload[uid] = {"coords": [], "pct": pct}
+                payload[uid] = {"coords": [], "axis": [], "pct": pct}
             position_meta[position] = {"players": len(members), "scored": False,
                                        "metrics": GK_METRICS, "caveat": GK_CAVEAT,
                                        **framing}
@@ -636,7 +658,7 @@ def main():
             continue
         if len(members) < 12:
             for uid in members.index:
-                payload[uid] = {"coords": [], "pct": {}}
+                payload[uid] = {"coords": [], "axis": [], "pct": {}}
             position_meta[position] = {"players": len(members), "scored": False,
                                        **framing}
             log(f"  {position:22} {len(members):4}  not scored ({framing['level']})")
@@ -646,6 +668,7 @@ def main():
         for i, uid in enumerate(uids):
             payload[uid] = {
                 "coords": [round(float(v), 4) for v in art["coords"][i]],
+                "axis": [int(round(v)) for v in art["axis_pct"][i]],
                 "pct": {k: int(round(art["percentiles"][k][i]))
                         for k in SIMILARITY_METRICS},
             }
@@ -750,6 +773,7 @@ def main():
             "us_id": int(row["id"]),
             "transfermarkt": None if pd.isna(row["tm_transfermarkt_url"]) else row["tm_transfermarkt_url"],
             "coords": payload[uid]["coords"],
+            "axis": payload[uid].get("axis", []),
             "gcoords": payload[uid].get("group_coords", []),
         })
 
@@ -766,6 +790,7 @@ def main():
         "latest_season": max(p["last_season"] for p in index),
         "understat_url": UNDERSTAT_URL,
         "min_minutes": args.min_minutes,
+        "default_min_minutes": DEFAULT_MIN_MINUTES,
         "seasons": sorted(master["season"].unique().tolist()),
         "leagues": lgs,
         "metric_labels": METRIC_LABELS,

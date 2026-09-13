@@ -2,35 +2,41 @@
 
 **Search a footballer and see who else plays like them.**
 
-A scouting tool that turns five seasons of European football into a single
-question: given a player you already have a view on, who is the closest
-equivalent, and where exactly do they differ?
+A scouting tool that turns five seasons of European football into one question:
+given a player you already have a view on, who is the closest equivalent — and
+where exactly do they differ?
 
-![Who is in the pool](docs/figures/pool.png)
+![The landing page](docs/screenshots/01-landing.png)
 
 ---
 
-## What it does
+## Two ways to use it
 
-Type a name. Get that player's profile measured against everyone else in their
-position, the ten closest matches filtered by age and contract, and a
-side-by-side comparison of up to five players across every metric.
+**Find someone new.** Search a player, read their profile, then see the ten
+closest matches filtered by age, contract, minutes and whether they are still in
+these leagues.
+
+**Compare players you already have in mind.** Open the Compare tab and search for
+anyone in the pool. They do not have to appear in the similar list — line up to
+six side by side and read every metric against each other.
+
+Both routes feed the same comparison, and anything worth keeping can be saved to
+a shortlist that survives between visits.
 
 | | |
 | --- | --- |
-| **Players** | 2,779 |
+| **Players** | 3,245 |
 | **Seasons** | 2021/22 to 2025/26, complete |
 | **Leagues** | England, Spain, Germany, Italy, France |
-| **Qualification** | 1,800+ minutes across the window |
+| **In the model** | 1,200+ minutes across the window |
+| **Shown by default** | 1,800+ minutes, adjustable |
 | **Still active in those leagues** | 1,801 |
 
 ---
 
-## The data
+## What each player carries
 
-### What each player carries
-
-One row per player per season, 13,980 in all, combining two kinds of
+One row per player per season, 13,980 in all, combining three kinds of
 information on the same line.
 
 **Playing record** — minutes, appearances, goals, assists, shots, key passes,
@@ -41,14 +47,24 @@ took part in, and the same excluding their own shots and key passes.
 **Player record** — date of birth, nationality, height, preferred foot,
 positional label, contract expiry, market value, current club.
 
-From those, twelve comparison metrics are derived per 90 minutes: shot volume
-and quality, goals and finishing against expectation, expected assists, key
-passes, chance quality created, assists, and three involvement measures
-including a final-third figure computed as total involvement minus build-up.
+**Team record** — for every club season: pressing intensity, expected goals
+conceded, deep entries allowed, league finish.
 
-### How the master file was assembled
+Fourteen comparison metrics are derived per 90 minutes: shot volume and quality,
+goals and finishing against expectation, expected assists, key passes, chance
+quality created, assists, three involvement measures, and two **share** metrics —
+how much of a team's threat and build-up ran through the player while he was on
+the pitch. Those two matter because they normalise for how good the side was: a
+player carrying a modest attack and a passenger in a great one can post identical
+per-90 figures and mean completely different things.
 
-The two kinds of record arrive separately and share no player identifier, so
+![Who is in the pool](docs/figures/pool.png)
+
+---
+
+## How the master file was assembled
+
+The three kinds of record arrive separately and share no player identifier, so
 they are matched on name, club and minutes across six passes of decreasing
 strictness. Each row records which pass matched it and how confident it was.
 
@@ -65,30 +81,28 @@ strictness. Each row records which pass matched it and how confident it was.
 
 Three decisions do most of the work:
 
-- **Club names are learned, not listed.** The two records spell clubs
-  differently, so the mapping is derived from the confident name matches rather
-  than maintained by hand. 128 club equivalences fall out automatically.
+- **Club names are learned, not listed.** The records spell clubs differently, so
+  the mapping is derived from the confident name matches rather than maintained
+  by hand. 128 equivalences fall out automatically.
 - **Minutes are a fingerprint.** Within one club-season, minutes played is close
-  to unique. That lets a shared name component plus agreement to within 8% form
-  a safe match where fuzzy names fail — the two records often keep different
-  parts of a long name.
-- **Identity is resolved once, globally.** Two people genuinely share a display
-  name more often than you would expect. Player records are assigned one-to-one,
-  strongest claim first, so two players can never end up sharing a date of birth.
-  Anyone who loses every claim is left with no record rather than someone else's.
+  to unique. That lets a shared name component plus agreement to within 8% form a
+  safe match where fuzzy names fail — the records often keep different parts of a
+  long name.
+- **Identity is resolved once, globally.** Two people share a display name more
+  often than you would guess. Records are assigned one-to-one, strongest claim
+  first, so two players can never end up sharing a date of birth. Anyone who
+  loses every claim is left without a record rather than given someone else's.
 
-Thresholds are deliberately strict. Loosened far enough to catch the last few
-stragglers, fuzzy matching starts pairing a squad player named Robert with
-Robert Lewandowski at a perfect score. A blank contract date is visible; a wrong
-one is not.
-
-Name pairs the matcher cannot infer live in `config/aliases.csv`, one line each.
+Thresholds are deliberately strict. Loosened enough to catch the last few
+stragglers, fuzzy matching starts pairing a squad player named Robert with Robert
+Lewandowski at a perfect score. A blank contract date is visible; a wrong one is
+not. Pairs the matcher cannot infer live in `config/aliases.csv`, one line each.
 
 ---
 
 ## How the tool works
 
-*Screenshots of the interface live in [docs/screenshots](docs/screenshots).*
+![A player profile](docs/screenshots/03-profile.png)
 
 ### One profile per player, not per season
 
@@ -96,67 +110,83 @@ Rates come from summed totals over summed minutes, so a 3,000-minute season
 outweighs a 200-minute one. Seasons under 270 minutes are excluded from per-90
 charts — a two-minute cameo divides out to nonsense.
 
-### League adjustment
+### League adjustment, per metric
 
-A goal is not equally hard to come by everywhere. Every rate is divided by a
-coefficient for the league it was produced in, fitted from the **624 players who
-appear in more than one league**, measuring the same person before and after a
-move. Comparing whole leagues instead would only reveal which has the better
-players.
+A goal is not equally hard to come by everywhere, and **no league is uniformly
+harder**. One coefficient is fitted per metric per league: Ligue 1 inflates
+expected goals but suppresses key passes, Serie A does the reverse.
 
 ![League adjustment](docs/figures/league-adjustment.png)
 
-### Twelve metrics into four or five numbers
+Each is fitted from the **624 players who appear in more than one league**,
+measuring the same person before and after a move. Comparing whole leagues
+instead would only reveal which has the better players.
+
+### Fourteen metrics into a handful of axes
 
 Several metrics measure the same thing twice: anyone who shoots often also has
 high non-penalty expected goals. Principal component analysis folds them into a
-smaller set of independent axes — for right wingers, four axes carrying 87% of
-what separates them. Similarity is the distance between two players across those
-axes, and each position is fitted separately, because what distinguishes wingers
-is not what distinguishes centre-backs.
+smaller set of independent axes, and similarity is the distance between two
+players across them. Each position is fitted separately, because what
+distinguishes wingers is not what distinguishes centre-backs.
 
 ![What the analysis keeps](docs/figures/pca.png)
 
-Widening a search to a position group uses a second analysis fitted across that
-group, since coordinates from different fits are not comparable.
+**How many axes to keep was decided by testing, not by picking a round share of
+the variance.** Holding back at 80% cost real accuracy — right wingers found
+themselves at median rank 34 on four axes and 23 on seven. A small share of the
+variation is not the same thing as noise.
+
+Those axes also answer *why* two players matched. Each result carries a line like
+*"Both high for possession and final third"*, read from where the pair sit on the
+axis that separates their position most.
+
+### Team context, never a team rating
+
+Pressing intensity is one number for eleven people. Assigning it to an individual
+would make everyone at the same club look alike, so it is shown as context — a
+panel describing the sides a player turned out for — and kept out of the
+similarity model entirely. The interface says so on the panel.
 
 ### Ranked results
 
-Ten closest profiles, re-ranked live as you filter by age bracket, contract
-remaining, or whether a player is still in these leagues. Each row shows a match
-score out of 100, and three tags: one trait the two players share, and the two
-largest differences with direction.
+![The ranked results](docs/screenshots/04-similar.png)
+
+Ten closest profiles, re-ranked live as you filter. Each row shows a match score
+out of 100, one trait the two players share, the two largest differences, and the
+reason they matched. Arrow keys walk the list, `S` saves, `+` adds to the
+comparison.
 
 ### Comparison
 
-Up to five players at once. Overlaid percentile shapes, every metric on a shared
-percentile track with one column per player, and output by season on a common
-axis.
+![Comparing players](docs/screenshots/05-compare.png)
+
+Up to six players at once, from the similar list or by searching the whole pool.
+Overlaid percentile shapes, every metric on a shared track with one column per
+player, and output by season on a common axis.
 
 ---
 
 ## Does it hold up?
 
-Each player's seasons are split into two halves and a profile built from each.
-Given the first half, where does that player's own second-half profile rank among
-every candidate? A model reading noise would not find him.
+If a tool claims two players are alike, the first thing to check is whether it
+can spot the most obvious case of all: a player and himself.
 
-| Position | Players | Median rank | If random |
-| --- | --- | --- | --- |
-| Attacking Midfield | 161 | 19 | 81 |
-| Right Winger | 153 | 27 | 77 |
-| Right-Back | 206 | 30 | 104 |
-| Centre-Back | 464 | 85 | 232 |
-| Goalkeeper | 160 | 62 | 80 |
+So each player is split in two — his early seasons and his later ones — and
+treated as two strangers. Hand the tool the early version, ask it to rank
+everyone, and see where the later version comes out.
 
 ![Validation](docs/figures/validation.png)
 
-Real signal, well short of proof — a shortlist to watch, not a verdict.
+An attacking midfielder lands **18th of 161**. Guessing at random would put him
+81st. The tool has never seen the two halves as the same person; it recognises
+the way he plays.
 
-The goalkeeper row is why goalkeepers are **not ranked at all**. At 62 against a
-chance of 80, a similar-players list would be close to random. They still get
-percentiles for build-up involvement, with a note that the measure reflects a
-team's possession as much as the keeper.
+Well ahead of chance everywhere, and nowhere near certain. Centre-backs do worst
+because the data holds nothing about defending. **Goalkeepers are not ranked at
+all** — at 57th of 160 against a chance of 80, a list would be close to random.
+They still get percentiles for build-up involvement, with a note that the measure
+reflects a team's possession as much as the keeper.
 
 ---
 
@@ -173,41 +203,36 @@ rather than burying it.
 
 ---
 
-## Updating for a new season
+## Keeping it current
 
-**Actions → Update data → Run workflow.** Four boxes:
+![The player bar](docs/screenshots/02-player.png)
 
-| Box | What to enter |
-| --- | --- |
-| **leagues** | keys from `config/leagues.yml`, space separated |
-| **seasons** | starting years. `2026` means 2026/27 |
-| **mode** | `add_missing` inserts only what the master lacks; `refresh` replaces those league-seasons; `rebuild` starts over |
-| **dry_run** | tick to see what would change without saving it |
+Three workflows, each doing one job.
 
-One run does everything: collects both records, matches them, rescores every
-player, commits, and the site redeploys itself. Fifteen to forty minutes. The run
-summary reports the match rate, what changed, and the new scores.
+**Update data** — run when a season finishes. Collects both records, matches
+them, rescores every player, commits. The site redeploys itself. Four inputs:
+leagues, seasons, mode (`add_missing`, `refresh` or `rebuild`), and a dry run.
+Fifteen to forty minutes.
 
-Wait until a season has finished. Part-season rates come from tiny samples and
-would distort a career profile; the workflow has no schedule for that reason.
+Wait until a season has actually finished. Part-season rates come from tiny
+samples and would distort a career profile, which is why the workflow has no
+schedule.
 
-**If a regular player fails to match**, the summary names them. Add a line to
+**Refresh clubs** — runs on the 1st and 15th, just after the European windows
+shut. Updates current club, market value and contract for every player already
+in the master, then rebuilds the site data. Nothing derived from match data is
+recalculated: a transfer is not a reason to rescore anyone.
+
+**Rebuild scores** — for when the data is fine but the model changed. Reads the
+master already in the repository, downloads nothing.
+
+Every run writes a report, and the interface reads them: the **Updated** chip in
+the masthead shows when the season data, the clubs and the model each last ran,
+in IST or UTC.
+
+**If a regular player fails to match**, the run summary names them. Add a line to
 `config/aliases.csv` and rerun with mode `refresh`. Only add one when you are
 certain — the alias file overrides all matching logic.
-
-**Clubs refresh on their own.** Where a player plays changes between seasons;
-what they did last season does not. A fortnightly job updates the current club,
-market value and contract for every player already in the master and rebuilds
-the site data. Nothing derived from match data is recalculated — a transfer is
-not a reason to rescore anyone. Run it on demand with **Actions → Refresh
-clubs**.
-
-**Changing the model rather than the data** — a different metric set, a new
-minutes threshold, different position groupings — means editing
-`pipeline/build_scores.py` and running **Rebuild scores**, which skips collection
-entirely.
-
-Full setup instructions: **[DEPLOY.md](DEPLOY.md)**.
 
 ---
 
@@ -219,16 +244,17 @@ config/
   aliases.csv         name equivalences the matcher cannot infer
 pipeline/
   resolve_leagues.py  league keys to each source's codes
-  pull_understat.py   the playing record
+  pull_understat.py   the playing and team records
   build_squads.py     the player record
   merge_master.py     matching and incremental merge — six passes
   refresh_clubs.py    fortnightly club, value and contract refresh
   build_scores.py     the model
-  merge_report.py     run summaries
-  score_report.py
+  stamp_assets.py     versions the stylesheet and script against stale caches
+  *_report.py         run summaries
 data/
   master_players.csv  one row per player per season
-  reports/            one JSON per update, recording exactly what changed
+  team_seasons.csv    one row per club per season
+  reports/            one JSON per run, recording exactly what changed
 site/
   index.html · app.js · style.css · assets · data
 ```
@@ -236,6 +262,9 @@ site/
 No framework and no build step. The page is plain HTML, CSS and JavaScript
 reading three JSON files, and ranking happens in the browser so filters re-rank
 against the whole pool rather than filtering a frozen list.
+
+The shortlist lives in the browser's own storage and never leaves the device; it
+exports to CSV for anywhere else.
 
 ---
 

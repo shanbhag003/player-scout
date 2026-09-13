@@ -963,3 +963,80 @@ input,button{border-radius:inherit}
   /* Fixed backgrounds repaint badly during momentum scroll on iOS. */
   body::before,body::after{position:absolute;height:100%}
 }
+
+/* ── two routes on the landing page ───────────────────── */
+.routes{display:grid;gap:1.4rem;margin-top:1.6rem;padding-top:1.2rem;
+  border-top:1px solid var(--hairline)}
+.route-tag{display:inline-block;font-family:var(--cond);font-weight:600;font-size:.82rem;
+  color:var(--gold);border:1px solid rgba(240,188,99,.32);background:rgba(240,188,99,.08);
+  border-radius:99px;padding:.14rem .6rem;margin-bottom:.6rem}
+.route-tag.alt{color:var(--blue);border-color:rgba(87,180,236,.32);background:rgba(87,180,236,.08)}
+.routes .howto{margin:0;padding:0;border:0;gap:.55rem}
+.inline-plus{color:var(--gold);font-weight:700}
+
+/* ── shortlist ────────────────────────────────────────── */
+.shortlist-wrap{position:relative;margin-left:auto}
+.freshness{margin-left:.5rem}
+#short-btn.has{border-color:rgba(240,188,99,.45);color:var(--gold);background:rgba(240,188,99,.1)}
+.short-panel{width:min(25rem,88vw)}
+.short-actions{display:flex;gap:.35rem}
+.short-actions .ghost{padding:.24rem .5rem;font-size:.72rem}
+.short-list{list-style:none;margin:0;padding:0;display:grid;gap:.1rem;
+  max-height:20rem;overflow:auto}
+.short-list li{display:grid;grid-template-columns:1fr auto;gap:.4rem;align-items:center;
+  border-bottom:1px solid var(--hairline-soft)}
+.short-list li:last-child{border-bottom:0}
+.short-empty{padding:.9rem 0;font-size:.8rem;color:var(--faint);line-height:1.45;
+  border-bottom:0!important}
+.short-open{display:flex;align-items:center;gap:.55rem;background:none;border:0;
+  cursor:pointer;text-align:left;padding:.45rem 0;color:var(--ink);width:100%}
+.short-open .flag{width:1.3rem;height:1.3rem}
+.short-open b{font-weight:500;font-size:.85rem;display:block}
+.short-open em{font-style:normal;font-size:.72rem;color:var(--muted)}
+
+.rowacts{display:grid;gap:.3rem}
+.savebtn{border:1px solid var(--hairline);background:var(--surface);color:var(--faint);
+  border-radius:var(--radius);cursor:pointer;display:grid;place-items:center;padding:.2rem}
+.savebtn svg{width:.95rem;height:.95rem}
+.savebtn.on{color:var(--gold);border-color:rgba(240,188,99,.45);background:rgba(240,188,99,.1)}
+.ghost.save.on{color:var(--gold);border-color:rgba(240,188,99,.45);background:rgba(240,188,99,.1)}
+.ghost.save{display:inline-flex;align-items:center;gap:.35rem}
+
+/* ── why two players matched ──────────────────────────── */
+.why{grid-column:3/-1;font-size:.74rem;color:var(--faint);margin-top:.15rem;
+  font-style:normal}
+
+/* ── add anyone to a comparison ───────────────────────── */
+.cmp-add{position:relative;margin-bottom:.8rem;max-width:34rem}
+.cmp-add label{display:block;font-family:var(--cond);font-weight:600;font-size:.88rem;
+  color:var(--muted);margin-bottom:.3rem}
+#cmp-search{width:100%;padding:.55rem 1rem .55rem 2.3rem;background:var(--surface);
+  border:1px solid var(--hairline);border-radius:var(--radius);font-size:16px;
+  -webkit-appearance:none;appearance:none}
+#cmp-search:focus{border-color:var(--blue);outline:none}
+#cmp-search:disabled{opacity:.5}
+.cmp-add .input-icon{width:1rem;height:1rem;left:.7rem}
+.cmp-add-note{font-size:.74rem;color:var(--faint);margin-top:.3rem}
+
+/* ── repo link ────────────────────────────────────────── */
+.repo-line{margin-bottom:1rem}
+.repo-line a{display:inline-flex;align-items:center;gap:.45rem;color:var(--muted);
+  text-decoration:none;font-size:.82rem;border:1px solid var(--hairline);
+  background:var(--surface);border-radius:99px;padding:.32rem .75rem}
+
+@media (max-width:680px){
+  .shortlist-wrap{margin-left:auto}
+  .freshness{margin-left:.3rem}
+  #short-count{font-size:0}
+  #short-btn.has #short-count{font-size:.72rem}
+  .short-panel{left:.8rem;right:.8rem;width:auto}
+  /* the scout shortcut has to exist on a phone too */
+  .traybtn{display:inline-block;font-size:.65rem;padding:.08rem .3rem}
+  .trayitem{flex-wrap:wrap}
+  .rowacts{grid-auto-flow:column;gap:.25rem}
+  .why{grid-column:1/-1}
+  .routes{gap:1.1rem}
+}
+@media (min-width:981px){
+  .routes{grid-template-columns:1fr 1fr;gap:2rem}
+}
