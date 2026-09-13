@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=c38aeb25">
+<link rel="stylesheet" href="style.css?v=f065864c">
 </head>
 <body>
 
@@ -109,6 +109,7 @@
 
     <div class="tabpanel" id="panel-profile" role="tabpanel">
       <div class="profile-grid">
+        <div class="profile-left">
         <article class="panel radar-panel">
           <header class="panel-head">
             <h2 id="radar-title">Profile against position</h2>
@@ -118,7 +119,16 @@
           <p class="scale-help" id="scale-help"></p>
         </article>
 
-        <div class="profile-side">
+        <article class="panel" id="team-panel" hidden>
+          <header class="panel-head">
+            <h2>The sides he played in</h2>
+            <p class="panel-sub" id="team-sub"></p>
+          </header>
+          <div class="teamctx" id="teamctx"></div>
+        </article>
+        </div>
+
+        <div class="profile-main">
           <article class="panel">
             <header class="panel-head"><h2>Percentile detail</h2></header>
             <div class="radar-key" id="radar-key"></div>
@@ -129,13 +139,6 @@
               <p class="panel-sub" id="career-sub"></p>
             </header>
             <div class="career" id="career"></div>
-          </article>
-          <article class="panel" id="team-panel" hidden>
-            <header class="panel-head">
-              <h2>The sides he played in</h2>
-              <p class="panel-sub" id="team-sub"></p>
-            </header>
-            <div class="teamctx" id="teamctx"></div>
           </article>
         </div>
 
@@ -237,6 +240,6 @@
   </details>
 </footer>
 
-<script src="app.js?v=c38aeb25"></script>
+<script src="app.js?v=f065864c"></script>
 </body>
 </html>

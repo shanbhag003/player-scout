@@ -72,15 +72,38 @@ REFRESHABLE = {
 
 
 def fetch_players():
+    """Download the archive and report how old it is.
+
+    This is a periodic rebuild of a third-party dataset, not a live feed, so the
+    only honest thing to show is when the file itself was last written. The
+    server's Last-Modified header answers that directly; the newest date inside
+    the archive is the fallback.
+    """
     print(f"downloading player records from {DATA_URL}")
     r = requests.get(DATA_URL, headers=HDR, timeout=300)
     r.raise_for_status()
+    served = r.headers.get("Last-Modified") or r.headers.get("Date")
+    if served:
+        print(f"  archive last modified: {served}")
+
+    # The newest timestamp among the files inside the zip.
+    built = None
+    try:
+        with zipfile.ZipFile(io.BytesIO(r.content)) as z:
+            stamps = [info.date_time for info in z.infolist() if info.date_time]
+            if stamps:
+                y, mo, d, hh, mm, ss = max(stamps)
+                built = f"{y:04d}-{mo:02d}-{d:02d}"
+                print(f"  newest file inside the archive: {built}")
+    except Exception:
+        pass
+
     tables = load_tables(r.content, ["players"])
     players = tables.get("players")
     if players is None or players.empty:
         raise RuntimeError("no players table in the archive")
     print(f"  {len(players):,} player records")
-    return players
+    return players, served, built
 
 
 def main():
@@ -96,7 +119,7 @@ def main():
     known = master["tm_player_id"].dropna().astype("int64").unique()
     print(f"master holds {len(master):,} rows covering {len(known):,} identified players")
 
-    players = fetch_players()
+    players, served, built = fetch_players()
     id_col = "player_id" if "player_id" in players.columns else players.columns[0]
     players[id_col] = pd.to_numeric(players[id_col], errors="coerce")
     fresh = players[players[id_col].isin(known)].drop_duplicates(id_col).set_index(id_col)
@@ -104,13 +127,14 @@ def main():
 
     # How stale is the snapshot? If a date column exists, the newest value in it
     # is the best available answer.
-    stamp = None
-    for col in ("date_of_last_update", "last_updated", "date"):
+    stamp = built
+    for col in ("date_of_last_update", "last_updated", "last_season", "date"):
         if col in players.columns:
-            stamp = str(pd.to_datetime(players[col], errors="coerce").max())[:10]
-            break
-    if stamp:
-        print(f"  upstream snapshot appears to be from {stamp}")
+            found = str(pd.to_datetime(players[col], errors="coerce").max())[:10]
+            if found and found != "NaT":
+                stamp = found
+                break
+    print(f"  upstream snapshot: {stamp or 'unknown'}")
 
     if args.inspect:
         row = players[players[id_col] == args.inspect]
@@ -159,6 +183,12 @@ def main():
     print("\nfields updated:")
     for dst, n in changes.items():
         print(f"  {dst:26} {n:6,} rows changed")
+    if not any(changes.values()):
+        print("\n  Nothing at all changed — not one club, contract or market value\n"
+              "  across 5,520 players. Market values move constantly, so this means\n"
+              "  the archive has not been rebuilt since the master was assembled,\n"
+              "  not that no player has moved. This dataset is a periodic scrape of\n"
+              "  Transfermarkt, and it lags the live site.")
     if examples:
         print("\nclub moves picked up:")
         for e in examples:
@@ -166,6 +196,8 @@ def main():
 
     log = {
         "upstream_snapshot": stamp,
+        "archive_last_modified": served,
+        "upstream_columns": sorted(players.columns.tolist()),
         "refreshed_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "rows": len(master), "identified_players": int(len(known)),
         "matched_upstream": int(len(fresh)),

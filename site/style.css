@@ -361,9 +361,11 @@ button,input{font:inherit;color:inherit}
 .panel-head h2{font-size:1.15rem}
 .panel-sub{font-size:.81rem;color:var(--muted);margin-top:.2rem}
 
-.profile-grid{display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,.98fr);
+/* Two columns that each hold their own stack, so neither has to stretch to
+   match the other and leave a hole where the radar used to sit alone. */
+.profile-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
   gap:.9rem;align-items:start}
-.profile-side{display:grid;gap:.9rem;align-content:start}
+.profile-left,.profile-main{display:grid;gap:.9rem;align-content:start}
 .history-panel{grid-column:1/-1}
 .career{display:grid;grid-template-columns:repeat(3,1fr);gap:.85rem .6rem}
 .career dt{font-size:.7rem;color:var(--faint);margin-bottom:.1rem}
@@ -623,11 +625,8 @@ button,input{font:inherit;color:inherit}
 @media (hover:hover){.traybtn:hover{border-color:var(--gold);color:var(--gold)}}
 
 /* the two profile columns end level */
-.profile-grid{align-items:stretch}
-.profile-side{grid-template-rows:auto 1fr}
 .radar-panel{display:flex;flex-direction:column}
-.radar-panel .radar-wrap{flex:1;align-items:center}
-.scale-help{margin-top:auto}
+.radar-panel .radar-wrap{align-items:center}
 
 /* rules between the method columns */
 .method{column-gap:0}

@@ -27,6 +27,15 @@ if moves:
     for m in moves[:12]:
         print(f"| {m['player']} | {m['was']} | {m['now']} |")
 else:
-    print("\nNo club changed since the last refresh. If you can see a move on the "
-          "live site that is missing here, the upstream dataset has not "
-          "published it yet — it is a periodic scrape, not a live feed.")
+    fields = r.get("fields") or {}
+    if fields and not any(fields.values()):
+        print("\n**Nothing changed at all** — not one club, contract or market value "
+              "across every player. Market values move constantly, so this means the "
+              "source archive has not been rebuilt since the master was assembled.")
+        print("\nThe source is a periodic scrape of Transfermarkt, not a live feed, so "
+              "it lags the website. A move visible there will appear here once the "
+              "archive is next published.")
+        if r.get("archive_last_modified"):
+            print(f"\nArchive last modified: `{r['archive_last_modified']}`")
+    else:
+        print("\nNo club changed since the last refresh.")
