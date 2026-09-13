@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=ce6add4d">
+<link rel="stylesheet" href="style.css?v=2739e578">
 </head>
 <body>
 
@@ -22,6 +22,23 @@
       <span class="brand-name">Player Scout</span>
     </div>
     <nav class="sports" id="sports" aria-label="Sport"></nav>
+    <div class="freshness">
+      <button class="fresh-btn" id="fresh-btn" aria-expanded="false" aria-controls="fresh-panel">
+        <span class="fresh-dot" aria-hidden="true"></span>
+        <span id="fresh-label">Updated</span>
+      </button>
+      <div class="fresh-panel" id="fresh-panel" hidden>
+        <div class="fresh-head">
+          <h2>When this was last updated</h2>
+          <div class="tzswitch" role="group" aria-label="Time zone">
+            <button data-tz="IST" aria-pressed="true">IST</button>
+            <button data-tz="UTC" aria-pressed="false">UTC</button>
+          </div>
+        </div>
+        <ul class="fresh-list" id="fresh-list"></ul>
+        <p class="fresh-foot" id="fresh-foot"></p>
+      </div>
+    </div>
     <div class="shortlist-wrap">
       <button class="fresh-btn" id="short-btn" aria-expanded="false" aria-controls="short-panel">
         <svg viewBox="0 0 24 24" class="btn-icon" aria-hidden="true">
@@ -39,24 +56,6 @@
         </div>
         <ul class="short-list" id="short-list"></ul>
         <p class="fresh-foot">Saved in this browser only. Nothing leaves your device.</p>
-      </div>
-    </div>
-
-    <div class="freshness">
-      <button class="fresh-btn" id="fresh-btn" aria-expanded="false" aria-controls="fresh-panel">
-        <span class="fresh-dot" aria-hidden="true"></span>
-        <span id="fresh-label">Updated</span>
-      </button>
-      <div class="fresh-panel" id="fresh-panel" hidden>
-        <div class="fresh-head">
-          <h2>When this was last updated</h2>
-          <div class="tzswitch" role="group" aria-label="Time zone">
-            <button data-tz="IST" aria-pressed="true">IST</button>
-            <button data-tz="UTC" aria-pressed="false">UTC</button>
-          </div>
-        </div>
-        <ul class="fresh-list" id="fresh-list"></ul>
-        <p class="fresh-foot" id="fresh-foot"></p>
       </div>
     </div>
   </div>
@@ -309,6 +308,6 @@
   </details>
 </footer>
 
-<script src="app.js?v=ce6add4d"></script>
+<script src="app.js?v=2739e578"></script>
 </body>
 </html>

@@ -410,15 +410,16 @@ button,input{font:inherit;color:inherit}
 @media (hover:hover){.addbtn:disabled:hover{border-color:var(--hairline-soft);color:var(--muted)}}
 
 .matches{list-style:none;margin:0;padding:0;display:grid;gap:.4rem}
-.match{position:relative;display:grid;grid-template-columns:1fr 2.4rem;gap:.4rem}
+.match{position:relative;display:grid;grid-template-columns:1fr auto;gap:.4rem;align-items:stretch}
 .match-btn{width:100%;text-align:left;cursor:pointer;background:var(--surface);
   border:1px solid var(--hairline);border-radius:var(--radius);padding:.65rem .85rem;
   display:grid;align-items:center;gap:.85rem;min-height:3.8rem;
-  grid-template-columns:1.3rem 3.2rem minmax(0,1fr) 2.8rem 6.2rem 4.2rem minmax(0,14rem)}
+  grid-template-columns:1.3rem 3.2rem minmax(0,1fr) 2.8rem 6.2rem 4.2rem minmax(9rem,14rem)}
 @media (hover:hover){.match-btn:hover{border-color:var(--gold);background:var(--raised)}}
 .match.is-open .match-btn{border-color:var(--blue)}
 .addbtn{border:1px solid var(--hairline);background:var(--surface);color:var(--muted);
-  border-radius:var(--radius);cursor:pointer;font-size:1.2rem;line-height:1}
+  border-radius:var(--radius);cursor:pointer;font-size:1.2rem;line-height:1;
+  display:grid;place-items:center}
 @media (hover:hover){.addbtn:hover{border-color:var(--gold);color:var(--gold)}}
 .addbtn.on{background:rgba(95,168,211,.14);border-color:var(--blue);color:var(--blue)}
 .rank{font-family:var(--cond);font-weight:600;color:var(--faint);font-size:.92rem}
@@ -914,7 +915,7 @@ body::after{
 @media (hover:hover){.fresh-btn:hover{border-color:var(--gold);color:var(--gold)}}
 .fresh-dot{width:.42rem;height:.42rem;border-radius:50%;background:var(--good);
   box-shadow:0 0 8px rgba(79,194,162,.7);flex:none}
-.fresh-panel{position:absolute;right:0;top:calc(100% + .5rem);z-index:40;width:min(23rem,86vw);
+.fresh-panel{position:absolute;right:0;top:calc(100% + .5rem);z-index:60;width:min(23rem,86vw);
   background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0) 46%),var(--raised);
   border:1px solid var(--hairline);border-radius:var(--radius);padding:.9rem 1rem;
   box-shadow:0 18px 44px rgba(0,0,0,.55)}
@@ -979,12 +980,12 @@ input,button{border-radius:inherit}
 
 /* ── shortlist ────────────────────────────────────────── */
 .shortlist-wrap{position:relative;flex:none;margin-left:auto}
-.freshness{flex:none}
+.freshness{flex:none;position:relative}
 #short-btn.has{border-color:rgba(240,188,99,.45);color:var(--gold);background:rgba(240,188,99,.1)}
 /* Its own anchor and its own dimensions - it was inheriting .fresh-panel's
    right:0 against the wrong parent and rendering as a clipped sliver. */
 .short-panel{
-  position:absolute;top:calc(100% + .5rem);right:0;left:auto;z-index:40;
+  position:absolute;top:calc(100% + .5rem);right:0;left:auto;z-index:60;
   width:min(25rem,88vw);max-width:90vw;
 }
 .short-actions{display:flex;gap:.35rem}
@@ -1002,7 +1003,8 @@ input,button{border-radius:inherit}
 .short-open b{font-weight:500;font-size:.85rem;display:block}
 .short-open em{font-style:normal;font-size:.72rem;color:var(--muted)}
 
-.rowacts{display:grid;gap:.3rem}
+.rowacts{display:flex;flex-direction:column;gap:.3rem;justify-content:center}
+.savebtn,.addbtn{flex:none;width:2.4rem;height:1.7rem}
 .savebtn{border:1px solid var(--hairline);background:var(--surface);color:var(--faint);
   border-radius:var(--radius);cursor:pointer;display:grid;place-items:center;padding:.2rem}
 .savebtn svg{width:.95rem;height:.95rem}
