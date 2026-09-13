@@ -416,8 +416,7 @@ button,input{font:inherit;color:inherit}
   border:1px solid var(--hairline);border-radius:var(--radius);padding:.65rem .85rem;
   display:grid;align-items:center;gap:.85rem;min-height:3.8rem;
   grid-template-columns:1.3rem 3.2rem minmax(0,1fr) 2.8rem 6.2rem 4.2rem minmax(9rem,14rem)}
-@media (hover:hover){.match-btn:hover{border-color:var(--gold);background:var(--raised)}
-.mhead,.mmeta{display:contents}}
+@media (hover:hover){.match-btn:hover{border-color:var(--gold);background:var(--raised)}}
 .match.is-open .match-btn{border-color:var(--blue)}
 .addbtn{border:1px solid var(--hairline);background:var(--surface);color:var(--muted);
   border-radius:var(--radius);cursor:pointer;font-size:1.2rem;line-height:1;
@@ -430,6 +429,7 @@ button,input{font:inherit;color:inherit}
 .score-track{height:.2rem;background:var(--ground);border-radius:99px;overflow:hidden}
 .score-track span{display:block;height:100%;background:var(--blue);opacity:.8}
 .who{min-width:0}
+.facts{display:contents}
 .who-top{display:flex;align-items:center;gap:.4rem;min-width:0}
 .who-top b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .who-top .flag{width:1.1rem;height:1.1rem}
@@ -710,27 +710,30 @@ button,input{font:inherit;color:inherit}
   .segmented{width:100%;overflow-x:auto;scrollbar-width:none}
   .segmented::-webkit-scrollbar{display:none}
 
-  /* Grouped in markup as .mhead (score+name) and .mmeta (age/contract/value),
-     so this is a plain flex column instead of fighting the desktop grid. */
+  /* The original two-column card, just tightened: less padding, smaller gaps,
+     age/contract/value on one wrapped line so the card is short. */
   .match{grid-template-columns:1fr 2.2rem;gap:.3rem}
   .match-btn{
-    display:flex;flex-direction:column;gap:.3rem;
-    min-height:0;padding:.55rem .65rem;
+    grid-template-columns:2.6rem minmax(0,1fr);
+    gap:.15rem .55rem;padding:.5rem .65rem;min-height:0;align-items:start;
   }
-  .mhead{display:flex!important;align-items:center;gap:.5rem}
-  .score{flex:none}
-  .score-track{width:2.2rem}
-  .who{min-width:0;flex:1}
+  .rank{display:none}
+  .score{grid-row:1;grid-column:1}
+  .score-num{font-size:1.15rem}
+  .score-track{width:1.9rem}
+  .who{grid-row:1;grid-column:2;min-width:0}
   .who-sub{white-space:normal;font-size:.74rem;line-height:1.3}
   .nowat{display:inline-block;margin:0 0 0 .2rem}
 
-  .mmeta{display:flex!important;flex-wrap:wrap;gap:0 .9rem}
+  /* age/contract/value on one wrapping line, under the name */
+  .facts{display:flex!important;flex-wrap:wrap;gap:.1rem .9rem;
+    grid-column:2;margin-top:.15rem}
   .meta-cell{font-size:.78rem;font-family:var(--sans);font-weight:500;
-    display:flex;align-items:baseline;gap:.3rem}
-  .meta-cell i{margin:0}
+    display:inline-flex;align-items:baseline;gap:.3rem}
+  .meta-cell i{display:inline;font-size:.72rem;margin:0}
 
-  .reads{margin-top:0}
-  .why{margin-top:0}
+  .reads{grid-column:2;margin-top:.2rem;justify-content:flex-start}
+  .why{grid-column:2;margin-top:.1rem}
 
   /* comparison table drops the track and keeps the columns legible */
   .mrow{grid-template-columns:1fr repeat(var(--cols),2.7rem);gap:.25rem .4rem}

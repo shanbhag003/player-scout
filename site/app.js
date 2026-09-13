@@ -836,16 +836,14 @@ function renderResults() {
     return `<li class="match${inCmp ? " is-open" : ""}">
       <button class="match-btn" data-uid="${c.uid}">
         <span class="rank">${i + 1}</span>
-        <span class="mhead">
-          <span class="score"><span class="score-num">${r.score.toFixed(0)}</span>
-            <span class="score-track"><span style="width:${Math.min(100, r.score).toFixed(1)}%"></span></span></span>
-          <span class="who">
-            <span class="who-top">${flagHtml(c.nationality)}<b>${esc(c.name)}</b>
-              ${c.active ? "" : '<em class="gone-tag">left</em>'}</span>
-            <span class="who-sub">${whereLine(c)}</span>
-          </span>
+        <span class="score"><span class="score-num">${r.score.toFixed(0)}</span>
+          <span class="score-track"><span style="width:${Math.min(100, r.score).toFixed(1)}%"></span></span></span>
+        <span class="who">
+          <span class="who-top">${flagHtml(c.nationality)}<b>${esc(c.name)}</b>
+            ${c.active ? "" : '<em class="gone-tag">left</em>'}</span>
+          <span class="who-sub">${whereLine(c)}</span>
         </span>
-        <span class="mmeta">
+        <span class="facts">
           <span class="meta-cell"><i>Age</i>${c.age ?? "—"}</span>
           <span class="meta-cell"><i>Contract</i>${esc(contractText(c.contract))}</span>
           <span class="meta-cell"><i>Value</i>${esc(fmtValue(c.value) || "—")}</span>
