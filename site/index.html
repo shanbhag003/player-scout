@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=5ff11ad5">
+<link rel="stylesheet" href="style.css?v=053e55cc">
 </head>
 <body>
 
@@ -23,46 +23,47 @@
     </div>
     <nav class="sports" id="sports" aria-label="Sport"></nav>
     <div class="statuswrap">
-    <div class="freshness">
-      <button class="fresh-btn" id="fresh-btn" aria-expanded="false" aria-controls="fresh-panel">
-        <span class="fresh-dot" aria-hidden="true"></span>
-        <span id="fresh-label">Updated</span>
-      </button>
-      <div class="fresh-panel" id="fresh-panel" hidden>
-        <div class="fresh-head">
-          <h2>When this was last updated</h2>
-          <div class="tzswitch" role="group" aria-label="Time zone">
-            <button data-tz="IST" aria-pressed="true">IST</button>
-            <button data-tz="UTC" aria-pressed="false">UTC</button>
+      <div class="freshness">
+        <button class="fresh-btn" id="fresh-btn" aria-expanded="false" aria-controls="fresh-panel">
+          <span class="fresh-dot" aria-hidden="true"></span>
+          <span id="fresh-label">Updated</span>
+        </button>
+        <div class="fresh-panel" id="fresh-panel" hidden>
+          <div class="fresh-head">
+            <h2>When this was last updated</h2>
+            <div class="tzswitch" role="group" aria-label="Time zone">
+              <button data-tz="IST" aria-pressed="true">IST</button>
+              <button data-tz="UTC" aria-pressed="false">UTC</button>
+            </div>
           </div>
+          <ul class="fresh-list" id="fresh-list"></ul>
+          <p class="fresh-foot" id="fresh-foot"></p>
         </div>
-        <ul class="fresh-list" id="fresh-list"></ul>
-        <p class="fresh-foot" id="fresh-foot"></p>
       </div>
-    </div>
-    <div class="shortlist-wrap">
-      <button class="fresh-btn" id="short-btn" aria-expanded="false" aria-controls="short-panel">
-        <svg viewBox="0 0 24 24" class="btn-icon" aria-hidden="true">
-          <path d="M7 4h10v16l-5-4-5 4z" fill="none" stroke="currentColor" stroke-width="1.8"
-                stroke-linejoin="round"/></svg>
-        <span id="short-count">Shortlist</span>
-      </button>
-      <div class="fresh-panel short-panel" id="short-panel" hidden>
-        <div class="fresh-head">
-          <h2>Your shortlist</h2>
-          <div class="short-actions">
-            <button class="ghost" id="short-csv">Export CSV</button>
-            <button class="ghost" id="short-clear">Clear</button>
+      <div class="shortlist-wrap" id="shortlist-wrap">
+        <button class="fresh-btn" id="short-btn" aria-expanded="false" aria-controls="short-panel">
+          <svg viewBox="0 0 24 24" class="btn-icon" aria-hidden="true">
+            <path d="M7 4h10v16l-5-4-5 4z" fill="none" stroke="currentColor" stroke-width="1.8"
+                  stroke-linejoin="round"/></svg>
+          <span id="short-count">Shortlist</span>
+        </button>
+        <div class="fresh-panel short-panel" id="short-panel" hidden>
+          <div class="fresh-head">
+            <h2>Your shortlist</h2>
+            <div class="short-actions">
+              <button class="ghost" id="short-csv">Export CSV</button>
+              <button class="ghost" id="short-clear">Clear</button>
+            </div>
           </div>
+          <ul class="short-list" id="short-list"></ul>
+          <p class="fresh-foot">Saved in this browser only. Nothing leaves your device.</p>
         </div>
-        <ul class="short-list" id="short-list"></ul>
-        <p class="fresh-foot">Saved in this browser only. Nothing leaves your device.</p>
       </div>
     </div>
   </div>
-    </div>
-  </div>
-</header>d="main" class="shell">
+</header>
+
+<main id="main" class="shell">
 
   <section class="hero" id="hero">
     <div class="hero-left">
@@ -309,6 +310,6 @@
   </details>
 </footer>
 
-<script src="app.js?v=5ff11ad5"></script>
+<script src="app.js?v=053e55cc"></script>
 </body>
 </html>

@@ -569,6 +569,7 @@ button,input{font:inherit;color:inherit}
   .reads{grid-column:3/-1;justify-content:flex-start;margin-top:.1rem}
 }
 @media (max-width:680px){
+  .savebtn,.traysave,#save-player{display:none}
   .match-btn{grid-template-columns:2.8rem minmax(0,1fr) auto;gap:.5rem .6rem}
   .rank{display:none}
   .meta-cell i{display:inline;margin-right:.25rem}
@@ -668,6 +669,7 @@ button,input{font:inherit;color:inherit}
 
 /* ── narrow screens ───────────────────────────────────── */
 @media (max-width:680px){
+  .shortlist-wrap{display:none}
   .top-inner{gap:.4rem;flex-wrap:nowrap}
   .brand-name{font-size:1.05rem}
   .sports{gap:.05rem;margin-left:.1rem;max-width:22vw}
