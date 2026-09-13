@@ -541,6 +541,39 @@ def same_club(a, b):
     return ka == kb or ka in kb or kb in ka
 
 
+def last_runs():
+    """When each part of the pipeline last did something.
+
+    Three separate events that people conflate: the season data being collected,
+    the clubs being refreshed, and the model being run. Reading them off the run
+    reports means the interface reports what happened rather than guessing.
+    """
+    import glob
+    reports = os.path.join(HERE, "data", "reports")
+    out = {}
+    for pattern, key, stamp_field in (
+            ("merge-*.json", "data", "built_at"),
+            ("clubs-*.json", "clubs", "refreshed_at")):
+        files = sorted(glob.glob(os.path.join(reports, pattern)))
+        if not files:
+            continue
+        try:
+            with open(files[-1]) as f:
+                report = json.load(f)
+        except Exception:
+            continue
+        entry = {"at": report.get(stamp_field)}
+        if key == "data":
+            entry["league_seasons"] = report.get("league_seasons", [])
+            entry["rows"] = report.get("master_rows")
+        else:
+            entry["upstream_snapshot"] = report.get("upstream_snapshot")
+            entry["club_moves"] = len(report.get("club_moves") or [])
+            entry["fields"] = report.get("fields", {})
+        out[key] = entry
+    return out
+
+
 def age_on(dob, today):
     if not isinstance(dob, str) or len(dob) < 10:
         return None
@@ -727,6 +760,7 @@ def main():
 
     meta = {
         "built_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "last_runs": last_runs(),
         "pool": len(index),
         "active_players": int(sum(1 for p in index if p["active"])),
         "latest_season": max(p["last_season"] for p in index),

@@ -6,7 +6,7 @@ const state = {
   meta: null, index: [], byUid: new Map(), detail: null,
   countries: {}, leagues: {}, selected: null, highlight: -1,
   filters: { scope: "position", age: "any", contract: "any", activeOnly: true },
-  compare: [], tab: "profile",
+  compare: [], tab: "profile", tz: "IST",
 };
 
 const MAX_COMPARE = 5;
@@ -81,10 +81,76 @@ function renderSports() {
     </button>`).join("");
 }
 
+/* Three different things get called "updated" and people conflate them: when
+   the season data was collected, when clubs were last checked, and when the
+   model was last run. Each is reported separately. */
+function fmtStamp(iso, tz) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d)) return null;
+  const opts = {
+    timeZone: tz === "UTC" ? "UTC" : "Asia/Kolkata",
+    day: "numeric", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  };
+  return `${d.toLocaleString("en-GB", opts)} ${tz}`;
+}
+
+function sinceText(iso) {
+  if (!iso) return "";
+  const hours = (Date.now() - new Date(iso)) / 3.6e6;
+  if (hours < 1) return "just now";
+  if (hours < 24) return `${Math.round(hours)}h ago`;
+  const days = Math.round(hours / 24);
+  if (days < 31) return `${days} day${days > 1 ? "s" : ""} ago`;
+  return `${Math.round(days / 30)} month${days >= 60 ? "s" : ""} ago`;
+}
+
+function renderFreshness() {
+  const m = state.meta;
+  const runs = m.last_runs || {};
+  const tz = state.tz;
+
+  const items = [
+    { key: "scores", at: m.built_at, title: "Model run",
+      note: `${m.pool.toLocaleString()} players scored across ` +
+            `${m.similarity_metrics.length} metrics` },
+    { key: "data", at: runs.data?.at, title: "Season data",
+      note: runs.data
+        ? `${(runs.data.rows || 0).toLocaleString()} player-seasons, ` +
+          `${(runs.data.league_seasons || []).length} league-seasons`
+        : "no record of a collection run yet" },
+    { key: "clubs", at: runs.clubs?.at, title: "Clubs and contracts",
+      note: runs.clubs
+        ? `${runs.clubs.club_moves || 0} club move${runs.clubs.club_moves === 1 ? "" : "s"} found` +
+          (runs.clubs.upstream_snapshot ? `, source dated ${runs.clubs.upstream_snapshot}` : "")
+        : "never run — clubs are as collected with the season data" },
+  ];
+
+  $("fresh-list").innerHTML = items.map((it) => `
+    <li class="${it.at ? "" : "never"}">
+      <span class="fl-title">${esc(it.title)}</span>
+      <span class="fl-when">${it.at ? esc(fmtStamp(it.at, tz)) : "—"}</span>
+      <span class="fl-since">${it.at ? esc(sinceText(it.at)) : ""}</span>
+      <span class="fl-note">${esc(it.note)}</span>
+    </li>`).join("");
+
+  const newest = items.map((i) => i.at).filter(Boolean).sort().pop();
+  $("fresh-label").innerHTML = newest
+    ? `<span class="fresh-word">Updated </span>${esc(sinceText(newest))}`
+    : `<span class="fresh-word">Updated</span>`;
+  $("fresh-btn").title = newest ? fmtStamp(newest, tz) : "";
+  $("fresh-foot").textContent =
+    `Seasons ${m.seasons[0]} to ${m.seasons[m.seasons.length - 1]} are complete. ` +
+    `The season in progress is added once it finishes.`;
+  document.querySelectorAll("[data-tz]").forEach((b) =>
+    b.setAttribute("aria-pressed", String(b.dataset.tz === tz)));
+}
+
 function renderCoverCard() {
   const m = state.meta;
   const last = m.seasons[m.seasons.length - 1];
-  $("top-note").textContent = `Complete through ${last}`;
+  renderFreshness();
 
   $("bigstats").innerHTML = [
     [m.pool.toLocaleString(), "players"],
@@ -223,7 +289,10 @@ function select(uid, opts = {}) {
   renderCompare();
   renderMethod();
   setTab("profile");
-  if (!opts.silent) window.scrollTo({ top: 0, behavior: "smooth" });
+  if (!opts.silent) {
+    try { window.scrollTo({ top: 0, behavior: "smooth" }); }
+    catch { window.scrollTo(0, 0); }
+  }
 }
 
 function clearSelection() {
@@ -1075,7 +1144,13 @@ function syncMethodPanels() {
   nav.querySelectorAll("button").forEach((b) =>
     b.addEventListener("click", () => {
       const el = cols[Number(b.dataset.step)];
-      $("method").scrollTo({ left: el.offsetLeft - $("method").offsetLeft, behavior: "smooth" });
+      const box = $("method");
+      const left = el.offsetLeft - box.offsetLeft;
+      // Safari only gained smooth scrollTo on elements recently.
+      if (typeof box.scrollTo === "function") {
+        try { box.scrollTo({ left, behavior: "smooth" }); }
+        catch { box.scrollLeft = left; }
+      } else box.scrollLeft = left;
       markMethodStep(Number(b.dataset.step));
     }));
   if (!$("method").dataset.wired) {
@@ -1131,6 +1206,20 @@ function wire() {
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".finder")) $("suggestions").hidden = true;
   });
+
+  $("fresh-btn").addEventListener("click", () => {
+    const open = $("fresh-panel").hidden;
+    $("fresh-panel").hidden = !open;
+    $("fresh-btn").setAttribute("aria-expanded", String(open));
+  });
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".freshness")) {
+      $("fresh-panel").hidden = true;
+      $("fresh-btn").setAttribute("aria-expanded", "false");
+    }
+  });
+  document.querySelectorAll("[data-tz]").forEach((b) =>
+    b.addEventListener("click", () => { state.tz = b.dataset.tz; renderFreshness(); }));
 
   document.querySelector(".brand").addEventListener("click", clearSelection);
   document.querySelector(".brand").setAttribute("role", "button");

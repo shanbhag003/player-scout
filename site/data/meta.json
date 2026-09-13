@@ -1,5 +1,38 @@
 {
- "built_at": "2026-09-13T03:56:55+00:00",
+ "built_at": "2026-09-13T04:19:48+00:00",
+ "last_runs": {
+  "data": {
+   "at": "2026-09-13T04:19:37+00:00",
+   "league_seasons": [
+    "Bundesliga 2021/22",
+    "Bundesliga 2022/23",
+    "Bundesliga 2023/24",
+    "Bundesliga 2024/25",
+    "Bundesliga 2025/26",
+    "La Liga 2021/22",
+    "La Liga 2022/23",
+    "La Liga 2023/24",
+    "La Liga 2024/25",
+    "La Liga 2025/26",
+    "Ligue 1 2021/22",
+    "Ligue 1 2022/23",
+    "Ligue 1 2023/24",
+    "Ligue 1 2024/25",
+    "Ligue 1 2025/26",
+    "Premier League 2021/22",
+    "Premier League 2022/23",
+    "Premier League 2023/24",
+    "Premier League 2024/25",
+    "Premier League 2025/26",
+    "Serie A 2021/22",
+    "Serie A 2022/23",
+    "Serie A 2023/24",
+    "Serie A 2024/25",
+    "Serie A 2025/26"
+   ],
+   "rows": 13980
+  }
+ },
  "pool": 2779,
  "active_players": 1801,
  "latest_season": "2025/26",

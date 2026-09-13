@@ -22,7 +22,23 @@
       <span class="brand-name">Player Scout</span>
     </div>
     <nav class="sports" id="sports" aria-label="Sport"></nav>
-    <p class="top-note" id="top-note"></p>
+    <div class="freshness">
+      <button class="fresh-btn" id="fresh-btn" aria-expanded="false" aria-controls="fresh-panel">
+        <span class="fresh-dot" aria-hidden="true"></span>
+        <span id="fresh-label">Updated</span>
+      </button>
+      <div class="fresh-panel" id="fresh-panel" hidden>
+        <div class="fresh-head">
+          <h2>When this was last updated</h2>
+          <div class="tzswitch" role="group" aria-label="Time zone">
+            <button data-tz="IST" aria-pressed="true">IST</button>
+            <button data-tz="UTC" aria-pressed="false">UTC</button>
+          </div>
+        </div>
+        <ul class="fresh-list" id="fresh-list"></ul>
+        <p class="fresh-foot" id="fresh-foot"></p>
+      </div>
+    </div>
   </div>
 </header>
 

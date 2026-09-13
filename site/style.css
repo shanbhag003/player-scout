@@ -28,6 +28,10 @@ html{-webkit-text-size-adjust:100%}
 body{
   margin:0;background:var(--ground);color:var(--ink);
   position:relative;min-height:100vh;
+  /* iOS counts the address bar in 100vh, leaving a gap once it retracts. */
+  min-height:100dvh;
+  overflow-x:hidden;
+  -webkit-tap-highlight-color:transparent;
   font-family:var(--sans);font-size:15px;line-height:1.5;
   font-variant-numeric:tabular-nums;
   -webkit-font-smoothing:antialiased;
@@ -37,14 +41,17 @@ p{margin:0}
 button,input{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:3px}
 
-.shell{width:min(var(--shell),100% - 2.5rem);margin-inline:auto}
+.shell{width:min(var(--shell),100% - 2.5rem);margin-inline:auto;
+  padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
 .skip{position:absolute;left:-999px}
 .skip:focus{left:1rem;top:1rem;z-index:99;background:var(--raised);padding:.5rem .8rem}
 
 /* ── masthead ─────────────────────────────────────────── */
 .top{border-bottom:1px solid var(--hairline);background:rgba(16,23,32,.92);
-  backdrop-filter:blur(8px);position:sticky;top:0;z-index:30}
-.top-inner{display:flex;align-items:center;gap:1.6rem;padding:.85rem 0}
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  position:-webkit-sticky;position:sticky;top:0;z-index:30}
+.top-inner{display:flex;align-items:center;gap:1.6rem;
+  padding:calc(.85rem + env(safe-area-inset-top)) 0 .85rem}
 .brand{display:flex;align-items:center;gap:.55rem}
 .brand-mark{width:.7rem;height:1.15rem;background:var(--gold);
   clip-path:polygon(0 0,100% 18%,100% 82%,0 100%)}
@@ -78,12 +85,14 @@ button,input{font:inherit;color:inherit}
 .input-icon{position:absolute;left:.8rem;width:1.1rem;height:1.1rem;
   color:var(--faint);pointer-events:none}
 #search{width:100%;padding:.72rem 2.4rem .72rem 2.5rem;background:var(--surface);
-  border:1px solid var(--hairline);border-radius:var(--radius);font-size:1rem}
+  border:1px solid var(--hairline);border-radius:var(--radius);
+  /* Below 16px iOS zooms the page when the field takes focus. */
+  font-size:16px;-webkit-appearance:none;appearance:none}
 #search::placeholder{color:var(--faint)}
 #search:focus{border-color:var(--gold);outline:none}
 .clear{position:absolute;right:.5rem;border:0;background:none;color:var(--faint);
   font-size:1.3rem;line-height:1;cursor:pointer;padding:.2rem .4rem}
-.clear:hover{color:var(--ink)}
+@media (hover:hover){.clear:hover{color:var(--ink)}}
 .suggestions{position:absolute;top:100%;left:0;right:0;z-index:25;margin:.35rem 0 0;
   padding:.25rem;list-style:none;background:var(--raised);border:1px solid var(--hairline);
   border-radius:var(--radius);max-height:20rem;overflow:auto;
@@ -101,7 +110,7 @@ button,input{font:inherit;color:inherit}
 .pick{display:inline-flex;align-items:center;gap:.45rem;cursor:pointer;
   border:1px solid var(--hairline);background:var(--surface);color:var(--ink);
   padding:.34rem .65rem .34rem .4rem;border-radius:99px;font-size:.88rem}
-.pick:hover{border-color:var(--gold);color:var(--gold)}
+@media (hover:hover){.pick:hover{border-color:var(--gold);color:var(--gold)}}
 .pick .flag{width:1.15rem;height:1.15rem}
 
 .hero-right{display:grid;gap:.9rem}
@@ -247,7 +256,7 @@ button,input{font:inherit;color:inherit}
 .foot summary::-webkit-details-marker{display:none}
 .foot summary::before{content:"+";display:inline-block;width:1rem;color:var(--gold)}
 .foot[open] summary::before,details[open] summary::before{content:"–"}
-.foot summary:hover{color:var(--gold)}
+@media (hover:hover){.foot summary:hover{color:var(--gold)}}
 .method{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1.5rem;
   margin-top:1.3rem}
 .mcol h3{font-size:.98rem;margin-bottom:.45rem;min-height:2.2rem}
@@ -331,20 +340,20 @@ button,input{font:inherit;color:inherit}
 .srclink{display:inline-flex;align-items:center;gap:.5rem;text-decoration:none;
   border:1px solid var(--hairline);background:var(--raised);color:var(--ink);
   padding:.4rem .7rem;border-radius:7px;font-size:.82rem}
-.srclink:hover{border-color:var(--gold);color:var(--gold)}
+@media (hover:hover){.srclink:hover{border-color:var(--gold);color:var(--gold)}}
 .srclink img,.srclink .monogram{width:1.05rem;height:1.05rem;border-radius:3px;flex:none}
 .srclink .monogram{display:flex;align-items:center;justify-content:center;
   background:var(--hairline);font-family:var(--cond);font-weight:700;font-size:.64rem;color:var(--muted)}
 .ghost{border:1px solid var(--hairline);background:var(--ground);color:var(--muted);
   padding:.4rem .7rem;border-radius:7px;font-size:.82rem;cursor:pointer}
-.ghost:hover{border-color:var(--gold);color:var(--gold)}
+@media (hover:hover){.ghost:hover{border-color:var(--gold);color:var(--gold)}}
 
 .tabs{display:flex;gap:.15rem;border-bottom:1px solid var(--hairline);margin:1.3rem 0 1.1rem}
 .tabs button{border:0;background:none;color:var(--muted);cursor:pointer;padding:.5rem .9rem;
   font-family:var(--cond);font-weight:600;font-size:1.05rem;border-bottom:2px solid transparent;
   margin-bottom:-1px}
 .tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--gold)}
-.tabs button:hover{color:var(--ink)}
+@media (hover:hover){.tabs button:hover{color:var(--ink)}}
 
 .panel{background:var(--surface);border:1px solid var(--hairline);
   border-radius:var(--radius);padding:1.15rem 1.25rem}
@@ -392,7 +401,7 @@ button,input{font:inherit;color:inherit}
 .tagkey-full{color:var(--warn);border:1px solid rgba(208,138,114,.35);border-radius:4px;
   padding:.05rem .4rem;margin-right:.3rem}
 .addbtn:disabled{opacity:.28;cursor:not-allowed;border-color:var(--hairline-soft)}
-.addbtn:disabled:hover{border-color:var(--hairline-soft);color:var(--muted)}
+@media (hover:hover){.addbtn:disabled:hover{border-color:var(--hairline-soft);color:var(--muted)}}
 
 .matches{list-style:none;margin:0;padding:0;display:grid;gap:.4rem}
 .match{position:relative;display:grid;grid-template-columns:1fr 2.4rem;gap:.4rem}
@@ -400,11 +409,11 @@ button,input{font:inherit;color:inherit}
   border:1px solid var(--hairline);border-radius:var(--radius);padding:.65rem .85rem;
   display:grid;align-items:center;gap:.85rem;min-height:3.8rem;
   grid-template-columns:1.3rem 3.2rem minmax(0,1fr) 2.8rem 6.2rem 4.2rem minmax(0,14rem)}
-.match-btn:hover{border-color:var(--gold);background:var(--raised)}
+@media (hover:hover){.match-btn:hover{border-color:var(--gold);background:var(--raised)}}
 .match.is-open .match-btn{border-color:var(--blue)}
 .addbtn{border:1px solid var(--hairline);background:var(--surface);color:var(--muted);
   border-radius:var(--radius);cursor:pointer;font-size:1.2rem;line-height:1}
-.addbtn:hover{border-color:var(--gold);color:var(--gold)}
+@media (hover:hover){.addbtn:hover{border-color:var(--gold);color:var(--gold)}}
 .addbtn.on{background:rgba(95,168,211,.14);border-color:var(--blue);color:var(--blue)}
 .rank{font-family:var(--cond);font-weight:600;color:var(--faint);font-size:.92rem}
 .score{display:grid;gap:.2rem}
@@ -452,7 +461,7 @@ button,input{font:inherit;color:inherit}
   border-radius:3px;padding:0 .25rem}
 .dropbtn{border:0;background:none;color:var(--faint);cursor:pointer;font-size:1rem;
   line-height:1;padding:0 .1rem}
-.dropbtn:hover{color:var(--warn)}
+@media (hover:hover){.dropbtn:hover{color:var(--warn)}}
 .trayhint{font-size:.78rem;color:var(--faint);margin-left:.3rem}
 
 .compare-grid{display:grid;grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr);
@@ -593,7 +602,7 @@ button,input{font:inherit;color:inherit}
 
 /* brand is a way home */
 .brand{cursor:pointer;border-radius:5px;padding:.1rem .2rem}
-.brand:hover .brand-name{color:var(--gold)}
+@media (hover:hover){.brand:hover .brand-name{color:var(--gold)}}
 
 /* club now differs from club then */
 .nowat{font-style:normal;color:var(--faint);border:1px solid var(--hairline);
@@ -611,7 +620,7 @@ button,input{font:inherit;color:inherit}
   padding:0 .3rem;line-height:1.35}
 .traybtn{border:1px solid var(--hairline);background:transparent;color:var(--faint);
   border-radius:4px;font-size:.7rem;padding:.1rem .35rem;cursor:pointer}
-.traybtn:hover{border-color:var(--gold);color:var(--gold)}
+@media (hover:hover){.traybtn:hover{border-color:var(--gold);color:var(--gold)}}
 
 /* the two profile columns end level */
 .profile-grid{align-items:stretch}
@@ -648,8 +657,7 @@ button,input{font:inherit;color:inherit}
 @media (max-width:680px){
   .top-inner{gap:.5rem .8rem}
   .brand-name{font-size:1.15rem}
-  .top-note{font-size:.7rem;width:100%;order:3;margin-left:0}
-  .sports{margin-left:auto}
+  .sports{margin-left:0}
   .sport{padding:.3rem .5rem;font-size:.95rem}
 
   .hero{margin:1.4rem 0 2rem}
@@ -735,7 +743,7 @@ button,input{font:inherit;color:inherit}
 .results-right{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;justify-content:flex-end}
 .ghost.primary{border-color:rgba(95,168,211,.45);color:var(--blue);
   background:rgba(95,168,211,.1);font-weight:500}
-.ghost.primary:hover{border-color:var(--blue);color:var(--ink);background:rgba(95,168,211,.18)}
+@media (hover:hover){.ghost.primary:hover{border-color:var(--blue);color:var(--ink);background:rgba(95,168,211,.18)}}
 
 /* ── comparison legend ────────────────────────────────── */
 .mlegend{display:flex;flex-wrap:wrap;gap:.35rem 1.1rem;margin-bottom:.8rem;
@@ -808,8 +816,8 @@ body::after{
 }
 .panel,.cover-card,.playerbar{box-shadow:inset 0 1px 0 rgba(255,255,255,.05),
   0 10px 26px -18px rgba(0,0,0,.9)}
-.match-btn:hover{box-shadow:inset 0 1px 0 rgba(255,255,255,.07),
-  0 8px 20px -14px rgba(0,0,0,.9)}
+@media (hover:hover){.match-btn:hover{box-shadow:inset 0 1px 0 rgba(255,255,255,.07),
+  0 8px 20px -14px rgba(0,0,0,.9)}}
 
 /* Panel headings get a hairline rule, the way a broadcast card does. */
 .panel-head{position:relative;padding-bottom:.7rem;
@@ -819,7 +827,10 @@ body::after{
 .panel-head h2{letter-spacing:.002em}
 
 .top{background:linear-gradient(180deg, rgba(8,12,19,.94), rgba(8,12,19,.78));
+  -webkit-backdrop-filter:blur(10px) saturate(120%);
   backdrop-filter:blur(10px) saturate(120%)}
+@media (max-width:680px){.top{position:-webkit-sticky;position:sticky}
+  .top-inner{position:relative}}
 .brand-mark{box-shadow:0 0 14px rgba(240,188,99,.45)}
 .tabs button[aria-selected=true]{text-shadow:0 0 18px rgba(240,188,99,.25)}
 .score-num{text-shadow:0 0 16px rgba(87,180,236,.28)}
@@ -852,7 +863,7 @@ body::after{
 .ghost.accent{border-color:rgba(240,188,99,.5);color:var(--gold);
   background:rgba(240,188,99,.12);font-weight:500;display:inline-flex;
   align-items:center;gap:.45rem}
-.ghost.accent:hover{border-color:var(--gold);background:rgba(240,188,99,.2);color:var(--ink)}
+@media (hover:hover){.ghost.accent:hover{border-color:var(--gold);background:rgba(240,188,99,.2);color:var(--ink)}}
 .btn-icon{width:.95rem;height:.95rem;flex:none}
 @media (max-width:680px){
   .pb-actions{display:grid;grid-template-columns:1fr 1fr;gap:.4rem}
@@ -880,3 +891,64 @@ body::after{
 .lgname{text-align:left!important;font-family:var(--sans)!important;font-size:.73rem!important}
 .lgval.up{color:var(--blue)}
 .lgval.down{color:var(--warn)}
+
+/* ── when this was last updated ───────────────────────── */
+.freshness{margin-left:auto;position:relative}
+.fresh-btn{display:inline-flex;align-items:center;gap:.45rem;cursor:pointer;
+  border:1px solid var(--hairline);background:var(--surface);color:var(--muted);
+  border-radius:99px;padding:.28rem .7rem;font-size:.76rem}
+@media (hover:hover){.fresh-btn:hover{border-color:var(--gold);color:var(--gold)}}
+.fresh-dot{width:.42rem;height:.42rem;border-radius:50%;background:var(--good);
+  box-shadow:0 0 8px rgba(79,194,162,.7);flex:none}
+.fresh-panel{position:absolute;right:0;top:calc(100% + .5rem);z-index:40;width:min(23rem,86vw);
+  background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0) 46%),var(--raised);
+  border:1px solid var(--hairline);border-radius:var(--radius);padding:.9rem 1rem;
+  box-shadow:0 18px 44px rgba(0,0,0,.55)}
+.fresh-head{display:flex;align-items:center;justify-content:space-between;gap:.8rem;
+  margin-bottom:.7rem}
+.fresh-head h2{font-size:.95rem}
+.tzswitch{display:flex;background:var(--ground);border:1px solid var(--hairline);
+  border-radius:6px;padding:2px;gap:2px}
+.tzswitch button{border:0;background:none;color:var(--muted);cursor:pointer;
+  padding:.14rem .45rem;border-radius:4px;font-size:.7rem}
+.tzswitch button[aria-pressed=true]{background:var(--surface);color:var(--gold)}
+
+.fresh-list{list-style:none;margin:0;padding:0;display:grid;gap:.1rem}
+.fresh-list li{display:grid;grid-template-columns:1fr auto;gap:.15rem .6rem;
+  padding:.5rem 0;border-bottom:1px solid var(--hairline-soft)}
+.fresh-list li:last-child{border-bottom:0}
+.fresh-list li.never{opacity:.6}
+.fl-title{font-size:.82rem;color:var(--ink);font-weight:500}
+.fl-when{font-family:var(--cond);font-weight:600;font-size:.82rem;color:var(--ink);
+  text-align:right;white-space:nowrap}
+.fl-since{grid-column:2;font-size:.68rem;color:var(--faint);text-align:right}
+.fl-note{grid-column:1;font-size:.72rem;color:var(--muted);line-height:1.35}
+.fresh-foot{margin-top:.7rem;padding-top:.65rem;border-top:1px solid var(--hairline-soft);
+  font-size:.72rem;color:var(--faint);line-height:1.45}
+
+@media (max-width:680px){
+  /* A sticky header on a phone should not grow a second row, so the chip stays
+     inline and sheds the word, leaving the dot and "3 days ago". */
+  .freshness{margin-left:auto;position:static}
+  .fresh-word{display:none}
+  .fresh-btn{padding:.24rem .55rem;font-size:.72rem}
+  .fresh-panel{left:.8rem;right:.8rem;width:auto;top:calc(100% + .35rem)}
+  .fresh-head h2{font-size:.9rem}
+  .fresh-list li{grid-template-columns:1fr auto}
+  .fl-when{font-size:.78rem}
+}
+
+
+/* ── iOS ──────────────────────────────────────────────────
+   Momentum scrolling inside the horizontal strips, and room for the home
+   indicator at the foot of the page. */
+.method,.tabs,.method-nav,.segmented,.suggestions{-webkit-overflow-scrolling:touch}
+.foot{padding-bottom:calc(1.2rem + env(safe-area-inset-bottom))}
+button,a{-webkit-tap-highlight-color:transparent}
+input,button{border-radius:inherit}
+.fresh-btn,.ghost,.pick,.sport,.segmented button,.tabs button,.addbtn,.match-btn{
+  -webkit-appearance:none;appearance:none;touch-action:manipulation}
+@supports (-webkit-touch-callout:none){
+  /* Fixed backgrounds repaint badly during momentum scroll on iOS. */
+  body::before,body::after{position:absolute;height:100%}
+}
