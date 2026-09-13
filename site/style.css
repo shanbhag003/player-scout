@@ -569,7 +569,6 @@ button,input{font:inherit;color:inherit}
   .reads{grid-column:3/-1;justify-content:flex-start;margin-top:.1rem}
 }
 @media (max-width:680px){
-  .savebtn,.traysave,#save-player{display:none}
   .match-btn{grid-template-columns:2.8rem minmax(0,1fr) auto;gap:.5rem .6rem}
   .rank{display:none}
   .meta-cell i{display:inline;margin-right:.25rem}
@@ -1069,3 +1068,25 @@ input,button{border-radius:inherit}
 .traysave svg{width:.95rem;height:.95rem}
 .traysave.on{color:var(--gold)}
 .traysave:hover{color:var(--gold)}
+
+/* ── shortlist: desktop only ──────────────────────────────────────────
+   Placed last on purpose. Earlier attempts to hide these controls under
+   680px kept losing to unrelated rules that happened to come after them in
+   the file and redeclared display on the same selectors. Being last in
+   source order, with matching specificity, means this always wins. */
+@media (max-width:680px){
+  .shortlist-wrap,
+  .savebtn,
+  .traysave,
+  #save-player,
+  .rowacts .savebtn {
+    display:none !important;
+  }
+  /* .rowacts held the bookmark and the +/- side by side; with the bookmark
+     gone it should not leave a gap where that column used to be. */
+  .rowacts{gap:0}
+  /* Same for the comparison tray - it had score, "Scout instead", bookmark,
+     remove in a row. Losing the bookmark should tighten the gap, not leave a
+     hole between "Scout instead" and the remove button. */
+  .trayitem{gap:.3rem}
+}
