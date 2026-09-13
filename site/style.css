@@ -61,6 +61,7 @@ button,input{font:inherit;color:inherit}
 .sports{display:flex;gap:.15rem;margin-left:.3rem;flex:none;
   overflow-x:auto;scrollbar-width:none;max-width:40vw}
 .sports::-webkit-scrollbar{display:none}
+.statuswrap{display:flex;align-items:center;gap:.5rem;margin-left:auto;flex:none}
 .sport{
   border:0;background:none;cursor:pointer;padding:.3rem .55rem;border-radius:6px;
   font-family:var(--cond);font-weight:600;font-size:.98rem;color:var(--faint);
@@ -667,13 +668,22 @@ button,input{font:inherit;color:inherit}
 
 /* ── narrow screens ───────────────────────────────────── */
 @media (max-width:680px){
-  .top-inner{gap:.5rem;flex-wrap:nowrap}
+  .top-inner{gap:.4rem;flex-wrap:nowrap}
   .brand-name{font-size:1.05rem}
-  .sports{gap:.05rem;margin-left:.15rem}
-  .sport{padding:.28rem .4rem;font-size:.86rem}
+  .sports{gap:.05rem;margin-left:.1rem;max-width:22vw}
+  .sport{padding:.24rem .32rem;font-size:.82rem}
+  .statuswrap{gap:.3rem}
+  .fresh-btn{padding:.22rem .45rem;font-size:0}
+  .fresh-dot{margin-right:0}
   #short-count{font-size:0}
-  #short-btn.has #short-count{font-size:.7rem}
   .fresh-btn .fresh-word{display:none}
+  /* Both dropdowns need to fit a 360-390px screen without spilling off either
+     edge, so they are sized from the viewport rather than from a fixed rem
+     value that assumed a laptop. */
+  .fresh-panel,.short-panel{
+    position:fixed;left:.6rem;right:.6rem;
+    top:calc(3.1rem + env(safe-area-inset-top));width:auto;max-width:none;
+  }
 
 .hero{margin:1.4rem 0 2rem}
   .hero-left h1{font-size:1.75rem;margin-bottom:1.1rem}
@@ -908,7 +918,7 @@ body::after{
 .lgval.down{color:var(--warn)}
 
 /* ── when this was last updated ───────────────────────── */
-.freshness{margin-left:auto;position:relative}
+.freshness{position:relative}
 .fresh-btn{display:inline-flex;align-items:center;gap:.4rem;cursor:pointer;
   border:1px solid var(--hairline);background:var(--surface);color:var(--muted);
   border-radius:99px;padding:.26rem .6rem;font-size:.73rem;white-space:nowrap;flex:none}
@@ -944,7 +954,7 @@ body::after{
 @media (max-width:680px){
   /* A sticky header on a phone should not grow a second row, so the chip stays
      inline and sheds the word, leaving the dot and "3 days ago". */
-  .freshness{margin-left:auto;position:static}
+  .freshness{position:static}
   .fresh-word{display:none}
   .fresh-btn{padding:.24rem .55rem;font-size:.72rem}
   .fresh-panel{left:.8rem;right:.8rem;width:auto;top:calc(100% + .35rem)}
@@ -979,7 +989,7 @@ input,button{border-radius:inherit}
 .inline-plus{color:var(--gold);font-weight:700}
 
 /* ── shortlist ────────────────────────────────────────── */
-.shortlist-wrap{position:relative;flex:none;margin-left:auto}
+.shortlist-wrap{position:relative;flex:none}
 .freshness{flex:none;position:relative}
 #short-btn.has{border-color:rgba(240,188,99,.45);color:var(--gold);background:rgba(240,188,99,.1)}
 /* Its own anchor and its own dimensions - it was inheriting .fresh-panel's
