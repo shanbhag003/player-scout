@@ -361,11 +361,15 @@ button,input{font:inherit;color:inherit}
 .panel-head h2{font-size:1.15rem}
 .panel-sub{font-size:.81rem;color:var(--muted);margin-top:.2rem}
 
-/* Two columns that each hold their own stack, so neither has to stretch to
-   match the other and leave a hole where the radar used to sit alone. */
+/* Both columns run to the same height, and the slack goes to the one panel in
+   each that can absorb it gracefully: the radar recentres, the career figures
+   space out. Nothing is left hanging in a half-empty box. */
 .profile-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
-  gap:.9rem;align-items:start}
-.profile-left,.profile-main{display:grid;gap:.9rem;align-content:start}
+  gap:.9rem;align-items:stretch}
+.profile-left,.profile-main{display:flex;flex-direction:column;gap:.9rem}
+.profile-left > .panel,.profile-main > .panel{flex:0 0 auto}
+.profile-left > .radar-panel{flex:1 1 auto}
+.profile-main > .panel:last-child{flex:1 1 auto}
 .history-panel{grid-column:1/-1}
 .career{display:grid;grid-template-columns:repeat(3,1fr);gap:.85rem .6rem}
 .career dt{font-size:.7rem;color:var(--faint);margin-bottom:.1rem}
@@ -553,6 +557,9 @@ button,input{font:inherit;color:inherit}
 
 @media (max-width:980px){
   .profile-grid,.compare-grid{grid-template-columns:1fr}
+  /* Stacked, there is no second column to match, so nothing should stretch. */
+  .profile-left > .radar-panel,.profile-main > .panel:last-child{flex:0 0 auto}
+  .profile-main > .panel:last-child .career{align-content:start}
   .playerbar{grid-template-columns:1fr}
 }
 @media (max-width:1100px){
@@ -626,7 +633,12 @@ button,input{font:inherit;color:inherit}
 
 /* the two profile columns end level */
 .radar-panel{display:flex;flex-direction:column}
-.radar-panel .radar-wrap{align-items:center}
+.radar-panel .radar-wrap{flex:1;display:flex;align-items:center;justify-content:center}
+.scale-help{margin-top:auto}
+
+/* the career panel takes the right column's slack */
+.profile-main > .panel:last-child{display:flex;flex-direction:column}
+.profile-main > .panel:last-child .career{flex:1;align-content:space-evenly}
 
 /* rules between the method columns */
 .method{column-gap:0}
