@@ -672,19 +672,22 @@ button,input{font:inherit;color:inherit}
   .shortlist-wrap{display:none}
   .top-inner{gap:.4rem;flex-wrap:nowrap}
   .brand-name{font-size:1.05rem}
-  .sports{gap:.05rem;margin-left:.1rem;max-width:22vw}
-  .sport{padding:.24rem .32rem;font-size:.82rem}
+  .sports{gap:.05rem;margin-left:.1rem;max-width:none;overflow:visible}
+  .sport{padding:.24rem .3rem;font-size:.8rem}
   .statuswrap{gap:.3rem}
   .fresh-btn{padding:.22rem .45rem;font-size:0}
   .fresh-dot{margin-right:0}
   #short-count{font-size:0}
   .fresh-btn .fresh-word{display:none}
-  /* Both dropdowns need to fit a 360-390px screen without spilling off either
-     edge, so they are sized from the viewport rather than from a fixed rem
-     value that assumed a laptop. */
+  /* Both dropdowns sized from the viewport, anchored under the header, with
+     their own scroll so long content never runs off the bottom of the screen. */
   .fresh-panel,.short-panel{
-    position:fixed;left:.6rem;right:.6rem;
-    top:calc(3.1rem + env(safe-area-inset-top));width:auto;max-width:none;
+    position:fixed !important;
+    top:calc(3.2rem + env(safe-area-inset-top)) !important;
+    left:.6rem !important;right:.6rem !important;
+    width:auto !important;max-width:none !important;
+    max-height:calc(100dvh - 4.4rem - env(safe-area-inset-top)) !important;
+    overflow-y:auto;-webkit-overflow-scrolling:touch;
   }
 
 .hero{margin:1.4rem 0 2rem}
