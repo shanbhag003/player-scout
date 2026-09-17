@@ -20,6 +20,8 @@ import glob
 import json
 import os
 import shutil
+import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -31,7 +33,12 @@ UPLOADS = "https://uploads.github.com"
 KINDS = ("appearances", "facts")
 
 
-def _req(url, token, method="GET", data=None, ctype=None, raw=False):
+# GitHub returns 502, 503 and 504 under load, and an upload that dies halfway
+# is not a reason to throw away an hour of parsing. Everything retries.
+RETRYABLE = {408, 429, 500, 502, 503, 504}
+
+
+def _req(url, token, method="GET", data=None, ctype=None, raw=False, retries=5):
     headers = {"Accept": "application/vnd.github+json",
                "X-GitHub-Api-Version": "2022-11-28",
                "User-Agent": "player-scout"}
@@ -39,9 +46,23 @@ def _req(url, token, method="GET", data=None, ctype=None, raw=False):
         headers["Authorization"] = f"Bearer {token}"
     if ctype:
         headers["Content-Type"] = ctype
-    req = urllib.request.Request(url, data=data, headers=headers, method=method)
-    with urllib.request.urlopen(req, timeout=600) as r:
-        return r.read() if raw else json.loads(r.read() or b"{}")
+    last = None
+    for attempt in range(1, retries + 1):
+        req = urllib.request.Request(url, data=data, headers=headers, method=method)
+        try:
+            with urllib.request.urlopen(req, timeout=600) as r:
+                return r.read() if raw else json.loads(r.read() or b"{}")
+        except urllib.error.HTTPError as e:
+            last = e
+            if e.code not in RETRYABLE:
+                raise
+        except (urllib.error.URLError, TimeoutError, OSError) as e:
+            last = e
+        if attempt < retries:
+            wait = min(60, 4 * 2 ** (attempt - 1))
+            print(f"    retry {attempt}/{retries - 1} in {wait}s ({last})", flush=True)
+            time.sleep(wait)
+    raise last
 
 
 class Store:
@@ -89,26 +110,50 @@ class Store:
             print(f"  pulled {asset['name']}")
 
     def push(self, names=None):
-        """Replace assets. Delete first: the API will not overwrite by name."""
+        """Replace assets, resumably.
+
+        An asset already up there at exactly the local size is left alone, so a
+        run that died partway through uploading picks up where it stopped rather
+        than redoing ninety files. Deleting is unavoidable — the API will not
+        overwrite by name — but it only happens once the local copy is confirmed
+        different.
+        """
         if not self.remote:
-            print(f"store: local only, nothing pushed")
-            return
+            print("store: local only, nothing pushed")
+            return []
         rel = self._release()
-        existing = {a["name"]: a["id"] for a in rel.get("assets", [])}
+        existing = {a["name"]: (a["id"], a["size"]) for a in rel.get("assets", [])}
         files = sorted(glob.glob(os.path.join(self.local, "*.parquet")))
+        pushed, skipped, failed = 0, 0, []
         for path in files:
             name = os.path.basename(path)
             if names and name not in names:
                 continue
-            if name in existing:
-                _req(f"{API}/repos/{self.repo}/releases/assets/{existing[name]}",
-                     self.token, "DELETE")
-            with open(path, "rb") as fh:
-                blob = fh.read()
-            url = (f"{UPLOADS}/repos/{self.repo}/releases/{rel['id']}/assets"
-                   f"?{urllib.parse.urlencode({'name': name})}")
-            _req(url, self.token, "POST", blob, "application/octet-stream")
-            print(f"  pushed {name} ({len(blob)/1e6:.1f} MB)")
+            size = os.path.getsize(path)
+            if name in existing and existing[name][1] == size:
+                skipped += 1
+                continue
+            try:
+                if name in existing:
+                    _req(f"{API}/repos/{self.repo}/releases/assets/{existing[name][0]}",
+                         self.token, "DELETE")
+                with open(path, "rb") as fh:
+                    blob = fh.read()
+                url = (f"{UPLOADS}/repos/{self.repo}/releases/{rel['id']}/assets"
+                       f"?{urllib.parse.urlencode({'name': name})}")
+                _req(url, self.token, "POST", blob, "application/octet-stream")
+                pushed += 1
+                print(f"  pushed {name} ({size/1e6:.1f} MB)", flush=True)
+            except Exception as e:
+                failed.append(name)
+                print(f"  FAILED {name}: {e}", file=sys.stderr, flush=True)
+        print(f"\npushed {pushed}, already current {skipped}, failed {len(failed)}")
+        if failed:
+            # Named so a rerun is obviously cheap: everything else is skipped.
+            print("rerun `store.py push` to finish these:", file=sys.stderr)
+            for f in failed:
+                print(f"  {f}", file=sys.stderr)
+        return failed
 
     # ── the actual merge ────────────────────────────────────────────────
     def upsert(self, incoming_dir: str):
@@ -154,12 +199,14 @@ def main():
     store = Store(args.repo, args.tag, local=args.local)
     if args.action == "pull":
         store.pull()
-    elif args.action == "push":
-        store.push()
+        return 0
+    if args.action == "push":
+        failed = store.push()
     else:
         touched, _ = store.upsert(args.incoming)
-        store.push(touched)
+        failed = store.push(touched)
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
