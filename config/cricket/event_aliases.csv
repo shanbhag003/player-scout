@@ -1,0 +1,76 @@
+# Event names as they appear in match files, mapped to a competition key.
+#
+# Needed because the rolling "recently added" window mixes every competition
+# together and the files are not keyed by one. Internationals do not appear here
+# at all: they route from team_type plus match_type, which is unambiguous.
+#
+# Club competitions do need this, because the name in the file drifts with the
+# sponsor. The T20 Blast has been NatWest, Vitality, and Vitality Blast Men in
+# the space of a few seasons, and they are one competition.
+#
+# The resolver already matches the `name` field in competitions.yml exactly, so
+# only variants belong here. An event name matching nothing is reported in the
+# run summary with its match count — never silently dropped. Add a line when one
+# shows up, the same way config/aliases.csv works on the football side.
+event,competition
+NatWest T20 Blast,ntb
+Vitality Blast,ntb
+Vitality Blast Men,ntb
+Vitality Blast Women,wtb
+Royal London One-Day Cup,rlc
+Metro Bank One Day Cup,rlc
+Specsavers County Championship,cch
+LV= Insurance County Championship,cch
+Rothesay County Championship,cch
+Indian Premier League,ipl
+Tata Indian Premier League,ipl
+Big Bash League,bbl
+KFC Big Bash League,bbl
+Women's Big Bash League,wbb
+Rebel Women's Big Bash League,wbb
+Pakistan Super League,psl
+HBL Pakistan Super League,psl
+Caribbean Premier League,cpl
+Hero Caribbean Premier League,cpl
+Women's Caribbean Premier League,wcl
+Massy Women's Caribbean Premier League,wcl
+Betway SA20,sat
+SA20,sat
+CSA T20 Challenge,ctc
+Mzansi Super League,msl
+Bangladesh Premier League,bpl
+Lanka Premier League,lpl
+Nepal Premier League,npl
+Major League Cricket,mlc
+International League T20,ilt
+DP World International League T20,ilt
+Syed Mushtaq Ali Trophy,sma
+The Hundred,hnd
+The Hundred Men's Competition,hnd
+The Hundred Women's Competition,hnd
+Super Smash,ssm
+Dream11 Super Smash,ssm
+Burger King Super Smash,ssm
+Sheffield Shield,ssh
+Marsh Sheffield Shield,ssh
+Plunket Shield,pks
+Bob Willis Trophy,bwt
+One-Day Cup,odc
+Marsh One-Day Cup,odc
+Dean Jones Trophy,odc
+Charlotte Edwards Cup,cec
+Rachael Heyhoe Flint Trophy,rhf
+ECB Women's One-Day Cup,wod
+Women's Cricket Super League,wsl
+Kia Super League,wsl
+Women's Premier League,wpl
+Tata Women's Premier League,wpl
+Women's T20 Challenge,wtc
+FairBreak Invitational Tournament,frb
+T20 Blaze,blz
+Cricket Ireland Inter-Provincial Twenty20 Trophy,ipt
+Cricket Ireland Inter-Provincial Limited Over Cup,ipo
+Major Clubs T20 Tournament,mct
+Major Clubs Limited Over Tournament,mcl
+European T20 Premier League,etpl
+Super 50,sft

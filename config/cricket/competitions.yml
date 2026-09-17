@@ -1,0 +1,138 @@
+# Which cricket competitions exist, and what each one is.
+#
+# `key` is the Cricsheet download key: the zip is https://cricsheet.org/downloads/<key>_json.zip
+# (or <key>_male_json.zip / <key>_female_json.zip where a competition has both).
+#
+# `format` is OUR format, not Cricsheet's match_type. Cricsheet reports The
+# Hundred as "T20" although it is 100 balls in five-ball overs; treating the two
+# as one format would corrupt every rate metric. Anything whose balls_per_over
+# is not 6 is rejected by the parser unless its format says otherwise here.
+#
+# `tier` is the competition's standard, which is NOT the same thing as the
+# competition. A full-member T20 international and an associate one carry the
+# same match_type and are not the same game: fitted as one competition, the
+# coefficient is an average of two populations and describes neither. Where a
+# competition spans standards, `tier_by_teams` splits it.
+#
+# Data source: Cricsheet (https://cricsheet.org), Open Data Commons Attribution
+# Licence. Attribution is a licence condition, not a courtesy — see README.
+
+formats:
+  # Phase bands, in overs, used when a match carries no explicit powerplay data.
+  # `use_powerplays: true` means prefer the innings' own powerplay block, which
+  # matters most for ODIs, where the regulations changed repeatedly.
+  T20:
+    balls_per_over: 6
+    phases: [[0, 5, powerplay], [6, 14, middle], [15, 999, death]]
+    use_powerplays: true
+  HUNDRED:
+    balls_per_over: 5
+    phases: [[0, 4, powerplay], [5, 14, middle], [15, 999, death]]
+    use_powerplays: true
+  ODI:
+    balls_per_over: 6
+    phases: [[0, 9, powerplay], [10, 39, middle], [40, 999, death]]
+    use_powerplays: true
+  FIRST_CLASS:
+    balls_per_over: 6
+    # A red-ball innings has no powerplay. What matters is the age of the ball:
+    # the new ball swings, the middle is attritional, the second new ball is due
+    # at 80 overs.
+    phases: [[0, 19, new_ball], [20, 79, middle], [80, 999, old_ball]]
+    use_powerplays: false
+
+# Teams used to decide the standard of an international fixture.
+tiers:
+  full_member: [Afghanistan, Australia, Bangladesh, England, India, Ireland,
+                New Zealand, Pakistan, South Africa, Sri Lanka, West Indies, Zimbabwe]
+  established: [Netherlands, Scotland, United Arab Emirates, Nepal, Namibia, Oman,
+                United States of America, Papua New Guinea, Canada, Hong Kong,
+                Kenya, Jersey, Guernsey, Italy, Denmark]
+
+competitions:
+
+  # ── internationals ─────────────────────────────────────────────────────────
+  - key: t20s
+    name: T20 Internationals
+    format: T20
+    genders: [male, female]
+    tier_by_teams: true          # splits into full / established / minor
+  - key: it20s
+    name: Other international T20s
+    format: T20
+    genders: [male, female]
+    tier_by_teams: true
+  - key: odis
+    name: One-day Internationals
+    format: ODI
+    genders: [male, female]
+    tier_by_teams: true
+  - key: odms
+    name: Other one-day internationals
+    format: ODI
+    genders: [male, female]
+    tier_by_teams: true
+  - key: tests
+    name: Test matches
+    format: FIRST_CLASS
+    genders: [male, female]
+    tier: international
+  - key: mdms
+    name: Other multi-day matches
+    format: FIRST_CLASS
+    genders: [male]
+    tier: international
+
+  # ── men's domestic and franchise T20 ───────────────────────────────────────
+  - {key: ipl, name: Indian Premier League,      format: T20, genders: [male], tier: franchise}
+  - {key: bbl, name: Big Bash League,            format: T20, genders: [male], tier: franchise}
+  - {key: psl, name: Pakistan Super League,      format: T20, genders: [male], tier: franchise}
+  - {key: cpl, name: Caribbean Premier League,   format: T20, genders: [male], tier: franchise}
+  - {key: sat, name: SA20,                       format: T20, genders: [male], tier: franchise}
+  - {key: ilt, name: International League T20,   format: T20, genders: [male], tier: franchise}
+  - {key: mlc, name: Major League Cricket,       format: T20, genders: [male], tier: franchise}
+  - {key: bpl, name: Bangladesh Premier League,  format: T20, genders: [male], tier: franchise}
+  - {key: lpl, name: Lanka Premier League,       format: T20, genders: [male], tier: franchise}
+  - {key: npl, name: Nepal Premier League,       format: T20, genders: [male], tier: domestic}
+  - {key: msl, name: Mzansi Super League,        format: T20, genders: [male], tier: franchise}
+  - {key: etpl, name: European T20 Premier League, format: T20, genders: [male], tier: domestic}
+  - {key: ntb, name: T20 Blast,                  format: T20, genders: [male], tier: domestic}
+  - {key: sma, name: Syed Mushtaq Ali Trophy,    format: T20, genders: [male], tier: domestic}
+  - {key: ctc, name: CSA T20 Challenge,          format: T20, genders: [male], tier: domestic}
+  - {key: ssm, name: Super Smash,                format: T20, genders: [male, female], tier: domestic}
+  - {key: ipt, name: Inter-Provincial T20 Trophy, format: T20, genders: [male], tier: domestic}
+  - {key: mct, name: Major Clubs T20 Tournament, format: T20, genders: [male], tier: domestic}
+
+  # ── the hundred, its own format ────────────────────────────────────────────
+  - {key: hnd, name: The Hundred, format: HUNDRED, genders: [male, female], tier: franchise}
+
+  # ── women's franchise and domestic ─────────────────────────────────────────
+  - {key: wpl, name: Women's Premier League,     format: T20, genders: [female], tier: franchise}
+  - {key: wbb, name: Women's Big Bash League,    format: T20, genders: [female], tier: franchise}
+  - {key: wcl, name: Women's Caribbean Premier League, format: T20, genders: [female], tier: franchise}
+  - {key: wtb, name: Women's T20 Blast,          format: T20, genders: [female], tier: domestic}
+  - {key: wsl, name: Women's Cricket Super League, format: T20, genders: [female], tier: domestic}
+  - {key: cec, name: Charlotte Edwards Cup,      format: T20, genders: [female], tier: domestic}
+  - {key: blz, name: T20 Blaze,                  format: T20, genders: [female], tier: domestic}
+  - {key: wtc, name: Women's T20 Challenge,      format: T20, genders: [female], tier: franchise}
+  - {key: frb, name: FairBreak Invitational,     format: T20, genders: [female], tier: franchise}
+  - {key: rhf, name: Rachael Heyhoe Flint Trophy, format: ODI, genders: [female], tier: domestic}
+  - {key: wod, name: ECB Women's One-Day Cup,    format: ODI, genders: [female], tier: domestic}
+  - {key: sft, name: Super 50,                   format: ODI, genders: [female], tier: domestic}
+
+  # ── men's domestic first-class and list A ──────────────────────────────────
+  - {key: cch, name: County Championship,        format: FIRST_CLASS, genders: [male], tier: domestic}
+  - {key: bwt, name: Bob Willis Trophy,          format: FIRST_CLASS, genders: [male], tier: domestic}
+  - {key: ssh, name: Sheffield Shield,           format: FIRST_CLASS, genders: [male], tier: domestic}
+  - {key: pks, name: Plunket Shield,             format: FIRST_CLASS, genders: [male], tier: domestic}
+  - {key: rlc, name: One-Day Cup,                format: ODI, genders: [male], tier: domestic}
+  - {key: odc, name: One-Day Cup (Australia),    format: ODI, genders: [male], tier: domestic}
+  - {key: ipo, name: Inter-Provincial One-Day Cup, format: ODI, genders: [male], tier: domestic}
+  - {key: mcl, name: Major Clubs Limited Over Tournament, format: ODI, genders: [male], tier: domestic}
+
+# Cricsheet withholds 374 matches involving Afghanistan or the Afghanistan
+# Premier League. This is a permanent property of the archive, not a gap that
+# will fill in, so Afghan players are systematically under-counted and the site
+# has to say so. See cricsheet.org/article/explanation-for-withholding-of-afghanistani-matches
+notes:
+  withheld: "Matches involving Afghanistan or the APL are withheld by Cricsheet."
