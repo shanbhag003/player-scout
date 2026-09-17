@@ -308,17 +308,22 @@ def main():
             if c in df:
                 df[c] = df[c].fillna(0).astype("int32")
 
-    keys = sorted(apps["competition"].unique())
-    for k in keys:
+    # Gender is part of the filename, not just a column. Cricsheet publishes a
+    # competition as two zips, and a filename keyed on the competition alone
+    # means the second parse silently overwrites the first — losing every
+    # women's match in every competition that has both.
+    groups = sorted(set(zip(apps["competition"], apps["gender"])))
+    for k, g in groups:
         for name, df in (("appearances", apps), ("facts", facts)):
-            part = df[df["competition"] == k]
-            part.to_parquet(os.path.join(args.out, f"{k}_{name}.parquet"), index=False)
+            part = df[(df["competition"] == k) & (df["gender"] == g)]
+            part.to_parquet(os.path.join(args.out, f"{k}_{g}_{name}.parquet"), index=False)
 
     print(f"matches {apps['match_id'].nunique():,}   skipped {skipped}   "
-          f"competitions {len(keys)}")
-    for k in keys:
-        a = apps[apps["competition"] == k]
-        print(f"  {k:6} {a['match_id'].nunique():5,} matches  {a['player_id'].nunique():5,} players  "
+          f"competition-genders {len(groups)}")
+    for k, g in groups:
+        a = apps[(apps["competition"] == k) & (apps["gender"] == g)]
+        print(f"  {k}_{g:7} {a['match_id'].nunique():5,} matches  "
+              f"{a['player_id'].nunique():5,} players  "
               f"{a['season'].min()}–{a['season'].max()}  {', '.join(sorted(a['tier'].unique()))}")
     if resolver is not None and resolver.report():
         print("\ncould not route — add a line to config/cricket/event_aliases.csv:")
