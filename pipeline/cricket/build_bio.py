@@ -97,25 +97,33 @@ def _get(query: str, timeout: int = 180) -> pd.DataFrame:
         return _parse(r.read().decode("utf-8", "replace"))
 
 
-def fetch_wikidata(retries: int = 3) -> pd.DataFrame:
-    frames = []
+def fetch_wikidata(retries: int = 4):
+    """Fetch every chunk. Returns what arrived and which chunks did not.
+
+    Catches Exception rather than a list of types, because the list was wrong:
+    a truncated response raises json.JSONDecodeError, which is a ValueError, and
+    it escaped both loops — throwing away ten thousand rows that had already
+    been fetched successfully. One flaky chunk should cost that chunk, nothing
+    more.
+    """
+    frames, failed = [], []
     for chunk in CHUNKS:
         for attempt in range(1, retries + 1):
             try:
                 df = _get(QUERY % chunk)
                 frames.append(df)
-                print(f"  ids starting {chunk}: {len(df):,} rows")
+                print(f"  ids starting {chunk}: {len(df):,} rows", flush=True)
                 break
-            except (urllib.error.URLError, RuntimeError, TimeoutError,
-                    pd.errors.ParserError) as e:
+            except Exception as e:
                 if attempt == retries:
-                    print(f"  ids starting {chunk}: giving up ({e})", file=sys.stderr)
+                    failed.append(chunk)
+                    print(f"  ids starting {chunk}: giving up ({e})",
+                          file=sys.stderr, flush=True)
                 else:
                     time.sleep(5 * attempt)
         time.sleep(1)                       # be a good citizen
-    if not frames:
-        raise RuntimeError("every Wikidata chunk failed")
-    return pd.concat(frames, ignore_index=True)
+    got = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(columns=FIELDS)
+    return got, failed
 
 
 def build(register_path: str, wikidata) -> pd.DataFrame:
@@ -171,19 +179,32 @@ def main():
         wd = pd.read_csv(args.wikidata_csv, low_memory=False)
         print(f"using saved Wikidata export: {len(wd):,} rows")
     else:
-        print("querying Wikidata in chunks:")
+        print("querying Wikidata in chunks:", flush=True)
         try:
-            wd = fetch_wikidata()
+            wd, failed = fetch_wikidata()
         except Exception as e:
             print(f"\nWIKIDATA FAILED: {e}", file=sys.stderr)
-            if args.fallback_csv and os.path.exists(args.fallback_csv):
-                wd = pd.read_csv(args.fallback_csv, low_memory=False)
-                print(f"falling back to {args.fallback_csv}: {len(wd):,} rows")
-            else:
-                # Deliberately not fatal. Ages and full names are an enhancement;
-                # the model does not depend on them.
-                print("continuing without ages, nationalities or full names.",
-                      file=sys.stderr)
+            wd, failed = pd.DataFrame(columns=FIELDS), list(CHUNKS)
+
+        # Patch only the chunks that failed, from the saved export. Live data
+        # everywhere it arrived, last known good where it did not — rather than
+        # discarding a whole successful run over one flaky request.
+        if failed and args.fallback_csv and os.path.exists(args.fallback_csv):
+            fb = pd.read_csv(args.fallback_csv, low_memory=False)
+            fb["cricinfo"] = fb["cricinfo"].astype(str)
+            patch = fb[fb["cricinfo"].str[:1].isin(failed)]
+            print(f"  patched chunks {','.join(failed)} from "
+                  f"{os.path.basename(args.fallback_csv)}: {len(patch):,} rows")
+            wd = pd.concat([wd, patch], ignore_index=True)
+        elif failed:
+            print(f"  chunks {','.join(failed)} missing and no fallback available; "
+                  f"those players will have no age or full name", file=sys.stderr)
+
+        if wd.empty:
+            # Deliberately not fatal. Ages and full names are an enhancement;
+            # the model does not depend on them.
+            print("continuing without ages, nationalities or full names.",
+                  file=sys.stderr)
 
     bio = build(args.register, wd)
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
