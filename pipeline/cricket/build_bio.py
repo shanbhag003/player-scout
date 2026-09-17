@@ -23,12 +23,14 @@ from __future__ import annotations
 
 import argparse
 import io
+import json
 import os
 import sys
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ET
 
 import pandas as pd
 
@@ -50,20 +52,49 @@ SELECT ?cricinfo ?personLabel ?dob ?countryLabel WHERE {
 }
 """
 
-EXPECTED_HEADER = "cricinfo"
+FIELDS = ["cricinfo", "personLabel", "dob", "countryLabel"]
 
 
-def _get(query: str, timeout: int = 180) -> str:
-    url = f"{SPARQL}?{urllib.parse.urlencode({'query': query, 'format': 'csv'})}"
-    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "text/csv"})
+def _parse(body: str) -> pd.DataFrame:
+    """Read whichever result format came back.
+
+    Asking for CSV is not reliable: the service ignored `format=csv` on a real
+    run and returned SPARQL Results XML with a 200. So rather than depend on
+    content negotiation, take JSON when offered, XML when not, and only complain
+    when it is neither.
+    """
+    text = body.lstrip()
+    if text.startswith("{"):
+        data = json.loads(text)
+        rows = []
+        for b in data.get("results", {}).get("bindings", []):
+            rows.append({f: b.get(f, {}).get("value") for f in FIELDS})
+        return pd.DataFrame(rows, columns=FIELDS)
+    if text.startswith("<"):
+        ns = {"s": "http://www.w3.org/2005/sparql-results#"}
+        root = ET.fromstring(text)
+        rows = []
+        for result in root.findall(".//s:result", ns):
+            row = {}
+            for binding in result.findall("s:binding", ns):
+                value = binding.find("s:literal", ns)
+                if value is None:
+                    value = binding.find("s:uri", ns)
+                row[binding.get("name")] = value.text if value is not None else None
+            rows.append({f: row.get(f) for f in FIELDS})
+        return pd.DataFrame(rows, columns=FIELDS)
+    if text.lower().startswith("cricinfo"):
+        return pd.read_csv(io.StringIO(body))
+    first = " / ".join(body.strip().splitlines()[:3])[:300]
+    raise RuntimeError(f"unrecognised response — endpoint said: {first}")
+
+
+def _get(query: str, timeout: int = 180) -> pd.DataFrame:
+    url = f"{SPARQL}?{urllib.parse.urlencode({'query': query, 'format': 'json'})}"
+    req = urllib.request.Request(
+        url, headers={"User-Agent": UA, "Accept": "application/sparql-results+json"})
     with urllib.request.urlopen(req, timeout=timeout) as r:
-        body = r.read().decode("utf-8", "replace")
-    # A timeout comes back as a stack trace with a 200, so the status alone
-    # proves nothing. Check that what arrived is actually the CSV we asked for.
-    if not body.lstrip().lower().startswith(EXPECTED_HEADER):
-        first = " / ".join(body.strip().splitlines()[:3])[:300]
-        raise RuntimeError(f"not CSV — endpoint said: {first}")
-    return body
+        return _parse(r.read().decode("utf-8", "replace"))
 
 
 def fetch_wikidata(retries: int = 3) -> pd.DataFrame:
@@ -71,7 +102,7 @@ def fetch_wikidata(retries: int = 3) -> pd.DataFrame:
     for chunk in CHUNKS:
         for attempt in range(1, retries + 1):
             try:
-                df = pd.read_csv(io.StringIO(_get(QUERY % chunk)))
+                df = _get(QUERY % chunk)
                 frames.append(df)
                 print(f"  ids starting {chunk}: {len(df):,} rows")
                 break

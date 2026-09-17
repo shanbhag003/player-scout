@@ -187,6 +187,12 @@ def fit_competition_effects(per_comp: pd.DataFrame, metrics, min_balls=150):
     Fitted only from players seen in more than one competition. Comparing whole
     competitions instead would show which has the better players, not which is
     the harder place to play.
+
+    Must be given RAW, unweighted records. How hard a competition is to play in
+    is a property of that competition, not of a player's current form, so
+    recency weighting has no business here: it discounts a player's older
+    competitions below the threshold, drops them from the mover pool, and biases
+    every coefficient toward whichever seasons happen to be recent.
     """
     t = per_comp[per_comp["balls"] >= min_balls].copy()
     t = t[t.groupby("player_id")["comp_key"].transform("nunique") >= 2]
@@ -268,12 +274,17 @@ def typed_matchups(facts: pd.DataFrame, types: dict) -> pd.DataFrame:
     return vb
 
 
-def build_discipline(facts, roles, players, discipline, metrics, min_balls, cells):
+def build_discipline(facts, roles, players, discipline, metrics, min_balls, cells,
+                     facts_raw=None):
     by = ["player_id", "comp_key"]
     profile = batting_profile if discipline == "batting" else bowling_profile
 
+    # Coefficients come from the unweighted record; the profile they are applied
+    # to is the weighted one.
+    per_comp_raw = profile(facts_raw if facts_raw is not None else facts, by).reset_index()
+    eff, movers = fit_competition_effects(per_comp_raw, metrics)
+
     per_comp = profile(facts, by).reset_index()
-    eff, movers = fit_competition_effects(per_comp, metrics)
     prof = apply_adjustment(per_comp, eff, metrics)
     # Pool entry is judged on real balls faced, not on what the weighting left.
     prof = prof[prof["balls_raw"] >= min_balls]
@@ -285,11 +296,13 @@ def build_discipline(facts, roles, players, discipline, metrics, min_balls, cell
     z_all = shrink(prof, metrics)
 
     # Halves, for the validation that decides whether any of this works.
+    # Validation asks whether there is enough of a record to recognise a player,
+    # which is a question about sample size, so it uses raw balls too.
     halves = {}
+    src = facts_raw if facts_raw is not None else facts
     for h in (0, 1):
-        sub = facts[facts["half"] == h]
-        p = profile(sub, ["player_id"])
-        halves[h] = p[p["balls"] >= MIN_HALF]
+        p = profile(src[src["half"] == h], ["player_id"])
+        halves[h] = p[p["balls_raw"] >= MIN_HALF]
 
     spaces, validation = {}, []
     coords = {}
@@ -492,6 +505,7 @@ def main():
     types = players["bowler_type"].dropna().to_dict()
 
     facts = pd.concat([facts, typed_matchups(facts, types)], ignore_index=True)
+    facts_raw = weight_by_recency(facts, 0)          # unweighted, for coefficients
     facts = weight_by_recency(facts, args.half_life)
     print(f"recency half-life: {args.half_life or 'off'} years "
           f"(measured from each player's own last match)")
@@ -508,9 +522,9 @@ def main():
           f"{facts['comp_key'].nunique()} competitions")
 
     bat = build_discipline(facts, roles, players, "batting", BAT_METRICS,
-                           MIN_BALLS_BAT, bat_cell)
+                           MIN_BALLS_BAT, bat_cell, facts_raw)
     bowl = build_discipline(facts, roles, players, "bowling", BOWL_METRICS,
-                            MIN_BALLS_BOWL, bowl_cell)
+                            MIN_BALLS_BOWL, bowl_cell, facts_raw)
 
     print(f"\ncompetition coefficients fitted from "
           f"{bat['movers']} batters / {bowl['movers']} bowlers seen in 2+ competitions")
