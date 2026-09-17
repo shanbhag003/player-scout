@@ -1,0 +1,91 @@
+name: Cricket daily
+
+# Pulls Cricsheet's rolling window, folds it into the stored facts, rebuilds the
+# model, and publishes to the STAGING channel only. Production cricket data does
+# not move until you run "Cricket promote".
+#
+# Nothing here commits. The facts live in a release asset and the site is
+# deployed as an artifact, so a job that runs every night leaves the repository
+# exactly the size it was yesterday.
+
+on:
+  schedule:
+    - cron: "40 3 * * *"        # 03:40 UTC, after most cricket has finished
+  workflow_dispatch:
+    inputs:
+      window:
+        description: "Rolling window in days"
+        type: choice
+        options: ["2", "7", "30"]
+        default: "7"
+
+permissions:
+  contents: write               # release assets
+  pages: write
+  id-token: write
+
+concurrency:
+  group: cricket-data
+  cancel-in-progress: false     # never interrupt a half-finished upsert
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      - name: Fetch the rolling window
+        run: |
+          python pipeline/cricket/pull_cricsheet.py \
+            --window ${{ inputs.window || '7' }} --out data/cricket/raw
+
+      - name: Bring down what is already stored
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python pipeline/cricket/store.py pull --repo ${{ github.repository }}
+
+      # Each match routes itself: the window mixes every competition together and
+      # the files are not keyed by one.
+      - name: Parse and route
+        run: |
+          python pipeline/cricket/parse_matches.py \
+            --source data/cricket/raw/recently_added_${{ inputs.window || '7' }}_json.zip \
+            --out data/cricket/incoming | tee data/cricket/route-report.txt
+
+      - name: Fold into the store
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python pipeline/cricket/store.py upsert --repo ${{ github.repository }}
+
+      - name: Refresh biography
+        run: |
+          curl -sSL -o data/cricket/raw/people.csv https://cricsheet.org/register/people.csv
+          python pipeline/cricket/build_bio.py --register data/cricket/raw/people.csv
+
+      - name: Rebuild master and model
+        run: |
+          python pipeline/cricket/build_master.py
+          python pipeline/cricket/build_cricket_scores.py --out site/data/cricket
+
+      - name: Build the staging channel
+        run: python pipeline/build_channels.py --staging-only
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Cricket daily" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat data/cricket/route-report.txt >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY

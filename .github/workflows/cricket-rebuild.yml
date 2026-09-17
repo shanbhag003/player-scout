@@ -1,0 +1,72 @@
+name: Cricket rebuild
+
+# Full re-parse from every competition zip. Run it when the model changes, when
+# a competition is added to config, and monthly to pick up revisions older than
+# the daily window.
+
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Competition keys, space separated. Blank for all."
+        default: ""
+      half_life:
+        description: "Recency half-life in years (0 for raw career shape)"
+        default: "3"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cricket-data
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      - name: Fetch every competition
+        run: |
+          python pipeline/cricket/pull_cricsheet.py --full --out data/cricket/raw \
+            ${{ inputs.only && format('--only {0}', inputs.only) || '' }}
+
+      # One competition at a time, so a failure at number thirty does not lose
+      # the twenty-nine that already worked.
+      - name: Parse each competition
+        run: |
+          set -e
+          for zip in data/cricket/raw/*.zip; do
+            key=$(basename "$zip" .zip | sed 's/_male$//; s/_female$//')
+            echo "::group::$key"
+            python pipeline/cricket/parse_matches.py --source "$zip" \
+              --competition "$key" --out data/cricket/incoming || echo "FAILED $key"
+            echo "::endgroup::"
+          done
+
+      - name: Replace the store
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python pipeline/cricket/store.py upsert --repo ${{ github.repository }}
+
+      - name: Biography, master and model
+        run: |
+          curl -sSL -o data/cricket/raw/people.csv https://cricsheet.org/register/people.csv
+          python pipeline/cricket/build_bio.py --register data/cricket/raw/people.csv
+          python pipeline/cricket/build_master.py
+          python pipeline/cricket/build_cricket_scores.py \
+            --half-life ${{ inputs.half_life }} --out site/data/cricket
+
+      - name: Keep the built site data for the deploy to pick up
+        uses: actions/upload-artifact@v4
+        with:
+          name: cricket-site-data
+          path: site/data/cricket
+          retention-days: 7
