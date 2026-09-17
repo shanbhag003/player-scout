@@ -58,9 +58,17 @@ jobs:
             --out data/cricket/incoming | tee data/cricket/route-report.txt
 
       - name: Fold into the store
+        id: store
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python pipeline/cricket/store.py upsert --repo ${{ github.repository }}
+
+      - name: Finish any uploads that failed
+        if: steps.store.outcome == 'failure'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python pipeline/cricket/store.py push --repo ${{ github.repository }}
 
       - name: Refresh biography
         run: |

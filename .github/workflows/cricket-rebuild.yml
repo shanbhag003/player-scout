@@ -52,9 +52,19 @@ jobs:
           done
 
       - name: Replace the store
+        id: store
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python pipeline/cricket/store.py upsert --repo ${{ github.repository }}
+
+      # Uploads occasionally 504. Everything already up at the right size is
+      # skipped, so a second pass finishes in seconds rather than repeating.
+      - name: Finish any uploads that failed
+        if: steps.store.outcome == 'failure'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python pipeline/cricket/store.py push --repo ${{ github.repository }}
 
       - name: Biography, master and model
         run: |
