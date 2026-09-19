@@ -89,13 +89,29 @@ def build(channel: str, out_root: str, base_url: str) -> str | None:
     dest = os.path.join(out_root, cfg["subdir"]) if cfg["subdir"] else out_root
     os.makedirs(dest, exist_ok=True)
 
-    live = {s["id"] for s in cfg["sports"] if s["status"] == "live"}
+    # Work out what is actually deployable BEFORE copying anything. A sport can
+    # be marked live in config and still have no data — a frontend-only deploy
+    # may run before the data job has ever published — and shipping its page
+    # with nothing behind it is worse than leaving it out.
+    sports = []
+    for s in cfg["sports"]:
+        if s["status"] != "live" or s["id"] == "football":
+            sports.append(s)
+            continue
+        src = os.path.join(SITE, "data", s["id"])
+        if os.path.isdir(src) and any(f.endswith(".json") for f in os.listdir(src)):
+            sports.append(s)
+        else:
+            print(f"  {channel}: {s['id']} has no data, shipping it as 'soon'")
+            sports.append(dict(s, status="soon"))
+    live = {s["id"] for s in sports if s["status"] == "live"}
+
     for entry in os.listdir(SITE):
         if entry == "data":
             continue
-        # A sport that is not live does not ship its page at all. A stray
-        # cricket.html in production would load, find no data and show an error
-        # to someone who never asked for cricket.
+        # A sport that is not live here does not ship its page at all. A stray
+        # cricket.html would load, find no data and show an error to someone who
+        # never asked for cricket.
         stem = entry.split(".")[0]
         if stem in ("cricket", "kabaddi") and stem not in live:
             continue
@@ -104,27 +120,23 @@ def build(channel: str, out_root: str, base_url: str) -> str | None:
         (shutil.copytree if os.path.isdir(src) else shutil.copy2)(
             src, dst, **({"dirs_exist_ok": True} if os.path.isdir(src) else {}))
 
-    # Data is copied per sport, so production simply has no cricket files until
-    # it is promoted — a missing sport cannot half-render.
     for sport in live:
-        src = os.path.join(SITE, "data") if sport == "football" else os.path.join(SITE, "data", sport)
         if sport == "football":
-            files = [f for f in os.listdir(src) if f.endswith(".json")] if os.path.isdir(src) else []
+            src = os.path.join(SITE, "data")
             os.makedirs(os.path.join(dest, "data"), exist_ok=True)
-            for f in files:
-                shutil.copy2(os.path.join(src, f), os.path.join(dest, "data", f))
-        elif os.path.isdir(src):
-            shutil.copytree(src, os.path.join(dest, "data", sport), dirs_exist_ok=True)
-        elif sport in live and sport != "football":
-            print(f"  {channel}: {sport} is live but has no data at {src}")
-            return None
+            for f in (os.listdir(src) if os.path.isdir(src) else []):
+                if f.endswith(".json"):
+                    shutil.copy2(os.path.join(src, f), os.path.join(dest, "data", f))
+        else:
+            shutil.copytree(os.path.join(SITE, "data", sport),
+                            os.path.join(dest, "data", sport), dirs_exist_ok=True)
 
-    info = {"channel": channel, "sports": cfg["sports"],
-            "analytics": cfg["analytics"], "banner": cfg["banner"], "base": base_url}
+    info = {"channel": channel, "sports": sports, "analytics": cfg["analytics"],
+            "banner": cfg["banner"], "base": base_url}
     with open(os.path.join(dest, "channel.json"), "w") as f:
         json.dump(info, f, indent=2)
-    # Loaded before the app so the sport switcher knows what is live here, and
-    # so analytics can be switched off on staging without a second code path.
+    # Loaded before the app so the switcher knows what is live here, and so
+    # analytics can be off on staging without a second code path.
     with open(os.path.join(dest, "channel.js"), "w") as f:
         f.write("window.PS_CHANNEL = " + json.dumps(info) + ";\n")
 
@@ -135,27 +147,20 @@ def build(channel: str, out_root: str, base_url: str) -> str | None:
         html = html.replace("<head>", '<head>\n  <meta name="robots" content="noindex,nofollow">', 1)
     with open(page, "w") as f:
         f.write(html)
-
     if cfg["noindex"]:
         with open(os.path.join(dest, "robots.txt"), "w") as f:
             f.write("User-agent: *\nDisallow: /\n")
 
     if cfg["banner"]:
-        with open(page) as f:
-            html = f.read()
-        html = html.replace("<body>", f'<body>\n<div class="staging-banner">'
-                                      f'{cfg["banner"]}</div>', 1)
-        with open(page, "w") as f:
-            f.write(html)
-        # Same strip on every page of the channel, not just the front one.
-        for other in ("cricket.html",):
-            op = os.path.join(dest, other)
-            if os.path.exists(op):
-                with open(op) as f:
-                    oh = f.read()
-                with open(op, "w") as f:
-                    f.write(oh.replace("<body>", f'<body>\n<div class="staging-banner">'
-                                                 f'{cfg["banner"]}</div>', 1))
+        for name in os.listdir(dest):
+            if not name.endswith(".html"):
+                continue
+            fp = os.path.join(dest, name)
+            with open(fp) as f:
+                h = f.read()
+            with open(fp, "w") as f:
+                f.write(h.replace("<body>",
+                        f'<body>\n<div class="staging-banner">{cfg["banner"]}</div>', 1))
 
     v = stamp(dest, channel)
     print(f"  {channel:11} -> {dest}   assets v={v}   sports live: {', '.join(sorted(live))}")

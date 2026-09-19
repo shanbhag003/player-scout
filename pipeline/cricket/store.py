@@ -68,8 +68,9 @@ def _req(url, token, method="GET", data=None, ctype=None, raw=False, retries=5):
 class Store:
     """Facts live either in a release (`repo` set) or in a directory."""
 
-    def __init__(self, repo=None, tag="cricket-data", token=None, local="data/cricket/facts"):
-        self.repo, self.tag, self.local = repo, tag, local
+    def __init__(self, repo=None, tag="cricket-data", token=None,
+                 local="data/cricket/facts", pattern="*.parquet"):
+        self.repo, self.tag, self.local, self.pattern = repo, tag, local, pattern
         self.token = token or os.environ.get("GITHUB_TOKEN")
         self.remote = bool(repo and self.token)
         os.makedirs(local, exist_ok=True)
@@ -82,7 +83,7 @@ class Store:
             if e.code != 404 or not create:
                 raise
         body = json.dumps({
-            "tag_name": self.tag, "name": "Cricket data",
+            "tag_name": self.tag, "name": self.tag.replace("-", " ").title(),
             "body": ("Parsed Cricsheet facts. Rebuilt by the pipeline; not part of "
                      "the git history. Source: Cricsheet, ODC-BY."),
             "prerelease": True,
@@ -96,8 +97,9 @@ class Store:
             print(f"store: local only ({self.local})")
             return
         rel = self._release()
+        import fnmatch
         for asset in rel.get("assets", []):
-            if not asset["name"].endswith(".parquet"):
+            if not fnmatch.fnmatch(asset["name"], self.pattern):
                 continue
             url = f"{API}/repos/{self.repo}/releases/assets/{asset['id']}"
             headers = {"Accept": "application/octet-stream"}
@@ -123,7 +125,7 @@ class Store:
             return []
         rel = self._release()
         existing = {a["name"]: (a["id"], a["size"]) for a in rel.get("assets", [])}
-        files = sorted(glob.glob(os.path.join(self.local, "*.parquet")))
+        files = sorted(glob.glob(os.path.join(self.local, self.pattern)))
         pushed, skipped, failed = 0, 0, []
         for path in files:
             name = os.path.basename(path)
@@ -163,7 +165,7 @@ class Store:
         stored row for that match, whether it is new or a revision.
         """
         touched, summary = set(), []
-        for path in sorted(glob.glob(os.path.join(incoming_dir, "*.parquet"))):
+        for path in sorted(glob.glob(os.path.join(incoming_dir, self.pattern))):
             name = os.path.basename(path)
             new = pd.read_parquet(path)
             if new.empty:
@@ -193,10 +195,12 @@ def main():
     ap.add_argument("--repo", default=os.environ.get("GITHUB_REPOSITORY"))
     ap.add_argument("--tag", default="cricket-data")
     ap.add_argument("--local", default="data/cricket/facts")
+    ap.add_argument("--pattern", default="*.parquet",
+                    help="which files in --local this store holds")
     ap.add_argument("--incoming", default="data/cricket/incoming")
     args = ap.parse_args()
 
-    store = Store(args.repo, args.tag, local=args.local)
+    store = Store(args.repo, args.tag, local=args.local, pattern=args.pattern)
     if args.action == "pull":
         store.pull()
         return 0
