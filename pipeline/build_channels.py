@@ -99,10 +99,17 @@ def build(channel: str, out_root: str, base_url: str) -> str | None:
             sports.append(s)
             continue
         src = os.path.join(SITE, "data", s["id"])
-        if os.path.isdir(src) and any(f.endswith(".json") for f in os.listdir(src)):
+        page = os.path.join(SITE, f"{s['id']}.html")
+        has_data = os.path.isdir(src) and any(f.endswith(".json") for f in os.listdir(src))
+        has_page = os.path.exists(page)
+        if has_data and has_page:
             sports.append(s)
         else:
-            print(f"  {channel}: {s['id']} has no data, shipping it as 'soon'")
+            # Both halves have to be there. Data without a page gives a live link
+            # to a 404; a page without data gives a page that loads and fails.
+            why = ("no data and no page" if not (has_data or has_page)
+                   else "no data" if not has_data else f"no {s['id']}.html")
+            print(f"  {channel}: {s['id']} has {why}, shipping it as 'soon'")
             sports.append(dict(s, status="soon"))
     live = {s["id"] for s in sports if s["status"] == "live"}
 
