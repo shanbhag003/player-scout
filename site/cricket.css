@@ -212,3 +212,19 @@ img.lmark.flag{width:1.4rem;height:1.4rem;border-radius:50%;object-fit:cover;
 @media (max-width:920px){.profile-grid{grid-template-columns:1fr}}
 .profile-left,.profile-main{display:flex;flex-direction:column;gap:.9rem}
 .profile-left > .panel:last-child,.profile-main > .panel:last-child{flex:1 1 auto}
+
+/* Selects only exist where the list is genuinely long; football's chip groups
+   cover everything else. Styled to sit level with them. */
+.filters select{background:var(--raised);border:1px solid var(--hairline);color:var(--ink);
+  border-radius:99px;padding:.3rem 1.9rem .3rem .7rem;font-size:.82rem;cursor:pointer;
+  -webkit-appearance:none;appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),
+                   linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 15px) 52%,calc(100% - 10px) 52%;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+@media (hover:hover){.filters select:hover{border-color:var(--gold);color:var(--gold)}}
+.filters select:focus{outline:none;border-color:var(--gold)}
+/* A dark option list is a browser default on Windows; force it so the open
+   dropdown is readable rather than white-on-white. */
+.filters select option{background:#17202D;color:#EAF1F8}
+.brand{text-decoration:none;color:inherit}

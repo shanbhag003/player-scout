@@ -32,6 +32,7 @@ try {
         a:e.age, nat:e.nationality, e:e.exposure, tb:e.tier_balls||{},
         cb:e.competition_balls||{}, kp:!!e.keeper, act:e.active,
         ls:e.last_seen, fs:e.first_seen, pc:d.percentile||{}, ad:d.adjusted||{},
+        sea:d.seasons||[],
         car:(((detail[e.player_id]||{}).career)||{})[e.discipline]||null,
         ci:(detail[e.player_id]||{}).cricinfo||null};
     }),
@@ -369,77 +370,333 @@ function paneProfile(){
   </div>`;
 }
 
-function paneSimilar(){
-  const p=entry();
-  if(!p) return `<div class="empty">Search a player first.</div>`;
-  const list=ranked();
-  const head=filterBar()+`<div class="note" style="margin-bottom:.8rem">Ranked on shape, not
-    quality — a player with the same profile is not necessarily as good. Scores are not
-    comparable across sample sizes: a thin record is shrunk toward the average and can
-    never score as close.</div>`;
-  if(!list.length) return head+`<div class="empty">Nothing matches those filters.</div>`;
-  return head+list.map(([s,c])=>`<div class="row">
-    <div class="score" style="color:${s>=60?"var(--green)":s>=45?"var(--gold)":"var(--faint)"}">${s.toFixed(0)}</div>
-    <div><div class="who2">${flag(c.nat)}<span>${esc(c.f||c.n)}</span></div>
-      <div class="why">${why(p,c)}</div></div>
-    <div class="rmeta">${c.b.toLocaleString()} balls<br>${EXPOSURE[c.e]||titled(c.e)}${c.a?" · "+Math.floor(c.a):""}</div>
-    <button class="add" data-add="${c.u}" aria-pressed="${state.compare.includes(c.u)}"
-      title="Add to comparison">${state.compare.includes(c.u)?"✓":"+"}</button></div>`).join("");
+/* ── similar players, in football's structure ────────────
+   Header, filter chips, tag key, then rows: rank, score with its track, flag and
+   name, meta cells, the three read chips, the reason, save and add. Same markup,
+   so the same stylesheet dresses it. */
+const SERIES = ["gold","blue","green","violet","coral","mint"];
+const MAX_COMPARE = 6;
+const AGE_BANDS = [["any","Any"],["u23","Under 23"],["u26","Under 26"],
+                   ["26-30","26–30"],["30-32","30–32"],["32+","32+"]];
+
+function ageOk(c){
+  const a = c.a; const b = state.f.age;
+  if (b === "any") return true;
+  if (!a) return false;
+  if (b === "u23") return a < 23;
+  if (b === "u26") return a < 26;
+  if (b === "26-30") return a >= 26 && a < 30;
+  if (b === "30-32") return a >= 30 && a < 32;
+  return a >= 32;
 }
-function paneCompare(){
-  const p=entry();
-  const uids=[...(p?[p.u]:[]),...state.compare.filter(u=>!p||u!==p.u)].slice(0,6);
-  if(!uids.length) return `<div class="empty">Add players from the similar list to compare them.</div>`;
-  const set=uids.map(u=>byUid[u]).filter(Boolean);
-  const mt=D.spaces[set[0].d][set[0].c].mt;
-  const rows=mt.map(m=>{
-    const vals=set.map(x=>x.pc[m]);
-    const ok=vals.filter(v=>v!=null);
-    const best=ok.length?(LOWER_BETTER.has(m)?Math.min(...ok):Math.max(...ok)):null;
-    return `<tr><td>${LABEL[m]||m}</td>${set.map((x,i)=>{
-      const v=vals[i]; if(v==null) return "<td>—</td>";
-      return `<td class="${v===best?"best":""}">${x.ad[m]??"—"}<span style="color:var(--faint);font-size:.75rem"> ${v}</span></td>`;
-    }).join("")}</tr>`;}).join("");
-  return `<div class="chips">${set.map(x=>`<span class="chip">${flag(x.nat)}${esc(x.f||x.n)}
-      ${p&&x.u===p.u?"":`<button data-drop="${x.u}">×</button>`}</span>`).join("")}</div>
-    <div class="card cmp"><table>
-      <thead><tr><th>Metric</th>${set.map(x=>`<th>${(x.f||x.n).split(" ").slice(-1)[0]}</th>`).join("")}</tr></thead>
-      <tbody><tr><td>Balls</td>${set.map(x=>`<td>${x.b.toLocaleString()}</td>`).join("")}</tr>
-      <tr><td>Age</td>${set.map(x=>`<td>${x.a?Math.floor(x.a):"—"}</td>`).join("")}</tr>
-      <tr><td>Exposure</td>${set.map(x=>`<td>${EXPOSURE[x.e]||titled(x.e)}</td>`).join("")}</tr>
-      ${rows}</tbody></table></div>
-    <div class="note">Adjusted value, with the percentile within role in grey. Green marks the
-    best of those shown, which says nothing about the wider pool.</div>`;
-}
-function draw(){
-  $("ccount").textContent = state.compare.length ? " "+state.compare.length : "";
-  document.querySelectorAll("#tabs button").forEach(b=>
-    b.setAttribute("aria-selected",String(b.dataset.tab===state.tab)));
-  playerbar();
-  $("pane").innerHTML = state.tab==="profile"?paneProfile()
-                      : state.tab==="similar"?paneSimilar():paneCompare();
-  document.querySelectorAll("[data-f]").forEach(el=>{
-    const k=el.dataset.f;
-    if(el.type==="checkbox") el.checked=!!state.f[k]; else el.value=state.f[k];
-    el.onchange=e=>{
-      state.f[k]= e.target.type==="checkbox" ? e.target.checked
-                : k==="minBalls" ? (+e.target.value||0) : e.target.value;
-      draw();};
+
+/* The three chips: the trait they share most closely, then the two biggest gaps.
+   Straight from football's chipsFor. */
+function chipsFor(a, b){
+  const mt = D.spaces[a.d][a.c].mt;
+  const rows = mt.map(m => {
+    const x = a.pc[m] ?? 50, y = b.pc[m] ?? 50;
+    return {m, gap:Math.abs(x-y), edge:Math.min(Math.abs(x-50), Math.abs(y-50)), x, y};
   });
-  const m=document.querySelector("[data-more]"); if(m) m.onclick=()=>{state.showMore=true;draw();};
-  const r=document.querySelector("[data-reset]"); if(r) r.onclick=()=>{
-    state.f=BLANK(); state.f.minBalls=state.mode==="scout"?300:0; draw();};
-  document.querySelectorAll("[data-career]").forEach(b=>
-    b.onclick=()=>{state.career=b.dataset.career; draw();});
-  document.querySelectorAll("[data-disc]").forEach(b=>
-    b.onclick=()=>{state.disc=b.dataset.disc; state.compare=[]; draw();});
-  document.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{
-    const u=b.dataset.add, i=state.compare.indexOf(u);
-    if(i>=0) state.compare.splice(i,1); else if(state.compare.length<5) state.compare.push(u);
-    draw();});
-  document.querySelectorAll("[data-drop]").forEach(b=>b.onclick=()=>{
-    state.compare=state.compare.filter(u=>u!==b.dataset.drop); draw();});
+  const same = rows.filter(r => r.edge > 15).sort((p,q) => p.gap - q.gap)[0]
+            || [...rows].sort((p,q) => p.gap - q.gap)[0];
+  const diff = [...rows].sort((p,q) => q.gap - p.gap).slice(0,2);
+  const nm = m => (LABEL[m] || m).toLowerCase();
+  return [{cls:"same", text:`Similar ${nm(same.m)}`},
+    ...diff.map(r => ({cls: r.y > r.x ? "more" : "less",
+      text:`${r.y > r.x ? "More" : "Less"} ${nm(r.m)}`}))];
 }
+
+function seg(label, key, opts){
+  return `<div class="filter"><span class="filter-label">${esc(label)}</span>
+    <div class="segmented" role="group" aria-label="${esc(label)}">${opts.map(([v,t]) =>
+      `<button data-f="${key}" data-v="${v}" aria-pressed="${String(state.f[key]) === v}"
+        >${esc(t)}</button>`).join("")}</div></div>`;
+}
+
+function renderFilters(){
+  const more = state.showMore || state.mode === "scout";
+  const countries = [...new Set(D.players.map(x => x.nat).filter(Boolean))].sort();
+  $("filters").innerHTML =
+    seg("Age", "age", AGE_BANDS) +
+    seg("Exposure", "exposure", [["any","Any"],["unfranchised","No internationals"],
+                                 ["uncapped","Uncapped only"]]) +
+    seg("Balls faced", "minBalls", [["0","Any"],["300","300+"],["1000","1,000+"]]) +
+    (more ? `<div class="filter"><span class="filter-label">Represents</span>
+        <select data-sel="country"><option value="any">Any country</option>
+        ${countries.map(c => `<option value="${esc(c)}"${state.f.country===c?" selected":""}
+          >${esc(c)}</option>`).join("")}</select></div>
+      <div class="filter"><span class="filter-label">Has played in</span>
+        <select data-sel="comp"><option value="any">Any competition</option>
+        ${CLUBCOMPS.map(c => `<option value="${c}"${state.f.comp===c?" selected":""}
+          >${esc(D.compNames[c]||c)}</option>`).join("")}</select></div>` : "") +
+    `<label class="switch"><input type="checkbox" data-chk="active" ${
+      state.f.active?"checked":""}><span>Only players still playing</span></label>
+     <label class="switch"><input type="checkbox" data-chk="keeper" ${
+      state.f.keeper?"checked":""}><span>Keepers only</span></label>` +
+    (more ? "" : `<button class="linkish" data-more>More filters</button>`) +
+    `<button class="linkish reset" data-reset>Reset</button>`;
+
+  $("filters").querySelectorAll("[data-f]").forEach(b => b.onclick = () => {
+    state.f[b.dataset.f] = b.dataset.f === "minBalls" ? +b.dataset.v : b.dataset.v;
+    draw();
+  });
+  $("filters").querySelectorAll("[data-sel]").forEach(el =>
+    el.onchange = e => { state.f[el.dataset.sel] = e.target.value; draw(); });
+  $("filters").querySelectorAll("[data-chk]").forEach(el =>
+    el.onchange = e => { state.f[el.dataset.chk] = e.target.checked; draw(); });
+  const m = $("filters").querySelector("[data-more]");
+  if (m) m.onclick = () => { state.showMore = true; draw(); };
+  $("filters").querySelector("[data-reset]").onclick = () => {
+    state.f = BLANK(); if (state.mode === "scout") state.f.minBalls = 300; draw(); };
+}
+
+function renderResults(){
+  const p = entry(); if (!p) return;
+  const sp = D.spaces[p.d][p.c];
+  const all = D.players.filter(c => c.u !== p.u && c.d === p.d && c.c === p.c);
+  const eligible = all.filter(passes).length;
+  const rows = ranked();
+  const full = state.compare.length >= MAX_COMPARE - 1;
+
+  $("results-title").textContent = `Closest to ${p.f || p.n}`;
+  $("results-note").textContent = p.d === "batting"
+    ? "Scoring rate, shape and match-up — how and when runs come, not only how many."
+    : "Economy, wickets and phase — where in an innings a bowler works and what it costs.";
+  $("results-count").innerHTML = rows.length
+    ? `${rows.length} shown of <b>${eligible}</b> in the pool` : "";
+  renderFilters();
+
+  if (!rows.length){
+    $("matches").innerHTML = ""; $("tagkey").hidden = true;
+    $("thin").hidden = false;
+    $("thin").textContent = `No ${titled(p.c).toLowerCase()}s match these filters. `
+      + `Widen the age band, or lower the balls faced.`;
+    return;
+  }
+  $("tagkey").hidden = false;
+  $("thin").hidden = rows.length >= 5;
+  if (rows.length < 5)
+    $("thin").textContent = `Only ${rows.length} match these filters. Loosen one.`;
+
+  $("tagkey").innerHTML =
+    (full ? `<span class="tagkey-full">Comparison is full. Remove a player to add another.</span> ` : "")
+    + `Tags compare each player with <b>${esc(p.f||p.n)}</b>: `
+    + `<em class="tag same">Similar</em> a shared trait, `
+    + `<em class="tag more">More</em> and <em class="tag less">Less</em> the two biggest gaps. `
+    + `<span class="tagkey-add">Use <b>+</b> to add a player to the comparison.</span>`;
+
+  const saved = slRead();
+  $("matches").innerHTML = rows.map(([score, c], i) => {
+    const inCmp = state.compare.includes(c.u), isSaved = saved.includes(c.u);
+    const chips = chipsFor(p, c);
+    const bat = c.d === "batting", t = (c.car||{}).total || {};
+    const cells = bat
+      ? [["Age", c.a ? Math.floor(c.a) : "—"],
+         ["Runs", (t.runs||0).toLocaleString()],
+         ["Strike rate", t.balls_raw ? (t.runs/t.balls_raw*100).toFixed(1) : "—"]]
+      : [["Age", c.a ? Math.floor(c.a) : "—"],
+         ["Wickets", t.wkts ?? "—"],
+         ["Economy", t.balls_raw ? (t.runs/t.balls_raw*6).toFixed(2) : "—"]];
+    return `<li class="match${inCmp ? " is-open" : ""}">
+      <button class="match-btn" data-uid="${c.u}">
+        <span class="rank">${i + 1}</span>
+        <span class="score"><span class="score-num">${score.toFixed(0)}</span>
+          <span class="score-track"><span style="width:${Math.min(100,score).toFixed(1)}%"></span></span></span>
+        <span class="who">
+          <span class="who-top">${flag(c.nat)}<b>${esc(c.f||c.n)}</b>
+            ${c.act ? "" : '<em class="gone-tag">retired</em>'}</span>
+          <span class="who-sub">${esc(titled(c.r||c.c))} · <b class="clubnow">${
+            esc(c.nat || "—")}</b> · ${esc(EXPOSURE[c.e] || titled(c.e))}</span>
+        </span>
+        <span class="facts">${cells.map(([k,v]) =>
+          `<span class="meta-cell"><i>${esc(k)}</i>${esc(v)}</span>`).join("")}</span>
+        <span class="reads">${chips.map(x =>
+          `<em class="tag ${x.cls}">${esc(x.text)}</em>`).join("")}</span>
+        <span class="why">${esc(why(p, c))}</span>
+      </button>
+      <span class="rowacts">
+        <button class="savebtn${isSaved?" on":""}" data-save="${c.u}" aria-pressed="${isSaved}"
+          title="${isSaved?"Remove from shortlist":"Save to shortlist"}">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v16l-5-4-5 4z"
+            fill="${isSaved?"currentColor":"none"}" stroke="currentColor" stroke-width="1.8"
+            stroke-linejoin="round"/></svg></button>
+        <button class="addbtn${inCmp?" on":""}" data-add="${c.u}" aria-pressed="${inCmp}"
+          ${!inCmp && full ? "disabled" : ""}
+          title="${inCmp?"Remove from comparison":full?"Comparison is full — remove someone first":"Add to comparison"}"
+          >${inCmp ? "&minus;" : "+"}</button></span>
+    </li>`;
+  }).join("");
+
+  $("matches").querySelectorAll(".match-btn").forEach(b => b.onclick = () => {
+    if (!state.compare.includes(b.dataset.uid) && !full) state.compare.push(b.dataset.uid);
+    setTab("compare");
+  });
+  $("matches").querySelectorAll(".addbtn").forEach(b => b.onclick = () => {
+    const i = state.compare.indexOf(b.dataset.add);
+    if (i >= 0) state.compare.splice(i,1);
+    else if (state.compare.length < MAX_COMPARE - 1) state.compare.push(b.dataset.add);
+    draw();
+  });
+  $("matches").querySelectorAll(".savebtn").forEach(b =>
+    b.onclick = () => slToggle(b.dataset.save));
+}
+
+/* ── compare, in football's structure ────────────────────
+   Tray of chips, one radar carrying everyone, a season trend, and every metric
+   as a span with a dot per player. */
+function compareSeries(){
+  const p = entry(); if (!p) return [];
+  const out = [{p, colour: SERIES[0]}];
+  state.compare.forEach((u,i) => {
+    const c = byUid[u];
+    if (c && c.u !== p.u) out.push({p:c, colour: SERIES[(i+1) % SERIES.length]});
+  });
+  return out;
+}
+function scoreAgainst(base, c){
+  const sp = D.spaces[base.d][base.c];
+  if (!sp || c.c !== base.c || c.d !== base.d) return null;
+  let d = 0; for (let k=0;k<base.x.length;k++){const v=base.x[k]-c.x[k]; d+=v*v;}
+  return 100 * Math.exp(-Math.LN2 * Math.sqrt(d) / sp.md);
+}
+function renderCompare(){
+  const base = entry(); if (!base) return;
+  const series = compareSeries(), saved = slRead();
+  $("tray").innerHTML = series.map((s,i) => {
+    const on = saved.includes(s.p.u);
+    const sv = `<button class="traysave${on?" on":""}" data-tsave="${s.p.u}"
+      aria-pressed="${on}" title="${on?"Remove from shortlist":"Save to shortlist"}">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v16l-5-4-5 4z"
+        fill="${on?"currentColor":"none"}" stroke="currentColor" stroke-width="1.8"
+        stroke-linejoin="round"/></svg></button>`;
+    const sc = i === 0 ? null : scoreAgainst(base, s.p);
+    return `<span class="trayitem ${s.colour}">
+      <i class="swatch"></i>${flag(s.p.nat)}<b>${esc(s.p.f||s.p.n)}</b>
+      ${i===0 ? '<span class="base-tag">searched</span>' + sv
+        : `<span class="tray-score" title="Match score against ${esc(base.f||base.n)}">${
+             sc==null?"—":sc.toFixed(0)}</span>
+           <button class="traybtn" data-scout="${s.p.p}">Scout instead</button>${sv}
+           <button class="dropbtn" data-drop="${s.p.u}" aria-label="Remove">&times;</button>`}
+    </span>`;
+  }).join("") + (state.compare.length < MAX_COMPARE-1
+    ? `<span class="trayhint">or pick from <button class="linkish"
+       data-goto="similar">Similar players</button></span>` : "");
+  $("tray").querySelectorAll("[data-drop]").forEach(b => b.onclick = () => {
+    state.compare = state.compare.filter(u => u !== b.dataset.drop); draw(); });
+  $("tray").querySelectorAll("[data-scout]").forEach(b => b.onclick = () => select(b.dataset.scout));
+  $("tray").querySelectorAll("[data-tsave]").forEach(b => b.onclick = () => slToggle(b.dataset.tsave));
+  $("tray").querySelectorAll("[data-goto]").forEach(b => b.onclick = () => setTab("similar"));
+
+  const room = MAX_COMPARE - 1 - state.compare.length;
+  $("cmp-add-note").textContent = room > 0
+    ? `Room for ${room} more. Anyone in the pool can be added — they do not have to appear in the similar list.`
+    : "The comparison is full. Remove someone to add another.";
+  $("cmp-search").disabled = room <= 0;
+
+  if (series.length < 2){
+    $("compare-body").hidden = true; $("compare-empty").hidden = false;
+    $("compare-empty").innerHTML = `Nothing to compare yet. Open <button class="linkish"
+      data-goto2="similar">Similar players</button> and press <b>+</b> on up to
+      ${MAX_COMPARE-1} of them.`;
+    $("compare-empty").querySelectorAll("[data-goto2]").forEach(b =>
+      b.onclick = () => setTab("similar"));
+    return;
+  }
+  $("compare-body").hidden = false; $("compare-empty").hidden = true;
+
+  const mt = D.spaces[base.d][base.c].mt;
+  const mixed = series.some(s => s.p.c !== base.c || s.p.d !== base.d);
+  $("cmp-radar-sub").textContent = mixed
+    ? "Percentiles are against each player's own role, so the shapes compare roles rather than raw output."
+    : `Percentile among ${D.spaces[base.d][base.c].n} ${titled(base.c).toLowerCase()}s.`;
+  $("cmp-radar").innerHTML = radarSvg(series.map(s => ({colour:s.colour, pct:s.p.pc})),
+    mt.slice(0,8), LABEL, {label:`Comparison of ${series.map(s=>s.p.f||s.p.n).join(", ")}`});
+  renderCompareMetrics(series, mt);
+  renderTrend(series);
+}
+function renderCompareMetrics(series, mt){
+  const el = $("cmp-metrics");
+  if (el.style && el.style.setProperty) el.style.setProperty("--cols", series.length);
+  el.innerHTML = `<div class="mlegend">${series.map(s =>
+      `<span class="lg"><i class="sw ${s.colour}"></i>${esc(s.p.f||s.p.n)}</span>`).join("")}</div>`
+    + mt.map(m => {
+    const vals = series.map(s => ({...s, pct:s.p.pc[m] ?? 50, val:s.p.ad[m]}));
+    const best = LOWER_BETTER.has(m) ? Math.min(...vals.map(v=>v.pct)) : Math.max(...vals.map(v=>v.pct));
+    const lo = Math.min(...vals.map(v=>v.pct)), hi = Math.max(...vals.map(v=>v.pct));
+    return `<div class="mrow"><span class="mlabel">${esc(LABEL[m]||m)}</span>
+      <span class="mtrack"><span class="mmid"></span>
+        <span class="mspan" style="left:${lo}%;width:${(hi-lo).toFixed(1)}%"></span>
+        ${vals.map(v => `<span class="mdot ${v.colour}" style="left:${v.pct}%"
+          title="${esc(v.p.f||v.p.n)}: ${fmtMetric(v.val)} (${Math.round(v.pct)}th)"></span>`).join("")}
+      </span>${vals.map(v => `<span class="mv ${v.colour}${v.pct===best?" lead":""}"
+        >${fmtMetric(v.val)}</span>`).join("")}</div>`;
+  }).join("");
+}
+function renderTrend(series){
+  const bat = series[0].p.d === "batting", key = bat ? "sr" : "econ";
+  const seasons = [...new Set(series.flatMap(s => (s.p.sea||[]).map(r => r.season)))].sort();
+  const lines = series.map(s => {
+    const map = new Map((s.p.sea||[]).filter(r => r[key] != null).map(r => [r.season, r]));
+    return {...s, points: seasons.map(x => map.get(x) || null)};
+  });
+  const vals = lines.flatMap(l => l.points.filter(Boolean).map(r => r[key]));
+  if (!seasons.length || !vals.length){
+    $("cmp-trend").innerHTML = `<p class="cmp-add-note">No season-by-season record.</p>`;
+    $("cmp-trend-sub").textContent = ""; return;
+  }
+  $("cmp-trend-sub").textContent = bat
+    ? "Strike rate season by season. A gap means too few balls that year to form a rate."
+    : "Economy season by season. A gap means too few balls that year to form a rate.";
+  const top = Math.max(...vals) * 1.1, bottom = bat ? 0 : Math.max(0, Math.min(...vals) - 1.5);
+  const W=700,H=250,padL=62,padR=22,padT=18,padB=46;
+  const x = i => padL + (i*(W-padL-padR))/Math.max(1, seasons.length-1);
+  const y = v => H-padB - ((v-bottom)/(top-bottom||1))*(H-padT-padB);
+  const grid = [0,.25,.5,.75,1].map(f => {
+    const v = bottom + (top-bottom)*f;
+    return `<line class="tgrid" x1="${padL}" x2="${W-padR}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/>
+      <text class="taxis" x="${padL-8}" y="${(y(v)+3.5).toFixed(1)}" text-anchor="end">${v.toFixed(bat?0:1)}</text>`;
+  }).join("");
+  const paths = lines.map(l => {
+    const chunks=[]; let cur=[];
+    l.points.forEach((d,i)=>{ if(d) cur.push(`${x(i).toFixed(1)},${y(d[key]).toFixed(1)}`);
+      else { if(cur.length) chunks.push(cur); cur=[]; } });
+    if (cur.length) chunks.push(cur);
+    const dots = l.points.map((d,i)=> d
+      ? `<circle class="tdot ${l.colour}" cx="${x(i).toFixed(1)}" cy="${y(d[key]).toFixed(1)}" r="3.6">
+          <title>${esc(l.p.f||l.p.n)} — ${esc(seasons[i])}: ${d[key]} from ${d.balls} balls</title></circle>` : "").join("");
+    return `<g class="tline ${l.colour}">${chunks.map(c=>`<polyline points="${c.join(" ")}"/>`).join("")}</g>${dots}`;
+  }).join("");
+  const xl = seasons.map((sn,i) => `<text class="taxis" x="${x(i).toFixed(1)}" y="${H-padB+18}"
+    text-anchor="${i===0?"start":i===seasons.length-1?"end":"middle"}">${esc(sn)}</text>`).join("");
+  $("cmp-trend").innerHTML = `<svg class="trend" viewBox="0 0 ${W} ${H}" role="img"
+    aria-label="Form by season">${grid}${paths}${xl}
+    <text class="taxis title" transform="translate(13,${((H-padB+padT)/2).toFixed(1)}) rotate(-90)"
+      text-anchor="middle">${bat?"Strike rate":"Economy"}</text>
+    <text class="taxis title" x="${(W+padL-padR)/2}" y="${H-6}" text-anchor="middle">Season</text>
+  </svg><div class="tlegend">${series.map(s =>
+    `<span class="lg"><i class="sw ${s.colour}"></i>${esc(s.p.f||s.p.n)}</span>`).join("")}</div>`;
+}
+
+function setTab(t){ state.tab = t; draw(); }
+
+function draw(){
+  $("ccount").textContent = state.compare.length ? ` (${state.compare.length + 1})` : "";
+  ["profile","similar","compare"].forEach(t => {
+    $("panel-" + t).hidden = state.tab !== t;
+    document.querySelectorAll(`#tabs [data-tab="${t}"]`).forEach(b =>
+      b.setAttribute("aria-selected", String(state.tab === t)));
+  });
+  playerbar();
+  if (state.tab === "profile") $("pane").innerHTML = paneProfile();
+  else if (state.tab === "similar") renderResults();
+  else renderCompare();
+  document.querySelectorAll("[data-career]").forEach(b =>
+    b.onclick = () => { state.career = b.dataset.career; draw(); });
+  document.querySelectorAll("[data-disc]").forEach(b =>
+    b.onclick = () => { state.disc = b.dataset.disc; state.compare = []; draw(); });
+}
+
 $("search").addEventListener("input",e=>{state.sugg=-1;renderSugg(e.target.value);});
 $("search").addEventListener("keydown",e=>{
   const box=$("suggestions"); if(box.hidden) return;
@@ -451,7 +708,7 @@ $("search").addEventListener("keydown",e=>{
   renderSugg($("search").value);
 });
 document.addEventListener("click",e=>{if(!e.target.closest(".finder"))$("suggestions").hidden=true;});
-document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;draw();});
+document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 document.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
 
 /* ── sport switcher, from the channel ────────────────────
@@ -703,13 +960,35 @@ if (D.built){
 }
 
 $("clear").onclick = toLanding;
+$("brand").onclick = e => { e.preventDefault(); toLanding(); };
 
-$("attrib").innerHTML = `Match data from <a href="https://cricsheet.org">Cricsheet</a>,
+/* ── add anyone to the comparison ───────────────────────── */
+let cmpSel = -1;
+$("cmp-search").addEventListener("input", e => {
+  const box = $("cmp-suggestions"), base = entry();
+  const list = found(e.target.value).filter(x => x.p !== (base && base.p));
+  if (!list.length){ box.hidden = true; return; }
+  box.hidden = false;
+  box.innerHTML = list.map((x,i) => `<li role="option" data-pid="${x.p}"
+    aria-selected="${i===cmpSel}">${flag(x.nat)}<span class="sug-name">${esc(x.f||x.n)}</span>
+    <span class="sug-meta">${esc(titled(x.r||x.c))}${x.a?" · "+Math.floor(x.a):""}</span></li>`).join("");
+  box.querySelectorAll("li").forEach(li => li.onclick = () => {
+    const cand = byPlayer[li.dataset.pid].find(z => z.d === (entry()||{}).d)
+              || byPlayer[li.dataset.pid][0];
+    if (cand && !state.compare.includes(cand.u) && state.compare.length < MAX_COMPARE - 1)
+      state.compare.push(cand.u);
+    $("cmp-search").value = ""; box.hidden = true; draw();
+  });
+});
+document.addEventListener("click", e => {
+  if (!e.target.closest(".cmp-add")) $("cmp-suggestions").hidden = true; });
+
+$("attrib").innerHTML = `Match data from <a href="https://cricsheet.org" target="_blank" rel="noopener noreferrer">Cricsheet</a>,
   under the Open Data Commons Attribution Licence. Biography from Wikidata.
   ${D.matches.toLocaleString()} matches.`;
 $("withheld").innerHTML = `<b>${D.withheld.matches} matches are missing by design.</b>
   ${esc(D.withheld.summary)} ${esc(D.withheld.reason)}
-  <a href="${D.withheld.link}">His explanation</a>.`;
+  <a href="${D.withheld.link}" target="_blank" rel="noopener noreferrer">His explanation</a>.`;
 
 renderShortlist();
 draw();

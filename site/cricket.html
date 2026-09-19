@@ -18,10 +18,10 @@
 
 <header class="top">
   <div class="shell top-inner">
-    <div class="brand">
+    <a class="brand" href="cricket.html" id="brand" aria-label="Player Scout — cricket home">
       <span class="brand-mark" aria-hidden="true"></span>
       <span class="brand-name">Player Scout</span>
-    </div>
+    </a>
     <nav class="sports" id="sports" aria-label="Sport"></nav>
     <div class="statuswrap">
       <div class="freshness">
@@ -148,7 +148,67 @@
         </div>
       </div>
     </div>
-    <div class="pane" id="pane"></div>
+    <div class="tabpanel" id="panel-profile" role="tabpanel">
+      <div id="pane"></div>
+    </div>
+
+    <div class="tabpanel" id="panel-similar" role="tabpanel" hidden>
+      <header class="results-head">
+        <div>
+          <h2 id="results-title"></h2>
+          <p class="results-note" id="results-note"></p>
+        </div>
+        <div class="results-right">
+          <p class="results-count" id="results-count"></p>
+        </div>
+      </header>
+      <div class="filters" id="filters"></div>
+      <p class="tagkey" id="tagkey"></p>
+      <ol class="matches" id="matches"></ol>
+      <p class="thin" id="thin" hidden></p>
+    </div>
+
+    <div class="tabpanel" id="panel-compare" role="tabpanel" hidden>
+      <div class="cmp-add">
+        <label for="cmp-search">Add any player to this comparison</label>
+        <div class="input-wrap">
+          <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="10.5" cy="10.5" r="6.6" fill="none" stroke="currentColor" stroke-width="1.7"/>
+            <path d="M15.4 15.4L20 20" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+          </svg>
+          <input id="cmp-search" type="text" autocomplete="off" spellcheck="false"
+                 placeholder="Search anyone — they need not be in the similar list">
+        </div>
+        <ul class="suggestions" id="cmp-suggestions" role="listbox" hidden></ul>
+        <p class="cmp-add-note" id="cmp-add-note"></p>
+      </div>
+      <div class="tray" id="tray"></div>
+      <p class="thin" id="compare-empty" hidden></p>
+      <div class="compare-grid" id="compare-body" hidden>
+        <article class="panel">
+          <header class="panel-head">
+            <h2>Shape against role</h2>
+            <p class="panel-sub" id="cmp-radar-sub"></p>
+          </header>
+          <div class="radar-wrap" id="cmp-radar"></div>
+        </article>
+        <article class="panel trend-panel">
+          <header class="panel-head">
+            <h2>Form by season</h2>
+            <p class="panel-sub" id="cmp-trend-sub"></p>
+          </header>
+          <div id="cmp-trend"></div>
+        </article>
+        <article class="panel cmp-metrics-panel">
+          <header class="panel-head">
+            <h2>Every metric</h2>
+            <p class="panel-sub">Adjusted value per player, with the dot marking where
+              each sits as a percentile among their own role.</p>
+          </header>
+          <div class="cmp-metrics" id="cmp-metrics"></div>
+        </article>
+      </div>
+    </div>
   </section>
 </main>
 
