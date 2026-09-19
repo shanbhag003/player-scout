@@ -47,6 +47,12 @@ CHANNELS = {
 }
 
 
+BANNER_CSS = """
+.staging-banner{background:#F0BC63;color:#101720;font:600 13px/1.4 system-ui,sans-serif;
+  text-align:center;padding:.35rem .8rem;letter-spacing:.01em}
+"""
+
+
 def stamp(root: str, channel: str) -> str:
     """Version the stylesheet and script.
 
@@ -54,6 +60,14 @@ def stamp(root: str, channel: str) -> str:
     each other's cached assets.
     """
     digest = hashlib.sha1(channel.encode())
+    # The banner needs a rule and it must exist in both stylesheets, because the
+    # two sports do not share one.
+    for sheet in ("style.css", "cricket.css"):
+        sp = os.path.join(root, sheet)
+        if os.path.exists(sp) and "staging-banner" not in open(sp).read():
+            with open(sp, "a") as f:
+                f.write(BANNER_CSS)
+
     for name in ("app.js", "style.css"):
         p = os.path.join(root, name)
         if os.path.exists(p):
@@ -75,8 +89,15 @@ def build(channel: str, out_root: str, base_url: str) -> str | None:
     dest = os.path.join(out_root, cfg["subdir"]) if cfg["subdir"] else out_root
     os.makedirs(dest, exist_ok=True)
 
+    live = {s["id"] for s in cfg["sports"] if s["status"] == "live"}
     for entry in os.listdir(SITE):
         if entry == "data":
+            continue
+        # A sport that is not live does not ship its page at all. A stray
+        # cricket.html in production would load, find no data and show an error
+        # to someone who never asked for cricket.
+        stem = entry.split(".")[0]
+        if stem in ("cricket", "kabaddi") and stem not in live:
             continue
         src = os.path.join(SITE, entry)
         dst = os.path.join(dest, entry)
@@ -85,7 +106,6 @@ def build(channel: str, out_root: str, base_url: str) -> str | None:
 
     # Data is copied per sport, so production simply has no cricket files until
     # it is promoted — a missing sport cannot half-render.
-    live = {s["id"] for s in cfg["sports"] if s["status"] == "live"}
     for sport in live:
         src = os.path.join(SITE, "data") if sport == "football" else os.path.join(SITE, "data", sport)
         if sport == "football":
@@ -99,10 +119,14 @@ def build(channel: str, out_root: str, base_url: str) -> str | None:
             print(f"  {channel}: {sport} is live but has no data at {src}")
             return None
 
+    info = {"channel": channel, "sports": cfg["sports"],
+            "analytics": cfg["analytics"], "banner": cfg["banner"], "base": base_url}
     with open(os.path.join(dest, "channel.json"), "w") as f:
-        json.dump({"channel": channel, "sports": cfg["sports"],
-                   "analytics": cfg["analytics"], "banner": cfg["banner"],
-                   "base": base_url}, f, indent=2)
+        json.dump(info, f, indent=2)
+    # Loaded before the app so the sport switcher knows what is live here, and
+    # so analytics can be switched off on staging without a second code path.
+    with open(os.path.join(dest, "channel.js"), "w") as f:
+        f.write("window.PS_CHANNEL = " + json.dumps(info) + ";\n")
 
     page = os.path.join(dest, "index.html")
     with open(page) as f:
@@ -115,6 +139,23 @@ def build(channel: str, out_root: str, base_url: str) -> str | None:
     if cfg["noindex"]:
         with open(os.path.join(dest, "robots.txt"), "w") as f:
             f.write("User-agent: *\nDisallow: /\n")
+
+    if cfg["banner"]:
+        with open(page) as f:
+            html = f.read()
+        html = html.replace("<body>", f'<body>\n<div class="staging-banner">'
+                                      f'{cfg["banner"]}</div>', 1)
+        with open(page, "w") as f:
+            f.write(html)
+        # Same strip on every page of the channel, not just the front one.
+        for other in ("cricket.html",):
+            op = os.path.join(dest, other)
+            if os.path.exists(op):
+                with open(op) as f:
+                    oh = f.read()
+                with open(op, "w") as f:
+                    f.write(oh.replace("<body>", f'<body>\n<div class="staging-banner">'
+                                                 f'{cfg["banner"]}</div>', 1))
 
     v = stamp(dest, channel)
     print(f"  {channel:11} -> {dest}   assets v={v}   sports live: {', '.join(sorted(live))}")

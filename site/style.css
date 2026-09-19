@@ -1111,3 +1111,7 @@ input,button{border-radius:inherit}
      hole between "Scout instead" and the remove button. */
   .trayitem{gap:.3rem}
 }
+
+/* A live sport other than the current one renders as a link, not a button.
+   Both must look the same. */
+a.sport{text-decoration:none;display:inline-flex;align-items:center}

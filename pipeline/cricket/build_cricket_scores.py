@@ -391,20 +391,29 @@ def emit(bat, bowl, players, roles, facts, out_dir, half_life=HALF_LIFE):
                                for c, t in zip(d["competition_name"], d["team"])],
                     include_groups=False).to_dict())
 
-    # Balls by tier, per player per discipline, so exposure can be judged on
-    # substance rather than on a single appearance.
-    tier_of = dict(zip(facts["comp_key"], facts["tier"]))
-    tier_balls = {}
-    for kind, disc in (("bat_phase", "batting"), ("bowl_phase", "bowling")):
-        sub = facts[facts["kind"] == kind]
-        g = sub.groupby(["player_id", "tier"])["balls_raw"].sum()
-        for (pid, tier), b in g.items():
-            tier_balls.setdefault((pid, disc), {})[tier] = int(b)
-
     bio_path = os.path.join(DATA, "bio.parquet")
     bio = (pd.read_parquet(bio_path).set_index("player_id")
            if os.path.exists(bio_path) else pd.DataFrame())
     as_of = pd.to_datetime(facts["date"], errors="coerce").max()
+
+    # Balls by tier and by competition, so exposure can be judged on substance
+    # and "has played in the IPL" becomes a filter rather than a guess.
+    tier_balls, comp_balls = {}, {}
+    for kind, disc in (("bat_phase", "batting"), ("bowl_phase", "bowling")):
+        sub = facts[facts["kind"] == kind]
+        for (pid, tier), b in sub.groupby(["player_id", "tier"])["balls_raw"].sum().items():
+            tier_balls.setdefault((pid, disc), {})[tier] = int(b)
+        for (pid, comp), b in sub.groupby(["player_id", "competition"])["balls_raw"].sum().items():
+            comp_balls.setdefault((pid, disc), {})[comp] = int(b)
+
+    # The country a player represents, taken from who they turn out for in
+    # internationals. This is cricketing eligibility, which is the question a
+    # franchise actually asks — and it covers far more players than Wikidata's
+    # citizenship, which is patchy and reports English players as British.
+    intl = apps[apps["tier"].str.startswith("international")].sort_values("date")
+    represents = intl.groupby("player_id")["team"].last().to_dict()
+
+    keepers = set(roles[roles.get("keeper", False) == True].index) if "keeper" in roles else set()
 
     index, detail = [], {}
     for disc, res, prof_fn, metrics in (("batting", bat, batting_profile, BAT_METRICS),
@@ -425,8 +434,10 @@ def emit(bat, bowl, players, roles, facts, out_dir, half_life=HALF_LIFE):
                 # Wikidata, joined on an exact Cricinfo id.
                 "full_name": (bio.at[pid, "full_name"]
                               if pid in bio.index and pd.notna(bio.at[pid, "full_name"]) else None),
-                "nationality": (bio.at[pid, "nationality"]
-                                if pid in bio.index and pd.notna(bio.at[pid, "nationality"]) else None),
+                "nationality": represents.get(pid) or (
+                    bio.at[pid, "nationality"]
+                    if pid in bio.index and pd.notna(bio.at[pid, "nationality"]) else None),
+                "keeper": pid in keepers,
                 "age": (round(float((as_of - bio.at[pid, "dob"]).days / 365.25), 1)
                         if pid in bio.index and pd.notna(bio.at[pid, "dob"]) else None),
                 "discipline": disc,
@@ -442,6 +453,7 @@ def emit(bat, bowl, players, roles, facts, out_dir, half_life=HALF_LIFE):
                 "active": bool(pd.notna(last) and (last_overall - last).days <= 550),
                 "exposure": exposure_of(tier_balls.get((pid, disc), {})),
                 "tier_balls": tier_balls.get((pid, disc), {}),
+                "competition_balls": comp_balls.get((pid, disc), {}),
             })
             d = detail.setdefault(pid, {"name": index[-1]["name"],
                                         "teams": teams.get(pid, []),
@@ -462,6 +474,9 @@ def emit(bat, bowl, players, roles, facts, out_dir, half_life=HALF_LIFE):
         "pool": len(index), "players": len(detail),
         "matches": int(facts["match_id"].nunique()),
         "competitions": sorted(facts["comp_key"].unique().tolist()),
+        "competition_names": {c["key"]: c["name"] for c in
+                              __import__("yaml").safe_load(
+                                  open(os.path.join("config", "cricket", "competitions.yml")))["competitions"]},
         "spaces": {"batting": bat["spaces"], "bowling": bowl["spaces"]},
         "competition_effects": {"batting": bat["effects"], "bowling": bowl["effects"]},
         "movers": {"batting": bat["movers"], "bowling": bowl["movers"]},
@@ -472,7 +487,19 @@ def emit(bat, bowl, players, roles, facts, out_dir, half_life=HALF_LIFE):
                        "shrinkage_k": SHRINK_K, "variance": VARIANCE,
                        "recency_half_life_years": half_life},
         "source": "Cricsheet (https://cricsheet.org), Open Data Commons Attribution Licence",
-        "withheld": "Matches involving Afghanistan or the APL are withheld by Cricsheet.",
+        # Not a gap in the data — a decision by the person who maintains it.
+        # Stated plainly, with a link to his own reasoning, so a reader sees
+        # whose position it is rather than ours.
+        "withheld": {
+            "summary": ("Cricsheet withholds all matches involving or played in "
+                        "Afghanistan, so Afghan players and opponents' records "
+                        "against them are incomplete."),
+            "matches": 374,
+            "reason": ("The maintainer withholds them in protest at Afghan women "
+                       "cricketers being ignored by the ICC and most full members."),
+            "link": ("https://cricsheet.org/article/"
+                     "explanation-for-withholding-of-afghanistani-matches/"),
+        },
         "limits": ("No ball tracking, shot type or fielding positions exist in the open "
                    "data, so players are compared on outcomes rather than technique."),
     }

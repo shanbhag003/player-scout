@@ -37,7 +37,10 @@ function track(event, params) {
 }
 
 
-const SPORTS = [
+/* Which sports are live is decided at build time, per channel, so staging can
+   run cricket while production still says "soon". The literal below is the
+   fallback for an unbuilt checkout. */
+const SPORTS = (window.PS_CHANNEL && window.PS_CHANNEL.sports) || [
   { id: "football", name: "Football", status: "live" },
   { id: "cricket", name: "Cricket", status: "soon" },
   { id: "kabaddi", name: "Kabaddi", status: "soon" },
@@ -114,11 +117,22 @@ async function boot() {
 }
 
 function renderSports() {
-  $("sports").innerHTML = SPORTS.map((s) => `
-    <button class="sport" data-sport="${s.id}" ${s.status === "live" ? "" : "disabled"}
-            aria-current="${s.status === "live"}">
-      ${esc(s.name)}
-    </button>`).join("");
+  /* A live sport other than this one is a link to its own page rather than a
+     disabled button. Each sport is a separate document: they share the shell and
+     the stylesheet, not a code path. */
+  $("sports").innerHTML = SPORTS.map((s) => {
+    const here = s.id === "football";
+    if (s.status !== "live") {
+      return `<button class="sport" data-sport="${s.id}" disabled aria-current="false">
+        ${esc(s.name)}</button>`;
+    }
+    if (here) {
+      return `<button class="sport" data-sport="${s.id}" aria-current="true">
+        ${esc(s.name)}</button>`;
+    }
+    return `<a class="sport" href="${esc(s.id)}.html" data-sport="${esc(s.id)}"
+       aria-current="false">${esc(s.name)}</a>`;
+  }).join("");
 }
 
 /* Three different things get called "updated" and people conflate them: when

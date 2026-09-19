@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Player Scout — Cricket</title>
+<meta name="theme-color" content="#101720">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="cricket.css">
+</head>
+<body>
+<header class="top"><div class="shell top-inner">
+  <div class="brand"><span class="brand-mark"></span><span class="brand-name">Player Scout</span></div>
+  <nav class="sports">
+    <a class="sport" href="index.html">Football</a>
+    <button class="sport" type="button" aria-current="true">Cricket</button>
+  </nav>
+  <div class="modewrap"><span class="modewrap-label" id="ml">Mode</span>
+    <div class="segmented" role="group" aria-labelledby="ml">
+      <button type="button" data-mode="explore" aria-pressed="true">Exploring</button>
+      <button type="button" data-mode="scout" aria-pressed="false">Scouting</button>
+    </div></div>
+</div></header>
+
+<main class="shell">
+  <div class="search">
+    <input id="q" type="search" autocomplete="off" spellcheck="false"
+      placeholder="Search a player — try Kohli, Bumrah, Suryakumar, Rashid Khan, Jadeja">
+    <div class="sugg" id="sugg" hidden></div>
+  </div>
+  <div class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-tab="profile" aria-selected="true">Profile</button>
+    <button role="tab" data-tab="similar" aria-selected="false">Similar players</button>
+    <button role="tab" data-tab="compare" aria-selected="false">Compare<span class="count" id="ccount"></span></button>
+  </div>
+  <div class="pane" id="pane"></div>
+</main>
+
+<footer class="shell foot">
+  <div id="attrib"></div>
+  <div class="warn" id="withheld"></div>
+</footer>
+
+
+<script src="channel.js"></script>
+<script src="cricket.js"></script>
+</body>
+</html>
