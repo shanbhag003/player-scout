@@ -287,3 +287,10 @@ img.lmark.flag{width:1.4rem;height:1.4rem;border-radius:50%;object-fit:cover;
 @media (max-width:820px){
   .multi-search,#cmp-search,#search{font-size:16px}
 }
+
+/* Said where it will be read, not only in the footer. */
+.warn-inline{display:block;font-style:normal;color:var(--gold);font-size:.82rem;
+  margin-top:.35rem;max-width:64ch;line-height:1.45}
+.pb-note.warn-inline{color:var(--gold)}
+.ghost.small{padding:.2rem .7rem;font-size:.8rem}
+.multi-foot{display:flex;align-items:center;justify-content:space-between;gap:.6rem}

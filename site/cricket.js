@@ -31,6 +31,7 @@ try {
         c:e.cell, r:e.role, x:e.coords, b:e.balls, eb:e.effective_balls, m:e.matches,
         a:e.age, nat:e.nationality, e:e.exposure, tb:e.tier_balls||{},
         cb:e.competition_balls||{}, kp:!!e.keeper, act:e.active,
+        partial:!!e.partial_record,
         ls:e.last_seen, fs:e.first_seen, pc:d.percentile||{}, ad:d.adjusted||{},
         sea:d.seasons||[],
         car:(((detail[e.player_id]||{}).career)||{})[e.discipline]||null,
@@ -39,6 +40,7 @@ try {
     spaces: Object.fromEntries(Object.entries(meta.spaces).map(([k,v]) =>
       [k, Object.fromEntries(Object.entries(v).map(([c,s]) =>
         [c, {md:s.median_distance, n:s.players, mt:s.metrics}]))])),
+    minSeasonBalls: (meta.thresholds || {}).min_season_balls || 60,
     withheld: meta.withheld, comps: meta.competitions,
     compNames: meta.competition_names || {}, matches: meta.matches,
     built: meta.built_at
@@ -283,6 +285,9 @@ function playerbar(){
         <p class="pb-role">${esc(titled(p.r || p.c))}${p.kp ? " · Wicketkeeper" : ""}</p></div>
       <span class="availability ${p.act?"active":"gone"}">${
         p.act ? "Currently playing" : `Last seen ${whenSeen(p.ls)}`}</span>
+      ${p.partial ? `<span class="pb-note warn-inline">Afghanistan's matches are
+        withheld from this archive. What is shown is franchise cricket only —
+        this player's international record is missing, not zero.</span>` : ""}
       ${mismatch ? `<span class="pb-note">Showing ${p.d}. No ${
         p.d === "batting" ? "bowling" : "batting"} profile — too few balls, or the
         bowling type could not be established.</span>` : ""}
@@ -435,7 +440,10 @@ function multi(key, label, options, anyText){
       <div class="multi-list">${options.map(([v,t]) =>
         `<label data-t="${esc(String(t).toLowerCase())}"><input type="checkbox" value="${esc(v)}"
           ${chosen.includes(v)?"checked":""}><span>${esc(t)}</span></label>`).join("")}</div>
-      <div class="multi-foot"><button class="linkish" data-clear>Clear</button></div>
+      <div class="multi-foot">
+        <button class="linkish" data-clear>Clear</button>
+        <button class="ghost small" data-done>Done</button>
+      </div>
     </div></div>`;
 }
 
@@ -463,12 +471,17 @@ function wireMulti(){
       state.f[key] = [...set];
       draw();
       // Keep it open: picking three countries should not mean three reopenings.
+      // Done closes it when the selection is finished.
+      state.openMulti = key;
       const again = $("filters").querySelector(`[data-multi="${key}"] .multi-panel`);
       if (again) { again.hidden = false;
         const b = $("filters").querySelector(`[data-multi="${key}"] .multi-btn`);
         if (b) b.setAttribute("aria-expanded","true"); }
     });
     box.querySelector("[data-clear]").onclick = () => { state.f[key] = []; draw(); };
+    box.querySelector("[data-done]").onclick = () => {
+      panel.hidden = true; btn.setAttribute("aria-expanded","false");
+    };
   });
 }
 
@@ -523,6 +536,11 @@ function renderResults(){
   $("results-note").textContent = p.d === "batting"
     ? "Scoring rate, shape and match-up — how and when runs come, not only how many."
     : "Economy, wickets and phase — where in an innings a bowler works and what it costs.";
+  const anyPartial = rows.some(([,c]) => c.partial) || p.partial;
+  $("results-note").innerHTML = ($("results-note").textContent || "")
+    + (anyPartial ? ` <em class="warn-inline">Afghanistan's matches are withheld
+      from this archive, so Afghan players' records here are franchise cricket
+      only — their international careers are missing, not zero.</em>` : "");
   $("results-count").innerHTML = rows.length
     ? `${rows.length} shown of <b>${eligible}</b> in the pool` : "";
   renderFilters();
@@ -740,11 +758,15 @@ function renderTrend(series){
       if (!l.points[i]) missing.push(seasons[i]);
     return missing.length ? [`${l.p.f || l.p.n} (${missing.join(", ")})`] : [];
   });
+  // "No qualifying cricket" read as though the player had not played at all.
+  // Bumrah bowled 48 balls of T20 in 2023 — one short series, no IPL, back
+  // surgery. Say the threshold instead of implying absence.
+  const floor = D.minSeasonBalls;
   $("cmp-trend-sub").textContent =
-    (bat ? "Strike rate by calendar year, pooling every competition played that year."
-         : "Economy by calendar year, pooling every competition played that year.")
-    + (gaps.length ? ` A break means no qualifying cricket that year: ${gaps.join("; ")}.`
-                   : "");
+    (bat ? `Strike rate by calendar year, pooling every competition played that year. `
+         : `Economy by calendar year, pooling every competition played that year. `)
+    + `A year needs ${floor} balls to form a rate.`
+    + (gaps.length ? ` Under that here: ${gaps.join("; ")}.` : "");
   const top = Math.max(...vals) * 1.1, bottom = bat ? 0 : Math.max(0, Math.min(...vals) - 1.5);
   const W=700,H=250,padL=62,padR=22,padT=18,padB=46;
   const x = i => padL + (i*(W-padL-padR))/Math.max(1, seasons.length-1);

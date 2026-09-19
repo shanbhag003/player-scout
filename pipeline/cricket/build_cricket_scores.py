@@ -361,11 +361,23 @@ def percentiles(z: pd.DataFrame, cells: pd.Series, metrics) -> pd.DataFrame:
     return out
 
 
+MIN_SEASON_BALLS = 60          # ten overs; below that a season rate is noise
+
+
 def season_history(facts, profile_fn, metrics, keep=("sr", "bdry", "dot_pct", "econ",
                                                      "wkt_rate", "dot_rate")):
+    """What happened, season by season — from the RAW record.
+
+    This must not be given the recency-weighted facts. The chart already puts
+    time on the x-axis, so discounting old seasons as well counts time twice:
+    Bumrah's 2015/16 held 565 balls and disappeared entirely, and his 2019 read
+    71 balls when he had bowled 526.
+    """
     h = profile_fn(facts, ["player_id", "season"])
     cols = [c for c in keep if c in h.columns]
-    h = h[h["balls"] >= 60][cols + ["balls"]].round(2)
+    h = h[h["balls_raw"] >= MIN_SEASON_BALLS].copy()
+    h["balls"] = h["balls_raw"]
+    h = h[cols + ["balls"]].round(2)
     out = {}
     for (pid, season), row in h.iterrows():
         out.setdefault(pid, []).append({"season": season, "balls": int(row["balls"]),
@@ -374,7 +386,7 @@ def season_history(facts, profile_fn, metrics, keep=("sr", "bdry", "dot_pct", "e
     return out
 
 
-def emit(bat, bowl, players, roles, facts, out_dir, half_life=HALF_LIFE):
+def emit(bat, bowl, players, roles, facts, out_dir, half_life=HALF_LIFE, facts_raw=None):
     """index.json, detail.json, meta.json — the shape the site already reads."""
     os.makedirs(out_dir, exist_ok=True)
     last_overall = pd.to_datetime(facts["date"], errors="coerce").max()
@@ -410,7 +422,13 @@ def emit(bat, bowl, players, roles, facts, out_dir, half_life=HALF_LIFE):
     # internationals. This is cricketing eligibility, which is the question a
     # franchise actually asks — and it covers far more players than Wikidata's
     # citizenship, which is patchy and reports English players as British.
-    intl = apps[apps["tier"].str.startswith("international")].sort_values("date")
+    # Invitational sides are not nationalities. Rashid Khan's only international
+    # appearances in this archive are for an ICC World XI, because Afghanistan's
+    # matches are withheld — so reading his team gave "ICC World XI".
+    INVITATIONAL = {"ICC World XI", "World XI", "Asia XI", "Africa XI",
+                    "Rest of World", "MCC"}
+    intl = apps[apps["tier"].str.startswith("international")
+                & ~apps["team"].isin(INVITATIONAL)].sort_values("date")
     represents = intl.groupby("player_id")["team"].last().to_dict()
 
     # A player who has never played an international has no team to read it off,
@@ -433,6 +451,24 @@ def emit(bat, bowl, players, roles, facts, out_dir, half_life=HALF_LIFE):
             .agg(lambda s: s.value_counts().idxmax()).to_dict())
 
     keepers = set(roles[roles.get("keeper", False) == True].index) if "keeper" in roles else set()
+
+    # Citizenship beats a guess from the competition, but "United Kingdom" is
+    # not a cricket nation — 276 players carry it — so that one falls through.
+    VAGUE = {"United Kingdom", "Great Britain"}
+
+    def nationality_of(pid):
+        team = represents.get(pid)
+        if team:
+            return team
+        wd = bio.at[pid, "nationality"] if pid in bio.index else None
+        if pd.notna(wd) and wd not in VAGUE:
+            return wd
+        return home.get(pid) or (wd if pd.notna(wd) else None)
+
+    # Afghanistan's matches are withheld from the archive, so anyone who plays
+    # for them has no international record here at all. That is not a gap the
+    # reader can infer, so it is flagged per player.
+    AFFECTED = {"Afghanistan"}
 
     # Career totals, split by the standard played at. A scout wants to know what
     # a player has actually done, not only how his rates compare — and wants it
@@ -464,7 +500,7 @@ def emit(bat, bowl, players, roles, facts, out_dir, half_life=HALF_LIFE):
                                         ("bowling", bowl, bowling_profile, BOWL_METRICS)):
         prof = res["profile"]
         pct = percentiles(res["z"], prof["cell"], metrics)
-        hist = season_history(facts, prof_fn, metrics)
+        hist = season_history(facts_raw if facts_raw is not None else facts, prof_fn, metrics)
         for pid, row in prof.iterrows():
             if pid not in res["coords"]:
                 continue
@@ -478,10 +514,9 @@ def emit(bat, bowl, players, roles, facts, out_dir, half_life=HALF_LIFE):
                 # Wikidata, joined on an exact Cricinfo id.
                 "full_name": (bio.at[pid, "full_name"]
                               if pid in bio.index and pd.notna(bio.at[pid, "full_name"]) else None),
-                "nationality": represents.get(pid) or home.get(pid) or (
-                    bio.at[pid, "nationality"]
-                    if pid in bio.index and pd.notna(bio.at[pid, "nationality"]) else None),
+                "nationality": nationality_of(pid),
                 "keeper": pid in keepers,
+                "partial_record": nationality_of(pid) in AFFECTED,
                 "age": (round(float((as_of - bio.at[pid, "dob"]).days / 365.25), 1)
                         if pid in bio.index and pd.notna(bio.at[pid, "dob"]) else None),
                 "discipline": disc,
@@ -541,7 +576,7 @@ def emit(bat, bowl, players, roles, facts, out_dir, half_life=HALF_LIFE):
         "validation": bat["validation"] + bowl["validation"],
         "exposure_ladder": EXPOSURE_LADDER,
         "bio_coverage": {"age": None, "nationality": None},
-        "thresholds": {"min_balls_batting": MIN_BALLS_BAT, "min_balls_bowling": MIN_BALLS_BOWL,
+        "thresholds": {"min_season_balls": MIN_SEASON_BALLS, "min_balls_batting": MIN_BALLS_BAT, "min_balls_bowling": MIN_BALLS_BOWL,
                        "shrinkage_k": SHRINK_K, "variance": VARIANCE,
                        "recency_half_life_years": half_life},
         "source": "Cricsheet (https://cricsheet.org), Open Data Commons Attribution Licence",
@@ -624,7 +659,7 @@ def main():
                   f"of {v['chance_median_rank']:6.1f}   first {v['ranked_first']:.1%}  "
                   f"top5 {v['top_five']:.1%}")
     print()
-    emit(bat, bowl, players, roles, facts, args.out, args.half_life)
+    emit(bat, bowl, players, roles, facts, args.out, args.half_life, facts_raw)
     return bat, bowl
 
 
