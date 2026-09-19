@@ -434,6 +434,31 @@ def emit(bat, bowl, players, roles, facts, out_dir, half_life=HALF_LIFE):
 
     keepers = set(roles[roles.get("keeper", False) == True].index) if "keeper" in roles else set()
 
+    # Career totals, split by the standard played at. A scout wants to know what
+    # a player has actually done, not only how his rates compare — and wants it
+    # separated, because runs against associate nations are not runs in the IPL.
+    def bucket(tier):
+        if tier.startswith("international"):
+            return "international"
+        return "franchise" if tier == "franchise" else "domestic"
+
+    career = {}
+    for kind, disc in (("bat_phase", "batting"), ("bowl_phase", "bowling")):
+        sub = facts[facts["kind"] == kind]
+        if sub.empty:
+            continue
+        cols = [c for c in ["balls_raw", "runs", "outs", "wkts", "fours", "sixes", "dots"]
+                if c in sub]
+        g = sub.assign(grp=sub["tier"].map(bucket)).groupby(["player_id", "grp"])[cols].sum()
+        for (pid, grp), row in g.iterrows():
+            rec = career.setdefault(pid, {}).setdefault(disc, {})
+            rec[grp] = {c: int(row[c]) for c in cols}
+
+    matches_by = (apps.assign(grp=apps["tier"].map(bucket))
+                  .groupby(["player_id", "grp"])["match_id"].nunique())
+    cricinfo = (bio["cricinfo"].dropna().astype("int64").to_dict()
+                if not bio.empty and "cricinfo" in bio else {})
+
     index, detail = [], {}
     for disc, res, prof_fn, metrics in (("batting", bat, batting_profile, BAT_METRICS),
                                         ("bowling", bowl, bowling_profile, BOWL_METRICS)):
@@ -476,7 +501,21 @@ def emit(bat, bowl, players, roles, facts, out_dir, half_life=HALF_LIFE):
             })
             d = detail.setdefault(pid, {"name": index[-1]["name"],
                                         "teams": teams.get(pid, []),
-                                        "role": index[-1]["role"]})
+                                        "role": index[-1]["role"],
+                                        "cricinfo": cricinfo.get(pid)})
+            car = (career.get(pid, {}) or {}).get(disc, {})
+            if car:
+                total = {}
+                for grp, rec in car.items():
+                    for k, v in rec.items():
+                        total[k] = total.get(k, 0) + v
+                d.setdefault("career", {})[disc] = {
+                    "total": total,
+                    **{g: rec for g, rec in car.items()},
+                    "matches": {g: int(matches_by.get((pid, g), 0))
+                                for g in list(car) + ["total"]
+                                if g != "total"},
+                }
             d[disc] = {
                 "balls": int(row["balls_raw"]),
                 "effective_balls": int(row["balls"]),

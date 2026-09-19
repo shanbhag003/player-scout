@@ -180,3 +180,26 @@ img.lmark.flag{width:1.4rem;height:1.4rem;border-radius:50%;object-fit:cover;
 
 /* The discipline toggle sits in the action row with the ghost buttons. */
 .pb-actions .segmented{align-self:center}
+
+/* ── career card ───────────────────────────────────────── */
+.ctabs{display:flex;gap:.25rem;margin:.2rem 0 .9rem;border-bottom:1px solid var(--hairline)}
+.ctabs button{border:0;background:none;cursor:pointer;padding:.35rem .7rem;
+  font-family:var(--cond);font-weight:600;font-size:.9rem;color:var(--faint);
+  border-bottom:2px solid transparent;margin-bottom:-1px}
+@media (hover:hover){.ctabs button:hover{color:var(--ink)}}
+.ctabs button[aria-selected=true]{color:var(--gold);border-bottom-color:var(--gold)}
+.cstats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.9rem .6rem}
+@media (max-width:760px){.cstats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.cstats dt{font-size:.72rem;color:var(--faint);font-family:var(--cond);
+  text-transform:uppercase;letter-spacing:.05em;margin-bottom:.15rem}
+.cstats dd{margin:0;font-family:var(--cond);font-weight:700;font-size:1.3rem;color:var(--ink)}
+
+/* ── footer, aligned with football ─────────────────────── */
+.foot .repo-line{margin:1.2rem 0 .2rem}
+.foot details summary{padding-top:.4rem}
+.warn{margin:.9rem 0 0}
+
+/* Fill the profile column so the two sides end level rather than leaving a gap. */
+.profile-main{display:grid;gap:.9rem;align-content:start}
+.profile-left{display:grid;gap:.9rem;align-content:start}
+.pane{padding:1.1rem 0 1.2rem}

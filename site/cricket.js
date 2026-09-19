@@ -31,7 +31,9 @@ try {
         c:e.cell, r:e.role, x:e.coords, b:e.balls, eb:e.effective_balls, m:e.matches,
         a:e.age, nat:e.nationality, e:e.exposure, tb:e.tier_balls||{},
         cb:e.competition_balls||{}, kp:!!e.keeper, act:e.active,
-        ls:e.last_seen, fs:e.first_seen, pc:d.percentile||{}, ad:d.adjusted||{}};
+        ls:e.last_seen, fs:e.first_seen, pc:d.percentile||{}, ad:d.adjusted||{},
+        car:(((detail[e.player_id]||{}).career)||{})[e.discipline]||null,
+        ci:(detail[e.player_id]||{}).cricinfo||null};
     }),
     spaces: Object.fromEntries(Object.entries(meta.spaces).map(([k,v]) =>
       [k, Object.fromEntries(Object.entries(v).map(([c,s]) =>
@@ -68,13 +70,15 @@ const LABEL = {
   econ_death:"Econ death", wide_rate:"Wides/100"};
 const LOWER_BETTER = new Set(["dot_pct","econ","econ_pp","econ_mid","econ_death",
   "bdry_conc","six_share_conc","wide_rate"]);
-const EXPOSURE = {domestic:"uncapped", franchise:"franchise",
-  international_minor:"assoc. int'l", international_established:"assoc. int'l",
-  international_full:"international"};
+const EXPOSURE = {domestic:"Uncapped", franchise:"Franchise",
+  international_minor:"Associate Int'l", international_established:"Associate Int'l",
+  international_full:"International"};
+/* Roles are derived lowercase in the pipeline; they are proper labels on screen. */
+const titled = s => String(s||"").replace(/\b[a-z]/g, c => c.toUpperCase());
 const BLANK = () => ({active:true,exposure:"any",country:"any",comp:"any",keeper:false,
   minAge:"",maxAge:"",minBalls:0,debutSince:""});
 const state = {mode:"explore", tab:"profile", sel:null, disc:"batting", sugg:-1,
-  compare:[], showMore:false, f:BLANK()};
+  compare:[], showMore:false, career:"total", f:BLANK()};
 
 const norm = s => (s||"").toLowerCase().replace(/[^a-z ]/g,"");
 D.players.forEach(p => p._s = norm(p.n)+" "+norm(p.f));
@@ -176,21 +180,77 @@ function filterBar(){
     :`<button class="more" data-more>More filters</button>`}
     <button class="more reset" data-reset>Reset</button></div>`;
 }
+
+/* ── career numbers ──────────────────────────────────────
+   Rates say how a player compares; totals say what he has actually done. A tab
+   only appears where there is something in it, so a player who has never gone
+   near an international does not get an empty one. */
+const GRP_LABEL = {total:"Total", international:"International",
+                   franchise:"Franchise", domestic:"Domestic"};
+
+function careerCard(p){
+  const car = p.car; if (!car) return "";
+  const groups = ["total","international","franchise","domestic"]
+    .filter(g => car[g] && (car[g].balls_raw || 0) > 0);
+  if (groups.length < 2) return "";
+  const g = groups.includes(state.career) ? state.career : "total";
+  const c = car[g] || {};
+  const balls = c.balls_raw || 0, runs = c.runs || 0, outs = c.outs || 0, wk = c.wkts || 0;
+  const matches = g === "total"
+    ? Object.values(car.matches || {}).reduce((a,b)=>a+b,0)
+    : (car.matches || {})[g] || 0;
+  const rows = p.d === "batting"
+    ? [["Matches", matches], ["Runs", runs.toLocaleString()],
+       ["Balls faced", balls.toLocaleString()],
+       ["Strike rate", balls ? (runs/balls*100).toFixed(1) : "—"],
+       ["Average", outs ? (runs/outs).toFixed(1) : "—"],
+       ["Fours", c.fours ?? 0], ["Sixes", c.sixes ?? 0],
+       ["Dot %", balls ? (c.dots/balls*100).toFixed(1) : "—"]]
+    : [["Matches", matches], ["Wickets", wk],
+       ["Balls bowled", balls.toLocaleString()],
+       ["Runs conceded", runs.toLocaleString()],
+       ["Economy", balls ? (runs/balls*6).toFixed(2) : "—"],
+       ["Average", wk ? (runs/wk).toFixed(1) : "—"],
+       ["Strike rate", wk ? (balls/wk).toFixed(1) : "—"],
+       ["Dot %", balls ? (c.dots/balls*100).toFixed(1) : "—"]];
+  return `<article class="panel">
+    <header class="panel-head"><h2>Career ${p.d === "batting" ? "batting" : "bowling"}</h2>
+      <p class="panel-sub">Raw totals, unadjusted — what actually happened.</p></header>
+    <div class="ctabs" role="tablist">${groups.map(x =>
+      `<button role="tab" data-career="${x}" aria-selected="${x===g}">${GRP_LABEL[x]}</button>`
+      ).join("")}</div>
+    <div class="cstats">${rows.map(([k,v]) =>
+      `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</div>
+  </article>`;
+}
+
 function playerbar(){
   const p = entry(); if(!p){ $("playerbar").innerHTML=""; return; }
   const both = byPlayer[p.p].length > 1;
   const saved = slRead().includes(p.u);
-  const facts = [
+  const t = (p.car||{}).total || {};
+  const bat = p.d === "batting";
+  const runs = t.runs || 0, ballsC = t.balls_raw || 0, outs = t.outs || 0, wk = t.wkts || 0;
+  const facts = bat ? [
     ["Age", p.a ? Math.floor(p.a) : "—", p.nat || ""],
-    ["Balls", p.b.toLocaleString(), `${p.m} matches`],
-    ["Exposure", EXPOSURE[p.e] || p.e, p.act ? "still playing" : `last ${(p.ls||"").slice(0,7)}`],
-    ["Debut", (p.fs||"—").slice(0,4), `weighted ${p.eb.toLocaleString()} balls`],
+    ["Runs", runs.toLocaleString(), `${(t.fours||0)} fours · ${(t.sixes||0)} sixes`],
+    ["Strike rate", ballsC ? (runs/ballsC*100).toFixed(1) : "—",
+      `${ballsC.toLocaleString()} balls`],
+    ["Average", outs ? (runs/outs).toFixed(1) : "—", `${outs} dismissals`],
+    ["Exposure", EXPOSURE[p.e] || titled(p.e), `${p.m} matches`],
+  ] : [
+    ["Age", p.a ? Math.floor(p.a) : "—", p.nat || ""],
+    ["Wickets", wk.toLocaleString(), `${p.m} matches`],
+    ["Economy", ballsC ? (runs/ballsC*6).toFixed(2) : "—",
+      `${ballsC.toLocaleString()} balls`],
+    ["Strike rate", wk ? (ballsC/wk).toFixed(1) : "—", "balls per wicket"],
+    ["Exposure", EXPOSURE[p.e] || titled(p.e), `debut ${(p.fs||"—").slice(0,4)}`],
   ];
   $("playerbar").innerHTML = `
     <div class="pb-id">
       ${flag(p.nat)}
       <div><h1>${esc(p.f||p.n)}</h1>
-        <p class="pb-role">${esc(p.r || p.c)}${p.kp ? " · keeper" : ""}</p></div>
+        <p class="pb-role">${esc(titled(p.r || p.c))}${p.kp ? " · Wicketkeeper" : ""}</p></div>
       <span class="availability ${p.act?"active":"gone"}">${
         p.act ? "Currently playing" : `Last seen ${(p.ls||"").slice(0,7)}`}</span>
     </div>
@@ -198,6 +258,8 @@ function playerbar(){
       `<div><dt>${esc(k)}</dt><dd>${esc(v)}${sub?`<small>${esc(sub)}</small>`:""}</dd></div>`
       ).join("")}</dl>
     <div class="pb-actions">
+      ${p.ci?`<a class="srclink" href="https://www.espncricinfo.com/ci/content/player/${p.ci}.html"
+         target="_blank" rel="noopener noreferrer"><span class="monogram">CI</span>ESPNcricinfo</a>`:""}
       ${both?`<div class="segmented" role="group" aria-label="Discipline">
         <button data-disc="batting" aria-pressed="${p.d==="batting"}">Batting</button>
         <button data-disc="bowling" aria-pressed="${p.d==="bowling"}">Bowling</button></div>`:""}
@@ -232,7 +294,7 @@ function paneProfile(){
       <article class="panel radar-panel">
         <header class="panel-head">
           <h2>Profile against role</h2>
-          <p class="panel-sub">Percentile among all ${pool} ${esc(p.c)}
+          <p class="panel-sub">Percentile among all ${pool} ${esc(titled(p.c))}
             ${p.d==="batting"?"batters":"bowlers"} in the pool, after adjusting for
             competition.</p>
         </header>
@@ -256,10 +318,11 @@ function paneProfile(){
       </article>
     </div>
     <div class="profile-main">
+      ${careerCard(p)}
       <article class="panel">
         <header class="panel-head"><h2>Percentile detail</h2>
           <p class="panel-sub">Adjusted value on the left, percentile among
-            ${esc(p.c)}s on the right.</p></header>
+            ${esc(titled(p.c))}s on the right.</p></header>
         <div class="radar-key">
           <div class="keyhead"><span>Metric</span><span>Value</span><span>Percentile</span></div>
           ${mt.map(m => {
@@ -288,7 +351,7 @@ function paneSimilar(){
     <div class="score" style="color:${s>=60?"var(--green)":s>=45?"var(--gold)":"var(--faint)"}">${s.toFixed(0)}</div>
     <div><div class="who2">${flag(c.nat)}<span>${esc(c.f||c.n)}</span></div>
       <div class="why">${why(p,c)}</div></div>
-    <div class="rmeta">${c.b.toLocaleString()} balls<br>${EXPOSURE[c.e]||c.e}${c.a?" · "+Math.floor(c.a):""}</div>
+    <div class="rmeta">${c.b.toLocaleString()} balls<br>${EXPOSURE[c.e]||titled(c.e)}${c.a?" · "+Math.floor(c.a):""}</div>
     <button class="add" data-add="${c.u}" aria-pressed="${state.compare.includes(c.u)}"
       title="Add to comparison">${state.compare.includes(c.u)?"✓":"+"}</button></div>`).join("");
 }
@@ -312,7 +375,7 @@ function paneCompare(){
       <thead><tr><th>Metric</th>${set.map(x=>`<th>${(x.f||x.n).split(" ").slice(-1)[0]}</th>`).join("")}</tr></thead>
       <tbody><tr><td>Balls</td>${set.map(x=>`<td>${x.b.toLocaleString()}</td>`).join("")}</tr>
       <tr><td>Age</td>${set.map(x=>`<td>${x.a?Math.floor(x.a):"—"}</td>`).join("")}</tr>
-      <tr><td>Exposure</td>${set.map(x=>`<td>${EXPOSURE[x.e]||x.e}</td>`).join("")}</tr>
+      <tr><td>Exposure</td>${set.map(x=>`<td>${EXPOSURE[x.e]||titled(x.e)}</td>`).join("")}</tr>
       ${rows}</tbody></table></div>
     <div class="note">Adjusted value, with the percentile within role in grey. Green marks the
     best of those shown, which says nothing about the wider pool.</div>`;
@@ -335,6 +398,8 @@ function draw(){
   const m=document.querySelector("[data-more]"); if(m) m.onclick=()=>{state.showMore=true;draw();};
   const r=document.querySelector("[data-reset]"); if(r) r.onclick=()=>{
     state.f=BLANK(); state.f.minBalls=state.mode==="scout"?300:0; draw();};
+  document.querySelectorAll("[data-career]").forEach(b=>
+    b.onclick=()=>{state.career=b.dataset.career; draw();});
   document.querySelectorAll("[data-disc]").forEach(b=>
     b.onclick=()=>{state.disc=b.dataset.disc; state.compare=[]; draw();});
   document.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{
@@ -532,7 +597,7 @@ const ROLES = ["opener","top middle","middle","finisher","pace","spin"]
   .filter(r => roleCount[r]).sort((a,b) => roleCount[b]-roleCount[a]);
 const topRole = Math.max(...ROLES.map(r => roleCount[r]));
 $("rolebars").innerHTML = `<h3>Players by role</h3>` + ROLES.map(r =>
-  `<div class="posrow"><span>${r[0].toUpperCase()+r.slice(1)}</span>
+  `<div class="posrow"><span>${titled(r)}</span>
     <span class="postrack"><span style="width:${(roleCount[r]/topRole*100).toFixed(1)}%"></span></span>
     <b>${roleCount[r]}</b></div>`).join("");
 
