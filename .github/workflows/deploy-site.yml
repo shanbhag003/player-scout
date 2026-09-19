@@ -36,18 +36,27 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt
 
-      # The three built json files, as the data job last left them. If they are
-      # not there yet, staging simply builds without cricket rather than failing
-      # — a frontend change should never be blocked by the data side.
+      # The three built json files, as the data job last left them.
+      #
+      # This must NOT be continue-on-error. If the fetch quietly fails, the build
+      # finds no cricket data, ships the sport as "soon", and someone changing a
+      # stylesheet silently removes a live feature. Better to refuse to deploy
+      # and say why.
       - name: Fetch the built cricket data
-        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p site/data/cricket
-          python pipeline/cricket/store.py pull \
-            --repo ${{ github.repository }} --tag cricket-site \
-            --local site/data/cricket --pattern "*.json"
+          if ! python pipeline/cricket/store.py pull \
+              --repo ${{ github.repository }} --tag cricket-site \
+              --local site/data/cricket --pattern "*.json"; then
+            echo "::error::Could not fetch the cricket-site release."
+            echo "::error::If this repository has never run Cricket daily, run it"
+            echo "::error::once — it creates that release. Refusing to deploy a"
+            echo "::error::site with cricket silently switched off."
+            exit 1
+          fi
+          ls -la site/data/cricket
 
       - name: Build both channels
         run: python pipeline/build_channels.py
