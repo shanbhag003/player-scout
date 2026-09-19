@@ -168,14 +168,9 @@ $("q").addEventListener("keydown",e=>{
   else if(e.key==="Escape"){box.hidden=true;return;} else return;
   renderSugg($("q").value);
 });
-document.addEventListener("click",e=>{if(!e.target.closest(".search"))$("sugg").hidden=true;});
+document.addEventListener("click",e=>{if(!e.target.closest(".finder"))$("sugg").hidden=true;});
 document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;draw();});
-document.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{
-  state.mode=b.dataset.mode;
-  document.querySelectorAll("[data-mode]").forEach(x=>
-    x.setAttribute("aria-pressed",String(x.dataset.mode===state.mode)));
-  state.f.minBalls = state.mode==="scout"?300:0;
-  draw();});
+document.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
 /* ── landing ────────────────────────────────────────── */
 const PICKS = ["V Kohli","JJ Bumrah","SA Yadav","Rashid Khan","RA Jadeja"];
 $("examples").innerHTML = PICKS.map(n=>{
@@ -183,6 +178,26 @@ $("examples").innerHTML = PICKS.map(n=>{
   return `<button class="pick" data-pid="${p.p}">${flag(p.nat)}${p.f||p.n}</button>`;
 }).join("");
 document.querySelectorAll(".pick").forEach(b=>b.onclick=()=>select(b.dataset.pid));
+
+/* The two routes on the landing are the mode chooser. Picking one sets the mode
+   and the filters that go with it, so a scout arrives at the results with the
+   pool already narrowed instead of having to find the controls first. */
+function setMode(mode, quiet){
+  state.mode = mode;
+  document.querySelectorAll("[data-mode]").forEach(x=>
+    x.setAttribute("aria-pressed", String(x.dataset.mode === mode)));
+  document.querySelectorAll(".route").forEach(r=>
+    r.setAttribute("aria-pressed", String(r.dataset.route === mode)));
+  if (mode === "scout"){ state.f.minBalls = 300; state.f.active = true;
+                         state.f.exposure = "uncapped"; state.showMore = true; }
+  else { state.f.minBalls = 0; state.f.exposure = "any"; }
+  if (!quiet) draw();
+}
+document.querySelectorAll(".route").forEach(r=>{
+  r.onclick = () => setMode(r.dataset.route);
+  r.onkeydown = e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); r.click(); } };
+});
+setMode("explore", true);
 
 const people = new Set(D.players.map(p=>p.p));
 const playing = new Set(D.players.filter(p=>p.act).map(p=>p.p));

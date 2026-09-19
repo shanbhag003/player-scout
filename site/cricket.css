@@ -227,3 +227,59 @@ a.sport:hover{color:var(--muted)}
 .card h2 .flag,.card h2 img.flag{width:1.5rem;height:1.12rem;margin-right:.5rem;
   vertical-align:-.1rem}
 .chip .flag{margin-right:.1rem}
+
+/* ── match football's measurements exactly ─────────────────
+   These override the cricket-first values above. The two sports sit one click
+   apart, so anything that differs reads as a mistake rather than a choice. */
+.hero{grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);
+  gap:2.4rem;margin:2.2rem 0 2.6rem;padding:0}
+.hero h1{font-size:clamp(2rem,4vw,2.85rem);letter-spacing:-.008em;max-width:15ch;
+  margin-bottom:1.6rem}
+/* The suggestions are absolutely positioned and need a positioned ancestor.
+   Without this they were laying out against the page, which is why searching
+   looked like it returned nothing. */
+.finder{position:relative;max-width:520px}
+.finder-label{font-family:var(--cond);font-size:.95rem;font-weight:600;
+  color:var(--muted);text-transform:none;letter-spacing:0;margin-bottom:.35rem}
+.input-icon{left:.8rem;pointer-events:none}
+.input-wrap input{padding:.72rem 2.4rem .72rem 2.5rem;font-size:16px}
+.sugg{top:100%;margin:.35rem 0 0;padding:.25rem;z-index:25;
+  max-height:20rem;box-shadow:0 16px 40px rgba(0,0,0,.45)}
+.sugg button{border-radius:7px;border-top:0;padding:.45rem .65rem}
+.hero-right{display:grid;gap:.9rem}
+.cover-card{padding:1.15rem 1.25rem}
+.cover-card h2{font-size:1.1rem}
+.routes{margin-top:1.6rem;padding-top:1.3rem}
+
+/* The routes are the mode chooser, so they have to look pressable. */
+.route{cursor:pointer;border:1px solid transparent;border-radius:var(--radius);
+  padding:.7rem .85rem;margin:-.7rem -.85rem;transition:border-color .15s,background .15s}
+.route:hover{border-color:var(--hairline)}
+.route[aria-pressed=true]{border-color:var(--hairline);background:var(--surface)}
+.route[data-route=scout][aria-pressed=true]{border-color:rgba(87,180,236,.3)}
+.route[data-route=explore][aria-pressed=true]{border-color:rgba(240,188,99,.3)}
+
+/* ── how these numbers are built ───────────────────────── */
+.repo-line{margin:1.2rem 0 .4rem;font-size:.85rem}
+.repo-line a{display:inline-flex;align-items:center;gap:.45rem;color:var(--muted);
+  text-decoration:none}
+.repo-line a:hover{color:var(--ink)}
+#method-wrap{margin-top:.6rem}
+#method-wrap summary{cursor:pointer;font-family:var(--cond);font-weight:600;
+  font-size:1rem;color:var(--muted);padding:.3rem 0;list-style:none}
+#method-wrap summary::-webkit-details-marker{display:none}
+#method-wrap summary::before{content:"+ ";color:var(--faint)}
+#method-wrap[open] summary::before{content:"– "}
+#method-wrap summary:hover{color:var(--ink)}
+.method{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin-top:1.3rem}
+.mcol{padding:0 1.25rem;border-left:1px solid var(--hairline)}
+.mcol:first-child{padding-left:0;border-left:0}
+.mcol:last-child{padding-right:0}
+.mcol h3{font-size:.98rem;margin-bottom:.45rem;min-height:2.2rem}
+.mcol p{font-size:.79rem;color:var(--muted);line-height:1.48;margin-bottom:.7rem}
+@media (max-width:980px){.method{grid-template-columns:1fr 1fr}
+  .mcol{border-left:0;padding:0}}
+@media (max-width:620px){.method{grid-template-columns:1fr}
+  .hero{margin:1.4rem 0 2rem}
+  .hero h1{font-size:1.75rem;margin-bottom:1.1rem}
+  .bigstats b{font-size:1.4rem}}
