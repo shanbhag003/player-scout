@@ -128,3 +128,102 @@ a.sport:hover{color:var(--muted)}
 .foot{border-top:1px solid var(--hairline);padding:1.4rem 0 2.4rem;color:var(--faint);font-size:.85rem}
 .foot a{color:var(--muted)}
 .warn{border-left:2px solid var(--gold);padding-left:.9rem;margin-top:.8rem;max-width:72ch}
+
+/* ── landing ───────────────────────────────────────────── */
+.hero{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:2.4rem;
+  padding:2.6rem 0 3rem;align-items:start}
+@media (max-width:920px){.hero{grid-template-columns:1fr;gap:1.6rem;padding-top:1.6rem}}
+.hero h1{font-size:clamp(2rem,4.4vw,3.1rem);font-weight:700;letter-spacing:-.01em;
+  max-width:14ch;margin-bottom:1.6rem}
+.finder-label{display:block;font-size:.78rem;color:var(--faint);font-family:var(--cond);
+  text-transform:uppercase;letter-spacing:.07em;margin-bottom:.4rem}
+.input-wrap{position:relative;display:flex;align-items:center}
+.input-icon{position:absolute;left:.85rem;width:1.1rem;height:1.1rem;color:var(--faint)}
+.input-wrap input{width:100%;background:var(--surface);border:1px solid var(--hairline);
+  border-radius:var(--radius);padding:.8rem 2.4rem .8rem 2.6rem;font-size:1.02rem}
+.input-wrap input::placeholder{color:var(--faint)}
+.clear{position:absolute;right:.6rem;border:0;background:none;color:var(--faint);
+  cursor:pointer;font-size:1.3rem;line-height:1;padding:.2rem .35rem}
+.intro-picks{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin-top:1rem}
+.intro-picks-label{font-size:.78rem;color:var(--faint);font-family:var(--cond);
+  text-transform:uppercase;letter-spacing:.07em}
+#examples{display:flex;gap:.45rem;flex-wrap:wrap}
+.pick{display:inline-flex;align-items:center;gap:.45rem;background:var(--surface);
+  border:1px solid var(--hairline);border-radius:99px;padding:.3rem .8rem;cursor:pointer;
+  font-size:.9rem}
+.pick:hover{border-color:var(--gold);color:var(--gold)}
+.routes{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:1.4rem;
+  margin-top:1.8rem;padding-top:1.4rem;border-top:1px solid var(--hairline-soft)}
+.route-tag{display:inline-block;font-family:var(--cond);font-weight:600;font-size:.85rem;
+  padding:.18rem .7rem;border-radius:99px;background:var(--warm);color:var(--gold);
+  border:1px solid rgba(240,188,99,.3)}
+.route-tag.alt{background:var(--cool);color:var(--blue);border-color:rgba(87,180,236,.3)}
+.howto{list-style:none;margin:.8rem 0 0;padding:0;display:grid;gap:.6rem}
+.howto li{display:grid;grid-template-columns:1.35rem 1fr;gap:.6rem;font-size:.88rem;
+  color:var(--muted)}
+.howto b{width:1.35rem;height:1.35rem;border-radius:50%;background:var(--raised);
+  border:1px solid var(--hairline);display:grid;place-items:center;font-size:.72rem;
+  color:var(--faint);font-weight:600}
+.howto strong{color:var(--ink);font-weight:600}
+.inline-plus{display:inline-grid;place-items:center;width:1.15rem;height:1.15rem;
+  border-radius:5px;border:1px solid var(--hairline);background:var(--raised);
+  font-size:.8rem;color:var(--gold)}
+.cover-card{background:var(--surface);border:1px solid var(--hairline);
+  border-radius:var(--radius);padding:1.2rem 1.3rem}
+.cover-card h2{font-size:1.15rem;margin-bottom:.9rem}
+.bigstats{display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;margin-bottom:1.1rem}
+.bigstats b{display:block;font-family:var(--cond);font-weight:700;font-size:1.75rem;
+  color:var(--gold);line-height:1}
+.bigstats span{font-size:.78rem;color:var(--faint)}
+.leaguelist{list-style:none;margin:0 0 1.1rem;padding:0;display:grid;gap:.05rem}
+.leaguelist li{display:grid;grid-template-columns:1fr auto;gap:.8rem;padding:.3rem 0;
+  border-top:1px solid var(--hairline-soft);font-size:.87rem}
+.leaguelist li:first-child{border-top:0}
+.lg-side{color:var(--faint)}
+.posbars{display:grid;gap:.25rem}
+.posbar{display:grid;grid-template-columns:6rem 1fr 2.4rem;gap:.6rem;align-items:center;
+  font-size:.82rem;color:var(--muted)}
+.pb-track{height:6px;background:var(--hairline);border-radius:3px;overflow:hidden}
+.pb-track span{display:block;height:100%;background:var(--blue)}
+.pb-val{text-align:right;font-weight:600;color:var(--ink)}
+.notes{margin-top:1rem;display:grid;gap:.6rem}
+.note-row{display:grid;grid-template-columns:.5rem 1fr;gap:.6rem;font-size:.83rem;
+  color:var(--faint);line-height:1.5}
+.dot{width:.42rem;height:.42rem;border-radius:50%;margin-top:.5rem}
+.dot.gold{background:var(--gold)}
+
+/* ── status slot, matching football ────────────────────── */
+.statuswrap{display:flex;align-items:center;gap:.5rem;margin-left:auto}
+.freshness,.shortlist-wrap{position:relative}
+.fresh-btn{display:inline-flex;align-items:center;gap:.45rem;background:var(--surface);
+  border:1px solid var(--hairline);border-radius:99px;padding:.3rem .8rem;cursor:pointer;
+  font-size:.85rem;color:var(--muted)}
+.fresh-btn:disabled{opacity:.45;cursor:not-allowed}
+.fresh-dot{width:.45rem;height:.45rem;border-radius:50%;background:var(--green)}
+.btn-icon{width:.95rem;height:.95rem}
+.fresh-panel{position:absolute;right:0;top:calc(100% + .5rem);z-index:40;min-width:19rem;
+  background:var(--raised);border:1px solid var(--hairline);border-radius:var(--radius);
+  padding:.9rem 1rem;box-shadow:0 14px 34px rgba(0,0,0,.55)}
+.fresh-head h2{font-size:1rem;margin-bottom:.6rem}
+.fresh-list{list-style:none;margin:0;padding:0;display:grid;gap:.3rem;font-size:.85rem}
+.fresh-list li{display:grid;grid-template-columns:1fr auto;gap:.8rem;color:var(--faint)}
+.fresh-list b{color:var(--ink);font-weight:500}
+.fresh-foot{margin-top:.7rem;font-size:.78rem;color:var(--faint)}
+
+/* ── tab row with the mode switcher on the right ───────── */
+.tabrow{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;
+  border-bottom:1px solid var(--hairline);flex-wrap:wrap}
+.tabrow .tabs{border-bottom:0;margin-top:0}
+.modewrap{display:flex;align-items:center;gap:.5rem;padding-bottom:.4rem;margin-left:0}
+.playerbar{padding:.6rem 0 .9rem}
+
+/* ── flags ─────────────────────────────────────────────── */
+.flag{width:1.15rem;height:.86rem;border-radius:2px;object-fit:cover;flex:none;
+  box-shadow:0 0 0 1px rgba(255,255,255,.08)}
+.flag-badge{display:inline-grid;place-items:center;background:var(--raised);
+  color:var(--faint);font-size:.58rem;font-weight:700;letter-spacing:.02em}
+.sugg .who{display:inline-flex;align-items:center;gap:.55rem}
+.who2{display:flex;align-items:center;gap:.55rem}
+.card h2 .flag,.card h2 img.flag{width:1.5rem;height:1.12rem;margin-right:.5rem;
+  vertical-align:-.1rem}
+.chip .flag{margin-right:.1rem}

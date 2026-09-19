@@ -11,38 +11,142 @@
 <link rel="stylesheet" href="cricket.css">
 </head>
 <body>
-<header class="top"><div class="shell top-inner">
-  <div class="brand"><span class="brand-mark"></span><span class="brand-name">Player Scout</span></div>
-  <nav class="sports">
-    <a class="sport" href="index.html">Football</a>
-    <button class="sport" type="button" aria-current="true">Cricket</button>
-  </nav>
-  <div class="modewrap"><span class="modewrap-label" id="ml">Mode</span>
-    <div class="segmented" role="group" aria-labelledby="ml">
-      <button type="button" data-mode="explore" aria-pressed="true">Exploring</button>
-      <button type="button" data-mode="scout" aria-pressed="false">Scouting</button>
-    </div></div>
-</div></header>
 
-<main class="shell">
-  <div class="search">
-    <input id="q" type="search" autocomplete="off" spellcheck="false"
-      placeholder="Search a player — try Kohli, Bumrah, Suryakumar, Rashid Khan, Jadeja">
-    <div class="sugg" id="sugg" hidden></div>
+<header class="top">
+  <div class="shell top-inner">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">Player Scout</span>
+    </div>
+    <nav class="sports" aria-label="Sport">
+      <a class="sport" href="index.html">Football</a>
+      <button class="sport" type="button" aria-current="true">Cricket</button>
+    </nav>
+    <!-- The same slot football uses for freshness and the shortlist. The mode
+         switcher used to sit here and has moved to the tab row: this space
+         belongs to status, not to controls. -->
+    <div class="statuswrap">
+      <div class="freshness">
+        <button class="fresh-btn" id="fresh-btn" aria-expanded="false" aria-controls="fresh-panel">
+          <span class="fresh-dot" aria-hidden="true"></span>
+          <span id="fresh-label">Updated</span>
+        </button>
+        <div class="fresh-panel" id="fresh-panel" hidden>
+          <div class="fresh-head"><h2>When this was last updated</h2></div>
+          <ul class="fresh-list" id="fresh-list"></ul>
+          <p class="fresh-foot" id="fresh-foot"></p>
+        </div>
+      </div>
+      <div class="shortlist-wrap">
+        <button class="fresh-btn" id="short-btn" disabled title="Not built yet for cricket">
+          <svg viewBox="0 0 24 24" class="btn-icon" aria-hidden="true">
+            <path d="M7 4h10v16l-5-4-5 4z" fill="none" stroke="currentColor" stroke-width="1.8"
+                  stroke-linejoin="round"/></svg>
+          <span>Shortlist</span>
+        </button>
+      </div>
+    </div>
   </div>
-  <div class="tabs" role="tablist" id="tabs">
-    <button role="tab" data-tab="profile" aria-selected="true">Profile</button>
-    <button role="tab" data-tab="similar" aria-selected="false">Similar players</button>
-    <button role="tab" data-tab="compare" aria-selected="false">Compare<span class="count" id="ccount"></span></button>
-  </div>
-  <div class="pane" id="pane"></div>
+</header>
+
+<main id="main" class="shell">
+
+  <section class="hero" id="hero">
+    <div class="hero-left">
+      <h1>Find the players who look like the one you already know.</h1>
+
+      <div class="finder">
+        <label class="finder-label" for="q">Search a player</label>
+        <div class="input-wrap">
+          <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="10.5" cy="10.5" r="6.6" fill="none" stroke="currentColor" stroke-width="1.7"/>
+            <path d="M15.4 15.4L20 20" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+          </svg>
+          <input id="q" type="text" autocomplete="off" spellcheck="false"
+                 role="combobox" aria-expanded="false" aria-controls="sugg" aria-autocomplete="list"
+                 placeholder="Virat Kohli, Jasprit Bumrah, Rashid Khan...">
+          <button class="clear" id="clear" hidden aria-label="Clear search">&times;</button>
+        </div>
+        <div class="sugg" id="sugg" role="listbox" hidden></div>
+      </div>
+
+      <div class="intro-picks">
+        <span class="intro-picks-label">Or try one</span>
+        <div id="examples"></div>
+      </div>
+
+      <div class="routes">
+        <div class="route">
+          <span class="route-tag">Find someone new</span>
+          <ol class="howto">
+            <li><b>1</b><span><strong>Search a player</strong> you already have a view on.</span></li>
+            <li><b>2</b><span><strong>Read their profile</strong> — percentile against
+              their own role, and the sample it rests on.</span></li>
+            <li><b>3</b><span><strong>See who is closest</strong>, filtered by age,
+              country and how far they have got.</span></li>
+            <li><b>4</b><span><strong>Add any of them</strong> to the comparison with
+              the <b class="inline-plus">+</b> button.</span></li>
+          </ol>
+        </div>
+        <div class="route">
+          <span class="route-tag alt">Scout uncapped players</span>
+          <ol class="howto">
+            <li><b>1</b><span><strong>Search someone you want more of</strong> — the
+              shape you are hunting.</span></li>
+            <li><b>2</b><span><strong>Switch to Scouting</strong> and set exposure to
+              <strong>uncapped only</strong>.</span></li>
+            <li><b>3</b><span><strong>Add an age cap</strong>, and you have a list of
+              players nobody has picked yet.</span></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <aside class="hero-right">
+      <div class="cover-card">
+        <h2>What is in here</h2>
+        <div class="bigstats" id="bigstats"></div>
+        <ul class="leaguelist" id="complist"></ul>
+        <div class="posbars" id="rolebars"></div>
+      </div>
+      <div class="notes">
+        <p class="note-row"><span class="dot gold"></span>
+          Coverage is what happened, not how. Every ball is here; line, length,
+          pace and shot type are not, because that data is commercial and has no
+          open equivalent.</p>
+        <p class="note-row"><span class="dot gold"></span>
+          Men's T20 only for now. A player's Test and one-day profiles are
+          different games and get scored separately.</p>
+      </div>
+    </aside>
+  </section>
+
+  <section class="workspace" id="workspace" hidden>
+    <div class="playerbar" id="playerbar"></div>
+
+    <div class="tabrow">
+      <nav class="tabs" role="tablist" id="tabs" aria-label="Player views">
+        <button role="tab" data-tab="profile" aria-selected="true">Profile</button>
+        <button role="tab" data-tab="similar" aria-selected="false">Similar players</button>
+        <button role="tab" data-tab="compare" aria-selected="false">Compare<span class="count" id="ccount"></span></button>
+      </nav>
+      <div class="modewrap">
+        <span class="modewrap-label" id="ml">Mode</span>
+        <div class="segmented" role="group" aria-labelledby="ml">
+          <button type="button" data-mode="explore" aria-pressed="true">Exploring</button>
+          <button type="button" data-mode="scout" aria-pressed="false">Scouting</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="pane" id="pane"></div>
+  </section>
 </main>
 
 <footer class="shell foot">
   <div id="attrib"></div>
   <div class="warn" id="withheld"></div>
 </footer>
-
 
 <script src="channel.js"></script>
 <script src="cricket.js"></script>

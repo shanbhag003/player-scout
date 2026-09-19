@@ -413,6 +413,25 @@ def emit(bat, bowl, players, roles, facts, out_dir, half_life=HALF_LIFE):
     intl = apps[apps["tier"].str.startswith("international")].sort_values("date")
     represents = intl.groupby("player_id")["team"].last().to_dict()
 
+    # A player who has never played an international has no team to read it off,
+    # and Wikidata citizenship is the wrong answer: it reports every English
+    # county player as British. But the competition says it — someone who only
+    # turns out in the T20 Blast is English. Fall back to that.
+    HOME = {"ntb": "England", "cch": "England", "rlc": "England", "bwt": "England",
+            "hnd": "England", "wtb": "England", "cec": "England", "rhf": "England",
+            "wod": "England", "wsl": "England",
+            "sma": "India", "ipl": "India", "wpl": "India", "wtc": "India",
+            "bbl": "Australia", "ssh": "Australia", "odc": "Australia", "wbb": "Australia",
+            "psl": "Pakistan", "bpl": "Bangladesh", "lpl": "Sri Lanka",
+            "sat": "South Africa", "ctc": "South Africa", "msl": "South Africa",
+            "cpl": "West Indies", "wcl": "West Indies", "sft": "West Indies", "blz": "West Indies",
+            "ssm": "New Zealand", "pks": "New Zealand",
+            "ipt": "Ireland", "ipo": "Ireland", "npl": "Nepal", "mlc": "United States of America"}
+    home = (apps[apps["competition"].isin(HOME)]
+            .assign(country=lambda d: d["competition"].map(HOME))
+            .groupby("player_id")["country"]
+            .agg(lambda s: s.value_counts().idxmax()).to_dict())
+
     keepers = set(roles[roles.get("keeper", False) == True].index) if "keeper" in roles else set()
 
     index, detail = [], {}
@@ -434,7 +453,7 @@ def emit(bat, bowl, players, roles, facts, out_dir, half_life=HALF_LIFE):
                 # Wikidata, joined on an exact Cricinfo id.
                 "full_name": (bio.at[pid, "full_name"]
                               if pid in bio.index and pd.notna(bio.at[pid, "full_name"]) else None),
-                "nationality": represents.get(pid) or (
+                "nationality": represents.get(pid) or home.get(pid) or (
                     bio.at[pid, "nationality"]
                     if pid in bio.index and pd.notna(bio.at[pid, "nationality"]) else None),
                 "keeper": pid in keepers,
