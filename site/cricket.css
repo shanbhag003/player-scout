@@ -203,3 +203,7 @@ img.lmark.flag{width:1.4rem;height:1.4rem;border-radius:50%;object-fit:cover;
 .profile-main{display:grid;gap:.9rem;align-content:start}
 .profile-left{display:grid;gap:.9rem;align-content:start}
 .pane{padding:1.1rem 0 1.2rem}
+
+/* Said out loud when the card is not the discipline the role implies. */
+.pb-note{flex-basis:100%;font-size:.78rem;color:var(--faint);margin-top:.35rem;
+  max-width:52ch;line-height:1.45}

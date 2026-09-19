@@ -75,6 +75,13 @@ const EXPOSURE = {domestic:"Uncapped", franchise:"Franchise",
   international_full:"International"};
 /* Roles are derived lowercase in the pipeline; they are proper labels on screen. */
 const titled = s => String(s||"").replace(/\b[a-z]/g, c => c.toUpperCase());
+const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+/* "2019-02" is not a date anyone reads. */
+function whenSeen(iso){
+  if (!iso) return "—";
+  const [y,m] = String(iso).split("-");
+  return m ? `${MON[+m - 1]} ${y}` : y;
+}
 const BLANK = () => ({active:true,exposure:"any",country:"any",comp:"any",keeper:false,
   minAge:"",maxAge:"",minBalls:0,debutSince:""});
 const state = {mode:"explore", tab:"profile", sel:null, disc:"batting", sugg:-1,
@@ -95,7 +102,7 @@ function found(term){
   return out.sort((a,b)=>b.m-a.m).slice(0,8);
 }
 function renderSugg(term){
-  const list=found(term), box=$("sugg");
+  const list=found(term), box=$("suggestions");
   if(!list.length){ box.hidden=true; return; }
   box.hidden=false;
   box.innerHTML=list.map((p,i)=>`<button data-pid="${p.p}" class="${i===state.sugg?"on":""}">
@@ -106,15 +113,23 @@ function renderSugg(term){
 function select(pid){
   state.sel=pid; state.compare=[];
   const e=byPlayer[pid];
-  state.disc=e.some(x=>x.d==="batting")?"batting":"bowling";
-  $("sugg").hidden=true; $("search").value=e[0].f||e[0].n;
+  // Open on whichever discipline the player actually is. Rajat Bhatia is a
+  // bowler: defaulting to batting gave him a card of zeroes and dashes.
+  const bestBy = (a,b) => (b?.b || 0) - (a?.b || 0);
+  const bat = e.find(x => x.d === "batting"), bowl = e.find(x => x.d === "bowling");
+  const role = String((bat||bowl).r || "").toLowerCase();
+  state.disc = role.includes("bowler") && bowl ? "bowling"
+             : !bat ? "bowling"
+             : !bowl ? "batting"
+             : [bat, bowl].sort(bestBy)[0].d;
+  $("suggestions").hidden=true; $("search").value=e[0].f||e[0].n;
   $("hero").hidden=true; $("workspace").hidden=false; $("clear").hidden=false;
   draw();
 }
 
 function toLanding(){
   state.sel=null; state.compare=[];
-  $("search").value=""; $("clear").hidden=true; $("sugg").hidden=true;
+  $("search").value=""; $("clear").hidden=true; $("suggestions").hidden=true;
   $("hero").hidden=false; $("workspace").hidden=true;
 }
 const entry = () => (byPlayer[state.sel]||[]).find(e=>e.d===state.disc);
@@ -228,6 +243,12 @@ function playerbar(){
   const p = entry(); if(!p){ $("playerbar").innerHTML=""; return; }
   const both = byPlayer[p.p].length > 1;
   const saved = slRead().includes(p.u);
+  // A player whose role says bowler but who has no bowling profile is being
+  // shown his batting, and saying nothing about that is misleading.
+  const role = String(p.r || "").toLowerCase();
+  const mismatch = !both && (
+    (role.includes("bowler") && p.d === "batting") ||
+    (!role.includes("bowler") && p.d === "bowling"));
   const t = (p.car||{}).total || {};
   const bat = p.d === "batting";
   const runs = t.runs || 0, ballsC = t.balls_raw || 0, outs = t.outs || 0, wk = t.wkts || 0;
@@ -252,7 +273,10 @@ function playerbar(){
       <div><h1>${esc(p.f||p.n)}</h1>
         <p class="pb-role">${esc(titled(p.r || p.c))}${p.kp ? " · Wicketkeeper" : ""}</p></div>
       <span class="availability ${p.act?"active":"gone"}">${
-        p.act ? "Currently playing" : `Last seen ${(p.ls||"").slice(0,7)}`}</span>
+        p.act ? "Currently playing" : `Last seen ${whenSeen(p.ls)}`}</span>
+      ${mismatch ? `<span class="pb-note">Showing ${p.d}. No ${
+        p.d === "batting" ? "bowling" : "batting"} profile — too few balls, or the
+        bowling type could not be established.</span>` : ""}
     </div>
     <dl class="pb-facts">${facts.map(([k,v,sub]) =>
       `<div><dt>${esc(k)}</dt><dd>${esc(v)}${sub?`<small>${esc(sub)}</small>`:""}</dd></div>`
@@ -411,7 +435,7 @@ function draw(){
 }
 $("search").addEventListener("input",e=>{state.sugg=-1;renderSugg(e.target.value);});
 $("search").addEventListener("keydown",e=>{
-  const box=$("sugg"); if(box.hidden) return;
+  const box=$("suggestions"); if(box.hidden) return;
   const n=box.querySelectorAll("li").length;
   if(e.key==="ArrowDown"){state.sugg=Math.min(n-1,state.sugg+1);e.preventDefault();}
   else if(e.key==="ArrowUp"){state.sugg=Math.max(0,state.sugg-1);e.preventDefault();}
@@ -419,7 +443,7 @@ $("search").addEventListener("keydown",e=>{
   else if(e.key==="Escape"){box.hidden=true;return;} else return;
   renderSugg($("search").value);
 });
-document.addEventListener("click",e=>{if(!e.target.closest(".finder"))$("sugg").hidden=true;});
+document.addEventListener("click",e=>{if(!e.target.closest(".finder"))$("suggestions").hidden=true;});
 document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;draw();});
 document.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
 
@@ -519,6 +543,12 @@ function renderShortlist(){
     : `<li class="sl-empty">Nothing saved yet.</li>`;
   $("short-panel").querySelectorAll("[data-unsave]").forEach(b =>
     b.onclick = () => slToggle(b.dataset.unsave));
+  $("short-btn").onclick = () => {
+    const panel = $("short-panel"), open = panel.hidden;
+    panel.hidden = !open;
+    $("short-btn").setAttribute("aria-expanded", String(open));
+    $("fresh-panel").hidden = true;
+  };
   $("sl-export").hidden = !l.length;
   $("sl-export").onclick = () => {
     const cols = ["name","country","role","age","exposure","balls","matches","last_seen"];
@@ -618,7 +648,8 @@ if (D.built){
     $("fresh-btn").setAttribute("aria-expanded", String(open));
   };
   document.addEventListener("click", e => {
-    if (!e.target.closest(".freshness")) $("fresh-panel").hidden = true; });
+    if (!e.target.closest(".freshness")) $("fresh-panel").hidden = true;
+    if (!e.target.closest(".shortlist-wrap")) $("short-panel").hidden = true; });
 }
 
 $("clear").onclick = toLanding;
