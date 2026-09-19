@@ -695,11 +695,35 @@ function renderCompareMetrics(series, mt){
         >${fmtMetric(v.val)}</span>`).join("")}</div>`;
   }).join("");
 }
+/* A season is named by its competition: the IPL calls it "2024", the Big Bash
+   "2023/24". Plotting the raw labels puts both on the axis, so a player who only
+   appears in one of them shows a dot, then a gap, then a dot — a broken line
+   that says nothing about his form. Everything is folded onto the calendar year
+   the season ends in. */
+function seasonYear(s){
+  const t = String(s);
+  const m = t.match(/^(\d{4})\/(\d{2})$/);
+  return m ? +(m[1].slice(0,2) + m[2]) : +t.slice(0,4);
+}
+
 function renderTrend(series){
   const bat = series[0].p.d === "batting", key = bat ? "sr" : "econ";
-  const seasons = [...new Set(series.flatMap(s => (s.p.sea||[]).map(r => r.season)))].sort();
+  const years = [...new Set(series.flatMap(s =>
+    (s.p.sea||[]).filter(r => r[key] != null).map(r => seasonYear(r.season))))]
+    .filter(Number.isFinite).sort((a,b) => a-b);
+  const seasons = years.map(String);
   const lines = series.map(s => {
-    const map = new Map((s.p.sea||[]).filter(r => r[key] != null).map(r => [r.season, r]));
+    // Two competitions can land in the same year; weight them by balls rather
+    // than letting whichever came last win.
+    const byYear = new Map();
+    (s.p.sea||[]).filter(r => r[key] != null).forEach(r => {
+      const y = seasonYear(r.season); if (!Number.isFinite(y)) return;
+      const a = byYear.get(y) || {sum:0, balls:0, seasons:[]};
+      a.sum += r[key] * (r.balls || 1); a.balls += (r.balls || 1);
+      a.seasons.push(r.season); byYear.set(y, a);
+    });
+    const map = new Map([...byYear].map(([y,a]) =>
+      [String(y), {[key]: a.sum / a.balls, balls: a.balls, seasons: a.seasons}]));
     return {...s, points: seasons.map(x => map.get(x) || null)};
   });
   const vals = lines.flatMap(l => l.points.filter(Boolean).map(r => r[key]));
@@ -707,9 +731,20 @@ function renderTrend(series){
     $("cmp-trend").innerHTML = `<p class="cmp-add-note">No season-by-season record.</p>`;
     $("cmp-trend-sub").textContent = ""; return;
   }
-  $("cmp-trend-sub").textContent = bat
-    ? "Strike rate season by season. A gap means too few balls that year to form a rate."
-    : "Economy season by season. A gap means too few balls that year to form a rate.";
+  // Name the gaps rather than leaving a hole for the reader to interpret.
+  const gaps = lines.flatMap(l => {
+    const idx = l.points.map((d,i) => d ? i : -1).filter(i => i >= 0);
+    if (idx.length < 2) return [];
+    const missing = [];
+    for (let i = idx[0]; i <= idx[idx.length-1]; i++)
+      if (!l.points[i]) missing.push(seasons[i]);
+    return missing.length ? [`${l.p.f || l.p.n} (${missing.join(", ")})`] : [];
+  });
+  $("cmp-trend-sub").textContent =
+    (bat ? "Strike rate by calendar year, pooling every competition played that year."
+         : "Economy by calendar year, pooling every competition played that year.")
+    + (gaps.length ? ` A break means no qualifying cricket that year: ${gaps.join("; ")}.`
+                   : "");
   const top = Math.max(...vals) * 1.1, bottom = bat ? 0 : Math.max(0, Math.min(...vals) - 1.5);
   const W=700,H=250,padL=62,padR=22,padT=18,padB=46;
   const x = i => padL + (i*(W-padL-padR))/Math.max(1, seasons.length-1);
@@ -726,7 +761,8 @@ function renderTrend(series){
     if (cur.length) chunks.push(cur);
     const dots = l.points.map((d,i)=> d
       ? `<circle class="tdot ${l.colour}" cx="${x(i).toFixed(1)}" cy="${y(d[key]).toFixed(1)}" r="3.6">
-          <title>${esc(l.p.f||l.p.n)} — ${esc(seasons[i])}: ${d[key]} from ${d.balls} balls</title></circle>` : "").join("");
+          <title>${esc(l.p.f||l.p.n)} — ${esc(seasons[i])}: ${d[key].toFixed(bat?1:2)} from ${
+            d.balls} balls (${esc((d.seasons||[]).join(", "))})</title></circle>` : "").join("");
     return `<g class="tline ${l.colour}">${chunks.map(c=>`<polyline points="${c.join(" ")}"/>`).join("")}</g>${dots}`;
   }).join("");
   const xl = seasons.map((sn,i) => `<text class="taxis" x="${x(i).toFixed(1)}" y="${H-padB+18}"
@@ -1027,19 +1063,35 @@ if (D.built){
 /* On a phone the four method columns become a swipeable strip with a pill nav,
    exactly as football does. */
 (function methodNav(){
-  const nav = $("method-nav"), cols = [...document.querySelectorAll(".method .mcol")];
-  if (!nav || !cols.length) return;
+  const nav = $("method-nav"), box = $("method-wrap");
+  const cols = [...document.querySelectorAll(".method .mcol")];
+  const strip = document.querySelector(".method");
+  if (!nav || !cols.length || !strip) return;
+  const SHORT = ["Sources","Measured on","Levelling","Does it work"];
   nav.innerHTML = cols.map((c,i) =>
     `<button role="tab" data-step="${i}" aria-selected="${i===0}">
-      <i>${i+1}</i>${esc(c.querySelector("h3") ? c.querySelector("h3").textContent : "")}</button>`
+      <i>${i+1}</i>${esc(SHORT[i] || (c.querySelector("h3")||{}).textContent || "")}</button>`
     ).join("");
+  const mark = i => nav.querySelectorAll("button").forEach((b,k) =>
+    b.setAttribute("aria-selected", String(k === i)));
   nav.querySelectorAll("button").forEach(b => b.onclick = () => {
-    const i = +b.dataset.step;
-    nav.querySelectorAll("button").forEach((x,k) =>
-      x.setAttribute("aria-selected", String(k === i)));
-    if (cols[i].scrollIntoView)
-      cols[i].scrollIntoView({behavior:"smooth", block:"nearest", inline:"start"});
+    const i = +b.dataset.step, left = cols[i].offsetLeft - strip.offsetLeft;
+    if (typeof strip.scrollTo === "function"){
+      try { strip.scrollTo({left, behavior:"smooth"}); } catch { strip.scrollLeft = left; }
+    } else strip.scrollLeft = left;
+    mark(i);
   });
+  // The pill has to follow a swipe too, or it points at the wrong panel the
+  // moment someone scrolls by hand rather than tapping.
+  let tick;
+  strip.addEventListener("scroll", () => {
+    clearTimeout(tick);
+    tick = setTimeout(() => {
+      const i = Math.round(strip.scrollLeft / Math.max(1, strip.clientWidth));
+      mark(Math.min(Math.max(i,0), cols.length - 1));
+    }, 90);
+  }, {passive:true});
+  mark(0);
 })();
 
 $("clear").onclick = toLanding;

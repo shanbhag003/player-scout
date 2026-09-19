@@ -132,6 +132,13 @@ def classify_bowlers(facts: pd.DataFrame, apps: pd.DataFrame, min_balls: int = 3
     # drops that bowler from the pace/spin split and nothing else.
     pool["bowler_type"] = np.where(pool["p_spin"] >= .85, "spin",
                           np.where(pool["p_spin"] <= .15, "pace", None))
+    # A hand label always wins. Six seeded bowlers — Rashid Khan and Kumble
+    # among them — were being thrown away because the model put them at 0.83
+    # rather than 0.85, which makes the seed file pointless for exactly the
+    # players someone bothered to label.
+    seeded_mask = pool["seed"].notna()
+    pool.loc[seeded_mask, "bowler_type"] = np.where(
+        pool.loc[seeded_mask, "seed"] == "S", "spin", "pace")
     out = pool[["bowler_type", "p_spin"]].reindex(b.index)
     out.attrs["seeded"] = seeded
     out.attrs["labelled"] = int(len(lab))
