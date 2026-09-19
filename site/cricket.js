@@ -1,14 +1,18 @@
-/* Cricket. A separate page from football on purpose: the two share a shell, a
-   stylesheet and a switcher, but not a code path. app.js is sixty-eight kilobytes
-   of working, validated football logic and a second sport has no business
-   reaching into it. */
+/* Cricket. A separate page from football on purpose: the two share the shell,
+   the stylesheet and the switcher, but not a code path. app.js is sixty-eight
+   kilobytes of working, validated football logic and a second sport has no
+   business reaching into it.
+
+   The look is not re-invented here. This page loads football's style.css and
+   cricket.css only adds what is genuinely new, so the two sports cannot drift
+   apart by accident. */
 (async function(){
 const $ = id => document.getElementById(id);
 const BASE = "data/cricket";
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g,
+  c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
 let D, FLAGS = {};
-
-function fail(msg){ $("pane").innerHTML = `<div class="empty">${msg}</div>`; }
 
 try {
   const [index, detail, meta, flags] = await Promise.all([
@@ -37,21 +41,141 @@ try {
     built: meta.built_at
   };
 } catch (err) {
-  fail(`Cricket data could not be loaded (${err.message}). ` +
-       `If this is staging, the daily job may not have run yet.`);
+  $("pane").innerHTML = `<div class="empty">Cricket data could not be loaded ` +
+    `(${esc(err.message)}). If this is staging, the daily job may not have run yet.</div>`;
   return;
 }
 
 /* A flag where there is one, a lettered badge where there is not. West Indies
    and an ICC XI are teams rather than countries and have no ISO code. */
 function flag(nat){
-  if (!nat) return "";
+  if (!nat) return '<span class="lmark letters"></span>';
   const code = FLAGS[nat];
-  if (code) return `<img class="flag" src="assets/flags/${code}.svg" alt="" loading="lazy">`;
-  const letters = nat.split(/\s+/).map(w => w[0]).join("").slice(0,2).toUpperCase();
-  return `<span class="flag flag-badge">${letters}</span>`;
+  if (code) return `<img class="lmark flag" src="assets/flags/${code}.svg" alt="" loading="lazy">`;
+  const letters = String(nat).split(/\s+/).map(w => w[0]).join("").slice(0,2).toUpperCase();
+  return `<span class="lmark letters">${letters}</span>`;
 }
 
+
+const LABEL = {
+  sr:"Strike rate", bpd:"Balls per out", bdry:"Boundary %", six_share:"Six share",
+  dot_pct:"Dot %", sr_pp:"SR powerplay", sr_mid:"SR middle", sr_death:"SR death",
+  sh_pp:"Balls in PP %", sh_death:"Balls at death %", sr_pace:"SR v pace",
+  sr_spin:"SR v spin", spin_bias:"Spin bias", sr_first10:"SR first 10",
+  accel:"Acceleration", bdry_spin:"Boundary % v spin",
+  econ:"Economy", wkt_rate:"Wickets/100", dot_rate:"Dot %", bdry_conc:"Boundary % conceded",
+  six_share_conc:"Six share conceded", econ_pp:"Econ powerplay", econ_mid:"Econ middle",
+  econ_death:"Econ death", wide_rate:"Wides/100"};
+const LOWER_BETTER = new Set(["dot_pct","econ","econ_pp","econ_mid","econ_death",
+  "bdry_conc","six_share_conc","wide_rate"]);
+const EXPOSURE = {domestic:"uncapped", franchise:"franchise",
+  international_minor:"assoc. int'l", international_established:"assoc. int'l",
+  international_full:"international"};
+const BLANK = () => ({active:true,exposure:"any",country:"any",comp:"any",keeper:false,
+  minAge:"",maxAge:"",minBalls:0,debutSince:""});
+const state = {mode:"explore", tab:"profile", sel:null, disc:"batting", sugg:-1,
+  compare:[], showMore:false, f:BLANK()};
+
+const norm = s => (s||"").toLowerCase().replace(/[^a-z ]/g,"");
+D.players.forEach(p => p._s = norm(p.n)+" "+norm(p.f));
+const byPlayer = {}, byUid = {};
+D.players.forEach(p => { (byPlayer[p.p] = byPlayer[p.p]||[]).push(p); byUid[p.u]=p; });
+const COUNTRIES = [...new Set(D.players.map(p=>p.nat).filter(Boolean))].sort();
+const CLUBCOMPS = D.comps.filter(c => !c.startsWith("international"));
+
+function found(term){
+  const t=norm(term); if(t.length<2) return [];
+  const seen=new Set(), out=[];
+  for(const p of D.players){ if(seen.has(p.p)||!p._s.includes(t)) continue;
+    seen.add(p.p); out.push(p); if(out.length>50) break; }
+  return out.sort((a,b)=>b.m-a.m).slice(0,8);
+}
+function renderSugg(term){
+  const list=found(term), box=$("sugg");
+  if(!list.length){ box.hidden=true; return; }
+  box.hidden=false;
+  box.innerHTML=list.map((p,i)=>`<button data-pid="${p.p}" class="${i===state.sugg?"on":""}">
+    <span>${p.f||p.n}${p.f&&p.f!==p.n?` <span class="meta">${p.n}</span>`:""}</span>
+    <span class="meta">${p.nat?p.nat+" · ":""}${p.r||""}${p.a?" · "+Math.floor(p.a):""}</span></button>`).join("");
+  box.querySelectorAll("button").forEach(b=>b.onclick=()=>select(b.dataset.pid));
+}
+function select(pid){
+  state.sel=pid; state.compare=[];
+  const e=byPlayer[pid];
+  state.disc=e.some(x=>x.d==="batting")?"batting":"bowling";
+  $("sugg").hidden=true; $("q").value=e[0].f||e[0].n;
+  $("hero").hidden=true; $("workspace").hidden=false; $("clear").hidden=false;
+  draw();
+}
+
+function toLanding(){
+  state.sel=null; state.compare=[];
+  $("q").value=""; $("clear").hidden=true; $("sugg").hidden=true;
+  $("hero").hidden=false; $("workspace").hidden=true;
+}
+const entry = () => (byPlayer[state.sel]||[]).find(e=>e.d===state.disc);
+
+function passes(c){
+  const f=state.f;
+  if(f.active&&!c.act) return false;
+  if(f.exposure==="uncapped"&&c.e!=="domestic") return false;
+  if(f.exposure==="unfranchised"&&!(c.e==="domestic"||c.e==="franchise")) return false;
+  if(f.country!=="any"&&c.nat!==f.country) return false;
+  if(f.comp!=="any"&&!(c.cb&&c.cb[f.comp])) return false;
+  if(f.keeper&&!c.kp) return false;
+  if(f.minAge&&(!c.a||c.a<+f.minAge)) return false;
+  if(f.maxAge&&(!c.a||c.a>+f.maxAge)) return false;
+  if(c.b<f.minBalls) return false;
+  if(f.debutSince&&(!c.fs||c.fs.slice(0,4)<f.debutSince)) return false;
+  return true;
+}
+function ranked(){
+  const p=entry(); if(!p) return [];
+  const sp=D.spaces[p.d][p.c]; if(!sp) return [];
+  const out=[];
+  for(const c of D.players){
+    if(c.u===p.u||c.d!==p.d||c.c!==p.c||!passes(c)) continue;
+    let d=0; for(let i=0;i<p.x.length;i++){const v=p.x[i]-c.x[i]; d+=v*v;}
+    out.push([100*Math.exp(-Math.LN2*Math.sqrt(d)/sp.md), c]);
+  }
+  return out.sort((a,b)=>b[0]-a[0]).slice(0,10);
+}
+function why(a,b){
+  const mt=D.spaces[a.d][a.c].mt, shared=[], diff=[];
+  for(const m of mt){
+    const x=a.pc[m], y=b.pc[m]; if(x==null||y==null) continue;
+    const gap=Math.abs(x-y);
+    if(gap<=12&&(x>=70||x<=30)) shared.push([Math.min(x,100-x),m,x]);
+    diff.push([gap,m]);
+  }
+  shared.sort((p,q)=>p[0]-q[0]); diff.sort((p,q)=>q[0]-p[0]);
+  const s=shared[0]?`Both ${shared[0][2]>=50?"high":"low"} for ${LABEL[shared[0][1]].toLowerCase()}`
+                   :"Similar overall shape";
+  return `${s} · differs on ${diff.slice(0,2).map(x=>LABEL[x[1]].toLowerCase()).join(" and ")}`;
+}
+function filterBar(){
+  const f=state.f, more=state.showMore||state.mode==="scout";
+  return `<div class="filters">
+    <label class="chk"><input type="checkbox" data-f="active"> Currently playing</label>
+    <div class="f"><label>Exposure</label><select data-f="exposure">
+      <option value="any">Any</option><option value="unfranchised">No internationals</option>
+      <option value="uncapped">Uncapped only</option></select></div>
+    <div class="f"><label>Age</label><span style="display:flex;gap:.3rem">
+      <input type="number" data-f="minAge" min="15" max="45" placeholder="min">
+      <input type="number" data-f="maxAge" min="15" max="45" placeholder="max"></span></div>
+    ${more?`<div class="f"><label>Represents</label><select data-f="country">
+      <option value="any">Any country</option>
+      ${COUNTRIES.map(c=>`<option value="${c}">${c}</option>`).join("")}</select></div>
+    <div class="f"><label>Has played in</label><select data-f="comp">
+      <option value="any">Any competition</option>
+      ${CLUBCOMPS.map(c=>`<option value="${c}">${D.compNames[c]||c}</option>`).join("")}</select></div>
+    <div class="f"><label>Min balls</label><input type="number" data-f="minBalls" min="0" step="100"></div>
+    <div class="f"><label>Debut since</label>
+      <input type="number" data-f="debutSince" min="2005" max="2026" placeholder="any"></div>
+    <label class="chk"><input type="checkbox" data-f="keeper"> Keepers only</label>`
+    :`<button class="more" data-more>More filters</button>`}
+    <button class="more reset" data-reset>Reset</button></div>`;
+}
 function paneProfile(){
   const p=entry();
   if(!p) return `<div class="empty">Search a player to begin.<br>
@@ -69,7 +193,7 @@ function paneProfile(){
     return `<div class="metric"><span class="nm">${LABEL[m]||m}</span>
       <span class="tr"><span style="width:${v}%;background:${col}"></span></span>
       <span class="vl">${p.ad[m]??""}</span></div>`;}).join("");
-  return `<div class="card"><h2>${flag(p.nat)}${p.f||p.n}</h2>
+  return `<div class="card"><h2>${flag(p.nat)}${esc(p.f||p.n)}</h2>
     <div class="sub">${p.r||p.c}${p.nat?" · "+p.nat:""}${p.a?" · age "+Math.floor(p.a):""}</div>
     <div class="tags"><span class="tag ${p.e==="domestic"?"gold":""}">${EXPOSURE[p.e]||p.e}</span>
       ${p.act?'<span class="tag blue">playing</span>':`<span class="tag">last ${(p.ls||"").slice(0,7)}</span>`}
@@ -101,7 +225,7 @@ function paneSimilar(){
   if(!list.length) return head+`<div class="empty">Nothing matches those filters.</div>`;
   return head+list.map(([s,c])=>`<div class="row">
     <div class="score" style="color:${s>=60?"var(--green)":s>=45?"var(--gold)":"var(--faint)"}">${s.toFixed(0)}</div>
-    <div><div class="who2">${flag(c.nat)}<span>${c.f||c.n}</span></div>
+    <div><div class="who2">${flag(c.nat)}<span>${esc(c.f||c.n)}</span></div>
       <div class="why">${why(p,c)}</div></div>
     <div class="rmeta">${c.b.toLocaleString()} balls<br>${EXPOSURE[c.e]||c.e}${c.a?" · "+Math.floor(c.a):""}</div>
     <button class="add" data-add="${c.u}" aria-pressed="${state.compare.includes(c.u)}"
@@ -121,7 +245,7 @@ function paneCompare(){
       const v=vals[i]; if(v==null) return "<td>—</td>";
       return `<td class="${v===best?"best":""}">${x.ad[m]??"—"}<span style="color:var(--faint);font-size:.75rem"> ${v}</span></td>`;
     }).join("")}</tr>`;}).join("");
-  return `<div class="chips">${set.map(x=>`<span class="chip">${flag(x.nat)}${x.f||x.n}
+  return `<div class="chips">${set.map(x=>`<span class="chip">${flag(x.nat)}${esc(x.f||x.n)}
       ${p&&x.u===p.u?"":`<button data-drop="${x.u}">×</button>`}</span>`).join("")}</div>
     <div class="card cmp"><table>
       <thead><tr><th>Metric</th>${set.map(x=>`<th>${(x.f||x.n).split(" ").slice(-1)[0]}</th>`).join("")}</tr></thead>
@@ -161,96 +285,110 @@ function draw(){
 $("q").addEventListener("input",e=>{state.sugg=-1;renderSugg(e.target.value);});
 $("q").addEventListener("keydown",e=>{
   const box=$("sugg"); if(box.hidden) return;
-  const n=box.querySelectorAll("button").length;
+  const n=box.querySelectorAll("li").length;
   if(e.key==="ArrowDown"){state.sugg=Math.min(n-1,state.sugg+1);e.preventDefault();}
   else if(e.key==="ArrowUp"){state.sugg=Math.max(0,state.sugg-1);e.preventDefault();}
-  else if(e.key==="Enter"){const b=box.querySelectorAll("button")[Math.max(0,state.sugg)];if(b)b.click();return;}
+  else if(e.key==="Enter"){const b=box.querySelectorAll("li")[Math.max(0,state.sugg)];if(b)b.click();return;}
   else if(e.key==="Escape"){box.hidden=true;return;} else return;
   renderSugg($("q").value);
 });
 document.addEventListener("click",e=>{if(!e.target.closest(".finder"))$("sugg").hidden=true;});
 document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;draw();});
 document.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
-/* ── landing ────────────────────────────────────────── */
-const PICKS = ["V Kohli","JJ Bumrah","SA Yadav","Rashid Khan","RA Jadeja"];
-$("examples").innerHTML = PICKS.map(n=>{
-  const p=D.players.find(x=>x.n===n); if(!p) return "";
-  return `<button class="pick" data-pid="${p.p}">${flag(p.nat)}${p.f||p.n}</button>`;
-}).join("");
-document.querySelectorAll(".pick").forEach(b=>b.onclick=()=>select(b.dataset.pid));
 
-/* The two routes on the landing are the mode chooser. Picking one sets the mode
-   and the filters that go with it, so a scout arrives at the results with the
-   pool already narrowed instead of having to find the controls first. */
+/* ── mode, chosen from the landing routes ───────────────
+   Mode used to live in the tab row, which only exists after a search — so the
+   choice was unreachable exactly when it was wanted. The two routes on the
+   landing are the chooser, and picking one sets the filters that go with it. */
 function setMode(mode, quiet){
   state.mode = mode;
-  document.querySelectorAll("[data-mode]").forEach(x=>
+  document.querySelectorAll("[data-mode]").forEach(x =>
     x.setAttribute("aria-pressed", String(x.dataset.mode === mode)));
-  document.querySelectorAll(".route").forEach(r=>
+  document.querySelectorAll(".route").forEach(r =>
     r.setAttribute("aria-pressed", String(r.dataset.route === mode)));
   if (mode === "scout"){ state.f.minBalls = 300; state.f.active = true;
                          state.f.exposure = "uncapped"; state.showMore = true; }
   else { state.f.minBalls = 0; state.f.exposure = "any"; }
   if (!quiet) draw();
 }
-document.querySelectorAll(".route").forEach(r=>{
+document.querySelectorAll(".route").forEach(r => {
   r.onclick = () => setMode(r.dataset.route);
   r.onkeydown = e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); r.click(); } };
 });
 setMode("explore", true);
 
-const people = new Set(D.players.map(p=>p.p));
-const playing = new Set(D.players.filter(p=>p.act).map(p=>p.p));
-$("bigstats").innerHTML = `
-  <div><b>${people.size.toLocaleString()}</b><span>players</span></div>
-  <div><b>${playing.size.toLocaleString()}</b><span>still playing</span></div>
-  <div><b>${D.comps.length}</b><span>competitions</span></div>`;
+/* ── landing, in football's markup ──────────────────────── */
+const PICKS = ["V Kohli","JJ Bumrah","SA Yadav","Rashid Khan","RA Jadeja"];
+$("examples").innerHTML = PICKS.map(n => {
+  const p = D.players.find(x => x.n === n);
+  return p ? `<button class="pick" data-pid="${p.p}">${flag(p.nat)}${esc(p.f||p.n)}</button>` : "";
+}).join("");
+document.querySelectorAll(".pick").forEach(b => b.onclick = () => select(b.dataset.pid));
 
-// Competitions by how much of the pool has played in them, biggest first.
-const compCount = {};
-D.players.forEach(p=>Object.keys(p.cb||{}).forEach(c=>{
-  compCount[c]=(compCount[c]||new Set()); compCount[c].add(p.p);}));
-$("complist").innerHTML = Object.entries(compCount)
-  .sort((a,b)=>b[1].size-a[1].size).slice(0,10)
-  .map(([c,set])=>`<li><span class="lg-name">${D.compNames[c]||c}</span>
-    <span class="lg-side">${set.size.toLocaleString()}</span></li>`).join("");
+const people = new Set(D.players.map(p => p.p));
+const playing = new Set(D.players.filter(p => p.act).map(p => p.p));
+$("bigstats").innerHTML = [
+  [people.size.toLocaleString(), "players"],
+  [playing.size.toLocaleString(), "still playing"],
+  [D.comps.length, "competitions"],
+].map(([v,k]) => `<div><b>${v}</b><span>${esc(k)}</span></div>`).join("");
 
-const roleCount={};
-D.players.forEach(p=>roleCount[p.c]=(roleCount[p.c]||0)+1);
-const maxRole=Math.max(...Object.values(roleCount));
-const ROLE_ORDER=["opener","top middle","middle","finisher","pace","spin"];
-$("rolebars").innerHTML = ROLE_ORDER.filter(r=>roleCount[r]).map(r=>
-  `<div class="posbar"><span class="pb-name">${r[0].toUpperCase()+r.slice(1)}</span>
-   <span class="pb-track"><span style="width:${100*roleCount[r]/maxRole}%"></span></span>
-   <span class="pb-val">${roleCount[r]}</span></div>`).join("");
+const COMP_COUNTRY = {ipl:"India", sma:"India", ntb:"England", hnd:"England",
+  bbl:"Australia", psl:"Pakistan", cpl:"West Indies", sat:"South Africa",
+  ctc:"South Africa", msl:"South Africa", bpl:"Bangladesh", lpl:"Sri Lanka",
+  ssm:"New Zealand", mlc:"United States", ilt:"UAE", npl:"Nepal",
+  etpl:"Europe", mct:"Nepal", t20i_full:"", t20i_estab:"", t20i_minor:""};
+const seen = {};
+D.players.forEach(p => Object.keys(p.cb||{}).forEach(c =>
+  (seen[c] = seen[c] || new Set()).add(p.p)));
+$("complist").innerHTML = Object.entries(seen)
+  .sort((a,b) => b[1].size - a[1].size).slice(0,10)
+  .map(([c,set]) => {
+    const name = D.compNames[c] || c;
+    const short = name.split(/\s+/).map(w => w[0]).join("").slice(0,3).toUpperCase();
+    return `<li><span class="lmark letters">${short}</span>
+      <span class="lname">${esc(name)}</span>
+      <span class="lcountry">${set.size.toLocaleString()}</span></li>`;
+  }).join("");
 
-/* ── freshness ──────────────────────────────────────── */
+const roleCount = {};
+D.players.forEach(p => roleCount[p.c] = (roleCount[p.c]||0) + 1);
+const ROLES = ["opener","top middle","middle","finisher","pace","spin"]
+  .filter(r => roleCount[r]).sort((a,b) => roleCount[b]-roleCount[a]);
+const topRole = Math.max(...ROLES.map(r => roleCount[r]));
+$("rolebars").innerHTML = `<h3>Players by role</h3>` + ROLES.map(r =>
+  `<div class="posrow"><span>${r[0].toUpperCase()+r.slice(1)}</span>
+    <span class="postrack"><span style="width:${(roleCount[r]/topRole*100).toFixed(1)}%"></span></span>
+    <b>${roleCount[r]}</b></div>`).join("");
+
+/* ── freshness ──────────────────────────────────────────── */
 if (D.built){
-  const d=new Date(D.built);
-  const days=Math.floor((Date.now()-d)/864e5);
-  $("fresh-label").textContent = days<1?"Updated today":days===1?"Updated yesterday"
-                               :`Updated ${days} days ago`;
+  const d = new Date(D.built);
+  const days = Math.floor((Date.now() - d) / 864e5);
+  $("fresh-label").textContent = days < 1 ? "Updated today"
+    : days === 1 ? "Updated yesterday" : `Updated ${days} days ago`;
   $("fresh-list").innerHTML = `<li><span>Model last run</span><b>${
     d.toLocaleString("en-GB",{timeZone:"Asia/Kolkata",day:"numeric",month:"short",
       year:"numeric",hour:"2-digit",minute:"2-digit",hour12:false})} IST</b></li>`;
   $("fresh-foot").textContent =
-    "Cricsheet data is pulled nightly; the model is rebuilt on the same run.";
-  $("fresh-btn").onclick=()=>{
-    const panel=$("fresh-panel"), open=panel.hidden;
-    panel.hidden=!open; $("fresh-btn").setAttribute("aria-expanded",String(open));
+    "Cricsheet is pulled nightly and the model is rebuilt on the same run.";
+  $("fresh-btn").onclick = () => {
+    const panel = $("fresh-panel"), open = panel.hidden;
+    panel.hidden = !open;
+    $("fresh-btn").setAttribute("aria-expanded", String(open));
   };
-  document.addEventListener("click",e=>{
-    if(!e.target.closest(".freshness")) $("fresh-panel").hidden=true;});
+  document.addEventListener("click", e => {
+    if (!e.target.closest(".freshness")) $("fresh-panel").hidden = true; });
 }
 
 $("clear").onclick = toLanding;
 
-$("attrib").innerHTML=`Match data from <a href="https://cricsheet.org">Cricsheet</a>, used under
-  the Open Data Commons Attribution Licence. Biographical data from Wikidata.
+$("attrib").innerHTML = `Match data from <a href="https://cricsheet.org">Cricsheet</a>,
+  under the Open Data Commons Attribution Licence. Biography from Wikidata.
   ${D.matches.toLocaleString()} matches.`;
-$("withheld").innerHTML=`<b>${D.withheld.matches} matches are missing by design.</b>
-  ${D.withheld.summary} ${D.withheld.reason}
+$("withheld").innerHTML = `<b>${D.withheld.matches} matches are missing by design.</b>
+  ${esc(D.withheld.summary)} ${esc(D.withheld.reason)}
   <a href="${D.withheld.link}">His explanation</a>.`;
-draw();
 
+draw();
 })();

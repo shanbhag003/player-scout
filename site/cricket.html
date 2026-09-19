@@ -4,10 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Player Scout — Cricket</title>
+<meta name="description" content="Find cricketers whose profile matches the one you are looking at.">
 <meta name="theme-color" content="#101720">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Football's stylesheet first, then only what cricket genuinely adds. The two
+     sports are one click apart, so anything that differs reads as a mistake. -->
+<link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="cricket.css">
 </head>
 <body>
@@ -22,9 +26,6 @@
       <a class="sport" href="index.html">Football</a>
       <button class="sport" type="button" aria-current="true">Cricket</button>
     </nav>
-    <!-- The same slot football uses for freshness and the shortlist. The mode
-         switcher used to sit here and has moved to the tab row: this space
-         belongs to status, not to controls. -->
     <div class="statuswrap">
       <div class="freshness">
         <button class="fresh-btn" id="fresh-btn" aria-expanded="false" aria-controls="fresh-panel">
@@ -56,18 +57,20 @@
       <h1>Find the players who look like the one you already know.</h1>
 
       <div class="finder">
-        <label class="finder-label" for="q">Search a player</label>
-        <div class="input-wrap">
-          <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="10.5" cy="10.5" r="6.6" fill="none" stroke="currentColor" stroke-width="1.7"/>
-            <path d="M15.4 15.4L20 20" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
-          </svg>
-          <input id="q" type="text" autocomplete="off" spellcheck="false"
-                 role="combobox" aria-expanded="false" aria-controls="sugg" aria-autocomplete="list"
-                 placeholder="Virat Kohli, Jasprit Bumrah, Rashid Khan...">
-          <button class="clear" id="clear" hidden aria-label="Clear search">&times;</button>
+        <div class="finder-field">
+          <label for="q">Search a player</label>
+          <div class="input-wrap">
+            <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="10.5" cy="10.5" r="6.6" fill="none" stroke="currentColor" stroke-width="1.7"/>
+              <path d="M15.4 15.4L20 20" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+            </svg>
+            <input id="q" type="text" autocomplete="off" spellcheck="false"
+                   role="combobox" aria-expanded="false" aria-controls="sugg" aria-autocomplete="list"
+                   placeholder="Virat Kohli, Jasprit Bumrah, Rashid Khan...">
+            <button class="clear" id="clear" hidden aria-label="Clear search">&times;</button>
+          </div>
+          <ul class="suggestions" id="sugg" role="listbox" aria-label="Matching players" hidden></ul>
         </div>
-        <div class="sugg" id="sugg" role="listbox" hidden></div>
       </div>
 
       <div class="intro-picks">
@@ -79,11 +82,11 @@
         <div class="route" data-route="explore" role="button" tabindex="0" aria-pressed="true">
           <span class="route-tag">Find someone new</span>
           <ol class="howto">
-            <li><b>1</b><span><strong>Search a player</strong> you already have a view on.</span></li>
+            <li><b>1</b><span><strong>Search a player</strong> you have a view on.</span></li>
             <li><b>2</b><span><strong>Read their profile</strong> — percentile against
-              their own role, and the sample it rests on.</span></li>
-            <li><b>3</b><span><strong>See who is closest</strong>, filtered by age,
-              country and how far they have got.</span></li>
+              their own role.</span></li>
+            <li><b>3</b><span><strong>See who is closest</strong>, filtered by age and
+              country.</span></li>
             <li><b>4</b><span><strong>Add any of them</strong> to the comparison with
               the <b class="inline-plus">+</b> button.</span></li>
           </ol>
@@ -91,12 +94,11 @@
         <div class="route" data-route="scout" role="button" tabindex="0" aria-pressed="false">
           <span class="route-tag alt">Scout uncapped players</span>
           <ol class="howto">
-            <li><b>1</b><span><strong>Search someone you want more of</strong> — the
-              shape you are hunting.</span></li>
-            <li><b>2</b><span><strong>Switch to Scouting</strong> and set exposure to
-              <strong>uncapped only</strong>.</span></li>
-            <li><b>3</b><span><strong>Add an age cap</strong>, and you have a list of
-              players nobody has picked yet.</span></li>
+            <li><b>1</b><span><strong>Pick this route</strong> — exposure is set to
+              uncapped and the full filters open.</span></li>
+            <li><b>2</b><span><strong>Search the shape</strong> you are hunting.</span></li>
+            <li><b>3</b><span><strong>Cap the age</strong> and you have players nobody
+              has picked yet.</span></li>
           </ol>
         </div>
       </div>
@@ -111,19 +113,17 @@
       </div>
       <div class="notes">
         <p class="note-row"><span class="dot gold"></span>
-          Coverage is what happened, not how. Every ball is here; line, length,
-          pace and shot type are not, because that data is commercial and has no
-          open equivalent.</p>
-        <p class="note-row"><span class="dot gold"></span>
-          Men's T20 only for now. A player's Test and one-day profiles are
-          different games and get scored separately.</p>
+          Every ball is here. Line, length, pace and shot type are not — that data
+          is commercial and has no open equivalent.</p>
+        <p class="note-row"><span class="dot blue"></span>
+          Men's T20 only. Test and one-day profiles are different games and get
+          scored separately.</p>
       </div>
     </aside>
   </section>
 
   <section class="workspace" id="workspace" hidden>
     <div class="playerbar" id="playerbar"></div>
-
     <div class="tabrow">
       <nav class="tabs" role="tablist" id="tabs" aria-label="Player views">
         <button role="tab" data-tab="profile" aria-selected="true">Profile</button>
@@ -138,7 +138,6 @@
         </div>
       </div>
     </div>
-
     <div class="pane" id="pane"></div>
   </section>
 </main>
@@ -146,7 +145,6 @@
 <footer class="shell foot">
   <div id="attrib"></div>
   <div class="warn" id="withheld"></div>
-
   <p class="repo-line">
     <a href="https://github.com/shanbhag003/player-scout" target="_blank" rel="noopener noreferrer">
       <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path fill="currentColor"
@@ -154,46 +152,29 @@
       Source and method on GitHub
     </a>
   </p>
-
   <details id="method-wrap">
     <summary>How these numbers are built</summary>
     <div class="method">
-      <div class="mcol">
-        <h3>Where it comes from</h3>
-        <p>Every ball of 22,905 matches, from Cricsheet. Each file carries a
-        registry mapping names to stable player ids, so nothing here depends on
-        matching people by name.</p>
-        <p>Dates of birth and full names join from Wikidata on an exact
-        ESPNcricinfo id. Which country a player represents is read from who they
-        turn out for, not from a passport.</p>
-      </div>
-      <div class="mcol">
-        <h3>How a profile is built</h3>
-        <p>Sixteen rates per batter, eleven per bowler, split by phase of the
-        innings and by whether the bowler was pace or spin. Pace and spin are
-        derived from the deliveries themselves, seeded with about fifty labels.</p>
-        <p>Thin records are pulled toward the average for their role, because a
-        strike rate off eighty balls is mostly noise. Old cricket counts for
-        less, on a three-year half-life measured from a player's own last match.</p>
-      </div>
-      <div class="mcol">
-        <h3>Levelling competitions</h3>
+      <div class="mcol"><h3>Where it comes from</h3>
+        <p>Every ball of 22,905 matches, from Cricsheet. Each file carries stable
+        player ids, so nothing depends on matching people by name.</p>
+        <p>Ages and full names join from Wikidata on an exact ESPNcricinfo id.
+        Country is read from who a player turns out for, not a passport.</p></div>
+      <div class="mcol"><h3>How a profile is built</h3>
+        <p>Sixteen rates per batter, eleven per bowler, split by phase and by
+        whether the bowler was pace or spin — both derived from the deliveries.</p>
+        <p>Thin records are pulled toward the role average. Old cricket counts
+        less, on a three-year half-life from a player's own last match.</p></div>
+      <div class="mcol"><h3>Levelling competitions</h3>
         <p>One coefficient per metric per competition, fitted only from players
-        seen in more than one. Comparing whole competitions would show which has
-        the better players, not which is the harder place to play.</p>
-        <p>It does almost nothing between competitions of similar standard and
-        cuts prediction error by a quarter to two-fifths across the widest gaps,
-        which is the case scouting cares about.</p>
-      </div>
-      <div class="mcol">
-        <h3>How similar is measured</h3>
-        <p>Metrics are standardised within a role, compressed with principal
-        component analysis, and similarity is the distance between two players
-        across the axes that remain.</p>
-        <p>Tested by splitting each player's matches in two and treating the
-        halves as strangers. A top-order batter finds himself around 45th of
-        235, where guessing would put him 118th.</p>
-      </div>
+        seen in more than one — the same person either side of a move.</p>
+        <p>Near-useless between similar competitions; cuts error by a quarter to
+        two-fifths across the widest gaps, which is what scouting needs.</p></div>
+      <div class="mcol"><h3>How similar is measured</h3>
+        <p>Metrics standardised within a role, compressed with PCA, similarity the
+        distance across the axes that remain.</p>
+        <p>Split each player's matches in two, treat the halves as strangers: a
+        top-order batter finds himself 45th of 235, chance says 118th.</p></div>
     </div>
   </details>
 </footer>
