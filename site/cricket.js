@@ -83,8 +83,8 @@ function whenSeen(iso){
   const [y,m] = String(iso).split("-");
   return m ? `${MON[+m - 1]} ${y}` : y;
 }
-const BLANK = () => ({active:true,exposure:"any",country:"any",comp:"any",keeper:false,
-  minAge:"",maxAge:"",minBalls:0,debutSince:""});
+const BLANK = () => ({active:true, exposure:"any", age:"any", minBalls:0,
+  country:[], comp:[], keeper:false});
 const state = {mode:"explore", tab:"profile", sel:null, disc:"batting", sugg:-1,
   compare:[], showMore:false, career:"total", f:BLANK()};
 
@@ -132,7 +132,9 @@ function select(pid){
              : [bat, bowl].sort(bestBy)[0].d;
   $("suggestions").hidden=true; $("search").value=e[0].f||e[0].n;
   $("hero").hidden=true; $("workspace").hidden=false; $("clear").hidden=false;
+  state.tab = "profile";          // a new player opens on his profile, as football does
   draw();
+  if (typeof window.scrollTo === "function") window.scrollTo(0,0);
 }
 
 function toLanding(){
@@ -147,11 +149,10 @@ function passes(c){
   if(f.active&&!c.act) return false;
   if(f.exposure==="uncapped"&&c.e!=="domestic") return false;
   if(f.exposure==="unfranchised"&&!(c.e==="domestic"||c.e==="franchise")) return false;
-  if(f.country!=="any"&&c.nat!==f.country) return false;
-  if(f.comp!=="any"&&!(c.cb&&c.cb[f.comp])) return false;
+  if(f.country.length && !f.country.includes(c.nat)) return false;
+  if(f.comp.length && !f.comp.some(k => (c.cb||{})[k])) return false;
   if(f.keeper&&!c.kp) return false;
-  if(f.minAge&&(!c.a||c.a<+f.minAge)) return false;
-  if(f.maxAge&&(!c.a||c.a>+f.maxAge)) return false;
+  if(!ageOk(c)) return false;
   if(c.b<f.minBalls) return false;
   if(f.debutSince&&(!c.fs||c.fs.slice(0,4)<f.debutSince)) return false;
   return true;
@@ -414,41 +415,97 @@ function seg(label, key, opts){
         >${esc(t)}</button>`).join("")}</div></div>`;
 }
 
+/* A multi-select with its own search, because "Represents" has eighty options
+   and "Has played in" forty-eight. A native select can hold one of those and
+   cannot be searched, which is the wrong control for the job. */
+function multi(key, label, options, anyText){
+  const chosen = state.f[key];
+  const summary = !chosen.length ? anyText
+    : chosen.length === 1 ? (options.find(o => o[0] === chosen[0]) || [,chosen[0]])[1]
+    : `${chosen.length} selected`;
+  return `<div class="filter multi" data-multi="${key}">
+    <span class="filter-label">${esc(label)}</span>
+    <button class="multi-btn${chosen.length?" on":""}" aria-expanded="false"
+      >${esc(summary)}<i class="caret"></i></button>
+    <div class="multi-panel" hidden>
+      <input class="multi-search" type="text" placeholder="Search…" aria-label="Search ${esc(label)}">
+      <div class="multi-list">${options.map(([v,t]) =>
+        `<label data-t="${esc(String(t).toLowerCase())}"><input type="checkbox" value="${esc(v)}"
+          ${chosen.includes(v)?"checked":""}><span>${esc(t)}</span></label>`).join("")}</div>
+      <div class="multi-foot"><button class="linkish" data-clear>Clear</button></div>
+    </div></div>`;
+}
+
+function wireMulti(){
+  $("filters").querySelectorAll("[data-multi]").forEach(box => {
+    const key = box.dataset.multi;
+    const btn = box.querySelector(".multi-btn"), panel = box.querySelector(".multi-panel");
+    const search = box.querySelector(".multi-search");
+    btn.onclick = e => {
+      e.stopPropagation();
+      const open = panel.hidden;
+      document.querySelectorAll(".multi-panel").forEach(p => p.hidden = true);
+      panel.hidden = !open;
+      btn.setAttribute("aria-expanded", String(open));
+      if (open && search.focus) search.focus();
+    };
+    search.oninput = () => {
+      const t = search.value.toLowerCase();
+      box.querySelectorAll(".multi-list label").forEach(l =>
+        l.hidden = t && !l.dataset.t.includes(t));
+    };
+    box.querySelectorAll(".multi-list input").forEach(cb => cb.onchange = () => {
+      const set = new Set(state.f[key]);
+      cb.checked ? set.add(cb.value) : set.delete(cb.value);
+      state.f[key] = [...set];
+      draw();
+      // Keep it open: picking three countries should not mean three reopenings.
+      const again = $("filters").querySelector(`[data-multi="${key}"] .multi-panel`);
+      if (again) { again.hidden = false;
+        const b = $("filters").querySelector(`[data-multi="${key}"] .multi-btn`);
+        if (b) b.setAttribute("aria-expanded","true"); }
+    });
+    box.querySelector("[data-clear]").onclick = () => { state.f[key] = []; draw(); };
+  });
+}
+
 function renderFilters(){
-  const more = state.showMore || state.mode === "scout";
-  const countries = [...new Set(D.players.map(x => x.nat).filter(Boolean))].sort();
+  const more = state.showMore;
+  const countries = [...new Set(D.players.map(x => x.nat).filter(Boolean))].sort()
+    .map(c => [c, c]);
+  const comps = CLUBCOMPS.map(c => [c, D.compNames[c] || c])
+    .sort((a,b) => a[1].localeCompare(b[1]));
   $("filters").innerHTML =
     seg("Age", "age", AGE_BANDS) +
     seg("Exposure", "exposure", [["any","Any"],["unfranchised","No internationals"],
                                  ["uncapped","Uncapped only"]]) +
     seg("Balls faced", "minBalls", [["0","Any"],["300","300+"],["1000","1,000+"]]) +
-    (more ? `<div class="filter"><span class="filter-label">Represents</span>
-        <select data-sel="country"><option value="any">Any country</option>
-        ${countries.map(c => `<option value="${esc(c)}"${state.f.country===c?" selected":""}
-          >${esc(c)}</option>`).join("")}</select></div>
-      <div class="filter"><span class="filter-label">Has played in</span>
-        <select data-sel="comp"><option value="any">Any competition</option>
-        ${CLUBCOMPS.map(c => `<option value="${c}"${state.f.comp===c?" selected":""}
-          >${esc(D.compNames[c]||c)}</option>`).join("")}</select></div>` : "") +
+    (more ? multi("country", "Represents", countries, "Any country")
+          + multi("comp", "Has played in", comps, "Any competition") : "") +
     `<label class="switch"><input type="checkbox" data-chk="active" ${
       state.f.active?"checked":""}><span>Only players still playing</span></label>
      <label class="switch"><input type="checkbox" data-chk="keeper" ${
       state.f.keeper?"checked":""}><span>Keepers only</span></label>` +
-    (more ? "" : `<button class="linkish" data-more>More filters</button>`) +
+    `<button class="linkish" data-more>${more ? "Fewer filters" : "More filters"}</button>` +
     `<button class="linkish reset" data-reset>Reset</button>`;
 
   $("filters").querySelectorAll("[data-f]").forEach(b => b.onclick = () => {
     state.f[b.dataset.f] = b.dataset.f === "minBalls" ? +b.dataset.v : b.dataset.v;
     draw();
   });
-  $("filters").querySelectorAll("[data-sel]").forEach(el =>
-    el.onchange = e => { state.f[el.dataset.sel] = e.target.value; draw(); });
   $("filters").querySelectorAll("[data-chk]").forEach(el =>
     el.onchange = e => { state.f[el.dataset.chk] = e.target.checked; draw(); });
-  const m = $("filters").querySelector("[data-more]");
-  if (m) m.onclick = () => { state.showMore = true; draw(); };
+  $("filters").querySelector("[data-more]").onclick = () => {
+    state.showMore = !state.showMore;
+    if (!state.showMore){ state.f.country = []; state.f.comp = []; }
+    draw();
+  };
   $("filters").querySelector("[data-reset]").onclick = () => {
-    state.f = BLANK(); if (state.mode === "scout") state.f.minBalls = 300; draw(); };
+    state.f = BLANK();
+    if (state.mode === "scout"){ state.f.minBalls = 300; state.f.exposure = "uncapped"; }
+    draw();
+  };
+  wireMulti();
 }
 
 function renderResults(){
@@ -707,7 +764,10 @@ $("search").addEventListener("keydown",e=>{
   else if(e.key==="Escape"){box.hidden=true;return;} else return;
   renderSugg($("search").value);
 });
-document.addEventListener("click",e=>{if(!e.target.closest(".finder"))$("suggestions").hidden=true;});
+document.addEventListener("click",e=>{
+  if(!e.target.closest(".finder")) $("suggestions").hidden=true;
+  if(!e.target.closest(".multi")) document.querySelectorAll(".multi-panel").forEach(p=>p.hidden=true);
+});
 document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 document.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
 
@@ -876,7 +936,7 @@ function setMode(mode, quiet){
     r.setAttribute("aria-pressed", String(r.dataset.route === mode)));
   if (mode === "scout"){ state.f.minBalls = 300; state.f.active = true;
                          state.f.exposure = "uncapped"; state.showMore = true; }
-  else { state.f.minBalls = 0; state.f.exposure = "any"; }
+  else { state.f.minBalls = 0; state.f.exposure = "any"; state.showMore = false; }
   const hint = $("route-hint");
   if (hint) hint.textContent = mode === "scout"
     ? "Scouting: uncapped players only, 300 balls minimum, all filters open."

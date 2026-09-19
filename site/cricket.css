@@ -149,13 +149,13 @@ img.lmark.flag{width:1.4rem;height:1.4rem;border-radius:50%;object-fit:cover;
 .mfig b{font-family:var(--cond);font-weight:700;font-size:1.45rem;color:var(--gold);
   line-height:1}
 .mfig span{font-size:.76rem;color:var(--faint)}
-.mrow{display:grid;grid-template-columns:3.4rem 1fr 2.4rem;gap:.5rem;align-items:center;
+.mfact{display:grid;grid-template-columns:3.4rem 1fr 2.4rem;gap:.5rem;align-items:center;
   margin-bottom:.32rem;font-size:.76rem;color:var(--faint)}
-.mtrack{height:6px;background:var(--hairline);border-radius:3px;overflow:hidden}
-.mtrack i{display:block;height:100%;background:var(--blue)}
-.mtrack i.good{background:var(--gold)}
-.mtrack i.dim{background:var(--hairline-soft);box-shadow:inset 0 0 0 1px var(--hairline)}
-.mrow b{text-align:right;color:var(--muted);font-weight:600;font-size:.78rem}
+.mbar{height:6px;background:var(--hairline);border-radius:3px;overflow:hidden}
+.mbar i{display:block;height:100%;background:var(--blue)}
+.mbar i.good{background:var(--gold)}
+.mbar i.dim{background:var(--hairline-soft);box-shadow:inset 0 0 0 1px var(--hairline)}
+.mfact b{text-align:right;color:var(--muted);font-weight:600;font-size:.78rem}
 .mcol p{margin-top:.6rem}
 
 /* ── route hint ────────────────────────────────────────── */
@@ -213,18 +213,73 @@ img.lmark.flag{width:1.4rem;height:1.4rem;border-radius:50%;object-fit:cover;
 .profile-left,.profile-main{display:flex;flex-direction:column;gap:.9rem}
 .profile-left > .panel:last-child,.profile-main > .panel:last-child{flex:1 1 auto}
 
-/* Selects only exist where the list is genuinely long; football's chip groups
-   cover everything else. Styled to sit level with them. */
-.filters select{background:var(--raised);border:1px solid var(--hairline);color:var(--ink);
-  border-radius:99px;padding:.3rem 1.9rem .3rem .7rem;font-size:.82rem;cursor:pointer;
-  -webkit-appearance:none;appearance:none;
-  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),
-                   linear-gradient(135deg,var(--muted) 50%,transparent 50%);
-  background-position:calc(100% - 15px) 52%,calc(100% - 10px) 52%;
-  background-size:5px 5px,5px 5px;background-repeat:no-repeat}
-@media (hover:hover){.filters select:hover{border-color:var(--gold);color:var(--gold)}}
-.filters select:focus{outline:none;border-color:var(--gold)}
-/* A dark option list is a browser default on Windows; force it so the open
-   dropdown is readable rather than white-on-white. */
-.filters select option{background:#17202D;color:#EAF1F8}
 .brand{text-decoration:none;color:inherit}
+
+/* ── multi-select with search ───────────────────────────
+   Eighty countries and forty-eight competitions is too many for a native
+   select, which holds one value and cannot be searched. */
+.filter.multi{position:relative}
+.multi-btn{display:inline-flex;align-items:center;gap:.45rem;background:var(--surface);
+  border:1px solid var(--hairline);color:var(--muted);border-radius:99px;
+  padding:.28rem .65rem;font-size:.82rem;cursor:pointer;white-space:nowrap}
+@media (hover:hover){.multi-btn:hover{border-color:var(--gold);color:var(--gold)}}
+.multi-btn.on{border-color:rgba(240,188,99,.45);color:var(--gold);background:var(--warm)}
+.caret{width:0;height:0;border:4px solid transparent;border-top-color:currentColor;
+  margin-top:3px}
+.multi-panel{position:absolute;top:calc(100% + .35rem);left:0;z-index:50;
+  width:min(17rem,80vw);background:var(--raised);border:1px solid var(--hairline);
+  border-radius:var(--radius);padding:.5rem;box-shadow:0 16px 40px rgba(0,0,0,.5)}
+.multi-search{width:100%;background:var(--ground);border:1px solid var(--hairline);
+  border-radius:7px;padding:.35rem .55rem;font-size:.85rem;color:var(--ink);margin-bottom:.4rem}
+.multi-search:focus{outline:none;border-color:var(--gold)}
+.multi-list{max-height:14rem;overflow:auto;display:grid;gap:.05rem}
+.multi-list label{display:grid;grid-template-columns:1rem 1fr;gap:.5rem;align-items:center;
+  padding:.28rem .3rem;border-radius:5px;font-size:.85rem;color:var(--muted);cursor:pointer}
+@media (hover:hover){.multi-list label:hover{background:var(--surface);color:var(--ink)}}
+.multi-list input{accent-color:var(--gold);width:1rem;height:1rem}
+.multi-foot{border-top:1px solid var(--hairline-soft);margin-top:.4rem;padding-top:.4rem;
+  text-align:right}
+
+/* The read chips describe the row; they are not controls. Inside the row button
+   they were picking up its hover and looking clickable. */
+.match .reads .tag{pointer-events:none}
+
+/* ── phones ─────────────────────────────────────────────
+   Cricket's own rows and panels, matching how football collapses. */
+@media (max-width:680px){
+  .hero{margin:1.2rem 0 1.6rem;gap:1.4rem}
+  .routes{grid-template-columns:1fr;gap:1rem}
+  .cstats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cstats dd{font-size:1.15rem}
+  .ctabs{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .ctabs button{white-space:nowrap}
+  .profile-grid{grid-template-columns:1fr}
+  .metric{grid-template-columns:6.5rem 1fr 2.6rem;font-size:.78rem}
+  .tabrow{align-items:flex-start;gap:.4rem}
+  .tabrow .tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%}
+  .modewrap{padding-bottom:.6rem}
+  .modewrap-label{display:none}
+  /* Filters scroll sideways rather than stacking into a wall of controls. */
+  .filters{gap:.5rem;padding:.7rem .8rem}
+  .filter{min-width:max-content}
+  .multi-panel{left:auto;right:0;width:min(15rem,78vw)}
+  .pb-note{font-size:.74rem}
+  .cmp-metrics{--cols:2}
+  .mrow{grid-template-columns:minmax(6.5rem,1fr) minmax(4rem,1fr) repeat(var(--cols),3.2rem);
+    gap:.35rem .4rem}
+  .mlabel{font-size:.72rem}
+  .mv{font-size:.8rem}
+  .trend{min-width:32rem}
+  #cmp-trend{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .method{grid-template-columns:1fr}
+  .listhead{font-size:.66rem}
+}
+
+/* iOS: momentum scrolling in the strips, no zoom on focus, and the multi-select
+   search must be 16px or Safari zooms the whole page when it is tapped. */
+.multi-list,.filters,.ctabs{-webkit-overflow-scrolling:touch}
+@media (max-width:820px){
+  .multi-search,.filters input[type=text]{font-size:16px}
+}
+.multi-btn,.multi-list label{-webkit-tap-highlight-color:transparent;
+  touch-action:manipulation}
