@@ -1,10 +1,15 @@
 name: Deploy site
 
+# Fires on any push to site/**, so editing a filter, a stylesheet or the cricket
+# page redeploys on its own. No data job needed: the cricket JSON is fetched from
+# a release rather than rebuilt, which takes seconds instead of minutes.
+
 on:
   push:
     branches: [main]
     paths:
       - "site/**"
+      - "pipeline/build_channels.py"
       - ".github/workflows/deploy-site.yml"
   workflow_dispatch:
 
@@ -28,11 +33,28 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Version the assets against stale caches
-        run: python pipeline/stamp_assets.py
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      # The three built json files, as the data job last left them. If they are
+      # not there yet, staging simply builds without cricket rather than failing
+      # — a frontend change should never be blocked by the data side.
+      - name: Fetch the built cricket data
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p site/data/cricket
+          python pipeline/cricket/store.py pull \
+            --repo ${{ github.repository }} --tag cricket-site \
+            --local site/data/cricket --pattern "*.json"
+
+      - name: Build both channels
+        run: python pipeline/build_channels.py
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4

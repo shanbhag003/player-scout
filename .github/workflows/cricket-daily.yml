@@ -80,6 +80,17 @@ jobs:
           python pipeline/cricket/build_master.py
           python pipeline/cricket/build_cricket_scores.py --out site/data/cricket
 
+      # Publish the built site data too, so changing a filter or a stylesheet
+      # does not mean pulling ninety megabytes of parquet and rerunning the
+      # model. Deploy site picks these up in seconds.
+      - name: Publish the built site data
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python pipeline/cricket/store.py push \
+            --repo ${{ github.repository }} --tag cricket-site \
+            --local site/data/cricket --pattern "*.json"
+
       - name: Build the staging channel
         run: python pipeline/build_channels.py --staging-only
 
