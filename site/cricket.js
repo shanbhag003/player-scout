@@ -300,6 +300,8 @@ function playerbar(){
         <svg viewBox="0 0 24 24" class="btn-icon" aria-hidden="true">
           <path d="M7 4h10v16l-5-4-5 4z" fill="none" stroke="currentColor" stroke-width="1.8"
                 stroke-linejoin="round"/></svg><span> ${saved?"Saved":"Save to shortlist"}</span></button>
+      <button class="ghost cta" id="go-compare" ${state.compare.length ? "" : "hidden"}
+        >Compare ${state.compare.length + 1} players</button>
       <button class="ghost accent" id="clear-player">
         <svg viewBox="0 0 24 24" aria-hidden="true" class="btn-icon">
           <circle cx="10.5" cy="10.5" r="6.4" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -307,6 +309,7 @@ function playerbar(){
         </svg>Search another player</button>
     </div>`;
   $("save-player").onclick = () => slToggle(p.u);
+  const go = $("go-compare"); if (go) go.onclick = () => setTab("compare");
   $("clear-player").onclick = toLanding;
 }
 
@@ -631,7 +634,9 @@ function renderCompare(){
     return `<span class="trayitem ${s.colour}">
       <i class="swatch"></i>${flag(s.p.nat)}<b>${esc(s.p.f||s.p.n)}</b>
       ${i===0 ? '<span class="base-tag">searched</span>' + sv
-        : `<span class="tray-score" title="Match score against ${esc(base.f||base.n)}">${
+        : `<span class="tray-score${sc==null?" na":""}" title="${sc==null
+             ? `Different role (${esc(titled(s.p.c))} against ${esc(titled(base.c))}) — the two are scored in separate spaces, so there is no distance between them`
+             : `Match score against ${esc(base.f||base.n)}`}">${
              sc==null?"—":sc.toFixed(0)}</span>
            <button class="traybtn" data-scout="${s.p.p}">Scout instead</button>${sv}
            <button class="dropbtn" data-drop="${s.p.u}" aria-label="Remove">&times;</button>`}
@@ -1019,6 +1024,24 @@ if (D.built){
     if (!e.target.closest(".shortlist-wrap")) $("short-panel").hidden = true; });
 }
 
+/* On a phone the four method columns become a swipeable strip with a pill nav,
+   exactly as football does. */
+(function methodNav(){
+  const nav = $("method-nav"), cols = [...document.querySelectorAll(".method .mcol")];
+  if (!nav || !cols.length) return;
+  nav.innerHTML = cols.map((c,i) =>
+    `<button role="tab" data-step="${i}" aria-selected="${i===0}">
+      <i>${i+1}</i>${esc(c.querySelector("h3") ? c.querySelector("h3").textContent : "")}</button>`
+    ).join("");
+  nav.querySelectorAll("button").forEach(b => b.onclick = () => {
+    const i = +b.dataset.step;
+    nav.querySelectorAll("button").forEach((x,k) =>
+      x.setAttribute("aria-selected", String(k === i)));
+    if (cols[i].scrollIntoView)
+      cols[i].scrollIntoView({behavior:"smooth", block:"nearest", inline:"start"});
+  });
+})();
+
 $("clear").onclick = toLanding;
 $("brand").onclick = e => { e.preventDefault(); toLanding(); };
 
@@ -1026,15 +1049,18 @@ $("brand").onclick = e => { e.preventDefault(); toLanding(); };
 let cmpSel = -1;
 $("cmp-search").addEventListener("input", e => {
   const box = $("cmp-suggestions"), base = entry();
-  const list = found(e.target.value).filter(x => x.p !== (base && base.p));
+  // Only people with a profile in the discipline on screen. Adding a batter to a
+   // bowling comparison gives a blank line and no score, which looks broken.
+  const list = found(e.target.value).filter(x => x.p !== (base && base.p))
+    .filter(x => byPlayer[x.p].some(z => z.d === (base && base.d)));
   if (!list.length){ box.hidden = true; return; }
   box.hidden = false;
   box.innerHTML = list.map((x,i) => `<li role="option" data-pid="${x.p}"
     aria-selected="${i===cmpSel}">${flag(x.nat)}<span class="sug-name">${esc(x.f||x.n)}</span>
     <span class="sug-meta">${esc(titled(x.r||x.c))}${x.a?" · "+Math.floor(x.a):""}</span></li>`).join("");
   box.querySelectorAll("li").forEach(li => li.onclick = () => {
-    const cand = byPlayer[li.dataset.pid].find(z => z.d === (entry()||{}).d)
-              || byPlayer[li.dataset.pid][0];
+    const cand = byPlayer[li.dataset.pid].find(z => z.d === (entry()||{}).d);
+    if (!cand) return;
     if (cand && !state.compare.includes(cand.u) && state.compare.length < MAX_COMPARE - 1)
       state.compare.push(cand.u);
     $("cmp-search").value = ""; box.hidden = true; draw();

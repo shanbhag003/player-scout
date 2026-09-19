@@ -106,21 +106,6 @@ img.lmark.flag{width:1.35rem;height:1rem;border-radius:2px;object-fit:cover;
   border-radius:var(--radius)}
 .note{color:var(--faint);font-size:.85rem;max-width:64ch;margin-top:.25rem}
 
-/* Compare. */
-.cmp{overflow-x:auto}
-.cmp table{border-collapse:collapse;width:100%;min-width:34rem}
-.cmp th,.cmp td{padding:.4rem .6rem;text-align:right;font-size:.85rem;
-  border-bottom:1px solid var(--hairline-soft);white-space:nowrap}
-.cmp th:first-child,.cmp td:first-child{text-align:left;color:var(--faint)}
-.cmp thead th{color:var(--ink);font-family:var(--cond);font-weight:600;font-size:.95rem;
-  border-bottom:1px solid var(--hairline)}
-.cmp .best{color:var(--green,#6FCF97);font-weight:600}
-.chips{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.8rem}
-.chip{display:flex;align-items:center;gap:.4rem;background:var(--raised);
-  border:1px solid var(--hairline);border-radius:99px;padding:.2rem .4rem .2rem .7rem;
-  font-size:.85rem}
-.chip button{border:0;background:none;color:var(--faint);cursor:pointer;font-size:1rem;line-height:1}
-@media (hover:hover){.chip button:hover{color:var(--gold)}}
 
 .warn{border-left:2px solid var(--gold);padding-left:.9rem;margin-top:.8rem;max-width:72ch}
 
@@ -244,42 +229,61 @@ img.lmark.flag{width:1.4rem;height:1.4rem;border-radius:50%;object-fit:cover;
    they were picking up its hover and looking clickable. */
 .match .reads .tag{pointer-events:none}
 
-/* ── phones ─────────────────────────────────────────────
-   Cricket's own rows and panels, matching how football collapses. */
-@media (max-width:680px){
-  .hero{margin:1.2rem 0 1.6rem;gap:1.4rem}
-  .routes{grid-template-columns:1fr;gap:1rem}
+
+
+/* ── even rows ──────────────────────────────────────────
+   Two chips or three changed the row height, so the list looked ragged. A
+   minimum height and a reads column that starts at the top keeps them level. */
+.match-btn{grid-template-columns:1.3rem 3.2rem minmax(0,1fr) repeat(3,minmax(4rem,5.4rem)) minmax(9rem,13.5rem);
+  min-height:5.4rem;align-items:center}
+.match-btn .facts{display:contents}
+.reads{display:flex;flex-wrap:wrap;gap:.3rem;justify-content:flex-end;align-content:center;
+  min-height:3.1rem}
+.why{grid-column:3/-2;color:var(--faint);font-size:.81rem;margin-top:-.15rem}
+.tray-score.na{opacity:.45;cursor:help}
+.ghost.cta{color:var(--blue);border-color:rgba(87,180,236,.4);background:var(--cool)}
+@media (hover:hover){.ghost.cta:hover{border-color:var(--blue)}}
+
+/* ── phones: nothing scrolls sideways ───────────────────
+   Every strip that was scrolling now wraps or drops instead. */
+@media (max-width:820px){
+  .filters{gap:.55rem;padding:.7rem .8rem}
+  .filter{width:100%}
+  .filter .segmented{width:100%;flex-wrap:wrap}
+  .filter .segmented button{flex:1 1 auto}
+  .multi-panel{position:static;width:100%;box-shadow:none;margin-top:.35rem}
+  .multi-btn{width:100%;justify-content:space-between}
+  /* The routes had negative margins to sit flush on desktop; on a phone that
+     pushed them past the edge. */
+  .route{margin:0;padding:.8rem .9rem;border-color:var(--hairline)}
+  .routes{grid-template-columns:1fr;gap:.8rem}
+  .tabrow{flex-wrap:wrap}
+  .tabrow .tabs{width:100%;flex-wrap:wrap}
+  .modewrap{padding-bottom:.5rem;margin-left:auto}
+  .modewrap-label{display:none}
+  .profile-grid,.cols,.compare-grid{grid-template-columns:1fr}
+  .cstats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ctabs{flex-wrap:wrap}
+  .metric{grid-template-columns:minmax(0,1fr) 2.6rem;gap:.3rem .5rem}
+  .metric .tr{grid-column:1/-1;order:9}
+  .match-btn{grid-template-columns:2.6rem minmax(0,1fr);min-height:0;
+    align-items:start;gap:.2rem .55rem;padding:.55rem .7rem}
+  .match-btn .facts{display:flex;flex-wrap:wrap;gap:.5rem .9rem;grid-column:1/-1}
+  .reads{grid-column:1/-1;justify-content:flex-start;min-height:0}
+  .why{grid-column:1/-1;margin-top:.2rem}
+  /* The trend is an SVG with a viewBox, so it scales rather than scrolls. */
+  #cmp-trend{overflow:visible}
+  .trend{width:100%;height:auto;min-width:0}
+  .tlegend{flex-wrap:wrap}
+  .multi-list{max-height:11rem}
+}
+@media (max-width:620px){
   .cstats{grid-template-columns:repeat(2,minmax(0,1fr))}
   .cstats dd{font-size:1.15rem}
-  .ctabs{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .ctabs button{white-space:nowrap}
-  .profile-grid{grid-template-columns:1fr}
-  .metric{grid-template-columns:6.5rem 1fr 2.6rem;font-size:.78rem}
-  .tabrow{align-items:flex-start;gap:.4rem}
-  .tabrow .tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%}
-  .modewrap{padding-bottom:.6rem}
-  .modewrap-label{display:none}
-  /* Filters scroll sideways rather than stacking into a wall of controls. */
-  .filters{gap:.5rem;padding:.7rem .8rem}
-  .filter{min-width:max-content}
-  .multi-panel{left:auto;right:0;width:min(15rem,78vw)}
-  .pb-note{font-size:.74rem}
-  .cmp-metrics{--cols:2}
-  .mrow{grid-template-columns:minmax(6.5rem,1fr) minmax(4rem,1fr) repeat(var(--cols),3.2rem);
-    gap:.35rem .4rem}
-  .mlabel{font-size:.72rem}
-  .mv{font-size:.8rem}
-  .trend{min-width:32rem}
-  #cmp-trend{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .method{grid-template-columns:1fr}
-  .listhead{font-size:.66rem}
+  .pb-actions{flex-wrap:wrap}
+  .pb-actions .ghost{flex:1 1 auto;justify-content:center}
 }
-
-/* iOS: momentum scrolling in the strips, no zoom on focus, and the multi-select
-   search must be 16px or Safari zooms the whole page when it is tapped. */
-.multi-list,.filters,.ctabs{-webkit-overflow-scrolling:touch}
+/* No zoom-on-focus in Safari: anything below 16px triggers it. */
 @media (max-width:820px){
-  .multi-search,.filters input[type=text]{font-size:16px}
+  .multi-search,#cmp-search,#search{font-size:16px}
 }
-.multi-btn,.multi-list label{-webkit-tap-highlight-color:transparent;
-  touch-action:manipulation}
