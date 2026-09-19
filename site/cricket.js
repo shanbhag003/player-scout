@@ -176,44 +176,105 @@ function filterBar(){
     :`<button class="more" data-more>More filters</button>`}
     <button class="more reset" data-reset>Reset</button></div>`;
 }
-function paneProfile(){
-  const p=entry();
-  if(!p) return `<div class="empty">Search a player to begin.<br>
-    ${D.players.length.toLocaleString()} profiles from ${D.matches.toLocaleString()} matches.</div>`;
-  const both=byPlayer[p.p].length>1, shrink=Math.round(100*p.eb/Math.max(1,p.b));
-  const mt=D.spaces[p.d][p.c].mt;
-  const comps=Object.entries(p.cb).sort((a,b)=>b[1]-a[1])
-    .map(([k,v])=>`<div><b>${D.compNames[k]||k}</b><span>${v.toLocaleString()}</span></div>`).join("");
-  const tiers=Object.entries(p.tb).sort((a,b)=>b[1]-a[1])
-    .map(([k,v])=>`<div><b>${EXPOSURE[k]||k}</b><span>${v.toLocaleString()}</span></div>`).join("");
-  const bars=mt.map(m=>{
-    const v=p.pc[m]; if(v==null) return "";
-    const good=LOWER_BETTER.has(m)?100-v:v;
-    const col=good>=66?"var(--green)":good>=33?"var(--gold)":"var(--faint)";
-    return `<div class="metric"><span class="nm">${LABEL[m]||m}</span>
-      <span class="tr"><span style="width:${v}%;background:${col}"></span></span>
-      <span class="vl">${p.ad[m]??""}</span></div>`;}).join("");
-  return `<div class="card"><h2>${flag(p.nat)}${esc(p.f||p.n)}</h2>
-    <div class="sub">${p.r||p.c}${p.nat?" · "+p.nat:""}${p.a?" · age "+Math.floor(p.a):""}</div>
-    <div class="tags"><span class="tag ${p.e==="domestic"?"gold":""}">${EXPOSURE[p.e]||p.e}</span>
-      ${p.act?'<span class="tag blue">playing</span>':`<span class="tag">last ${(p.ls||"").slice(0,7)}</span>`}
-      <span class="tag">${p.m} matches</span>${p.kp?'<span class="tag">keeper</span>':""}
-      ${both?`<div class="segmented" style="margin-left:.3rem">
+function playerbar(){
+  const p = entry(); if(!p){ $("playerbar").innerHTML=""; return; }
+  const both = byPlayer[p.p].length > 1;
+  const saved = slRead().includes(p.u);
+  const facts = [
+    ["Age", p.a ? Math.floor(p.a) : "—", p.nat || ""],
+    ["Balls", p.b.toLocaleString(), `${p.m} matches`],
+    ["Exposure", EXPOSURE[p.e] || p.e, p.act ? "still playing" : `last ${(p.ls||"").slice(0,7)}`],
+    ["Debut", (p.fs||"—").slice(0,4), `weighted ${p.eb.toLocaleString()} balls`],
+  ];
+  $("playerbar").innerHTML = `
+    <div class="pb-id">
+      ${flag(p.nat)}
+      <div><h1>${esc(p.f||p.n)}</h1>
+        <p class="pb-role">${esc(p.r || p.c)}${p.kp ? " · keeper" : ""}</p></div>
+      <span class="availability ${p.act?"active":"gone"}">${
+        p.act ? "Currently playing" : `Last seen ${(p.ls||"").slice(0,7)}`}</span>
+    </div>
+    <dl class="pb-facts">${facts.map(([k,v,sub]) =>
+      `<div><dt>${esc(k)}</dt><dd>${esc(v)}${sub?`<small>${esc(sub)}</small>`:""}</dd></div>`
+      ).join("")}</dl>
+    <div class="pb-actions">
+      ${both?`<div class="segmented" role="group" aria-label="Discipline">
         <button data-disc="batting" aria-pressed="${p.d==="batting"}">Batting</button>
         <button data-disc="bowling" aria-pressed="${p.d==="bowling"}">Bowling</button></div>`:""}
-    </div></div>
-  <div class="cols">
-    <div class="card"><div class="hd">Sample</div>
-      <div class="prov"><b>${p.b.toLocaleString()}</b> balls, <b>${p.eb.toLocaleString()}</b> after recency weighting
-      <div class="bar"><span style="width:${Math.min(100,shrink)}%"></span></div>
-      ${shrink<40?"Thin or dated record — heavily shrunk toward the role average."
-                 :"Enough recent cricket to judge on."}</div>
-      <div class="hd" style="margin-top:1rem">By competition</div><div class="kv">${comps}</div>
-      <div class="hd" style="margin-top:1rem">By standard</div><div class="kv">${tiers}</div>
-      <div class="note">Debut ${(p.fs||"").slice(0,4)} · last seen ${(p.ls||"").slice(0,7)}</div></div>
-    <div class="card"><div class="hd">Profile — percentile among ${p.c}s</div>${bars}</div>
+      <button class="ghost save" id="save-player" aria-pressed="${saved}">
+        <svg viewBox="0 0 24 24" class="btn-icon" aria-hidden="true">
+          <path d="M7 4h10v16l-5-4-5 4z" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linejoin="round"/></svg><span> ${saved?"Saved":"Save to shortlist"}</span></button>
+      <button class="ghost accent" id="clear-player">
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="btn-icon">
+          <circle cx="10.5" cy="10.5" r="6.4" fill="none" stroke="currentColor" stroke-width="2"/>
+          <path d="M15.4 15.4L20 20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>Search another player</button>
+    </div>`;
+  $("save-player").onclick = () => slToggle(p.u);
+  $("clear-player").onclick = toLanding;
+}
+
+function paneProfile(){
+  const p = entry();
+  if(!p) return `<div class="empty">Search a player to begin.</div>`;
+  const mt = D.spaces[p.d][p.c].mt;
+  // Eight axes on the radar; a sixteen-spoke chart is unreadable. The rest are
+  // in the table beside it, which is where football puts the detail too.
+  const radarMetrics = mt.slice(0, 8);
+  const shrink = Math.round(100 * p.eb / Math.max(1, p.b));
+  const comps = Object.entries(p.cb).sort((a,b)=>b[1]-a[1]).slice(0,6)
+    .map(([k,v])=>`<div><b>${esc(D.compNames[k]||k)}</b><span>${v.toLocaleString()}</span></div>`).join("");
+  const pool = D.spaces[p.d][p.c].n;
+
+  return `<div class="profile-grid">
+    <div class="profile-left">
+      <article class="panel radar-panel">
+        <header class="panel-head">
+          <h2>Profile against role</h2>
+          <p class="panel-sub">Percentile among all ${pool} ${esc(p.c)}
+            ${p.d==="batting"?"batters":"bowlers"} in the pool, after adjusting for
+            competition.</p>
+        </header>
+        <div class="radar-wrap">${radarSvg([{colour:"gold", pct:p.pc}], radarMetrics,
+          LABEL, {label:`Profile for ${p.f||p.n}`})}</div>
+        <p class="scale-help">Percentile = how many of those ${pool} this player beats.
+          <b>50</b> is the role average, marked by the dotted ring. Higher is better on
+          every axis shown.</p>
+      </article>
+      <article class="panel">
+        <header class="panel-head"><h2>What this rests on</h2>
+          <p class="panel-sub">Balls faced, and how much of it is recent enough to
+            count.</p></header>
+        <div class="prov"><b>${p.b.toLocaleString()}</b> balls,
+          <b>${p.eb.toLocaleString()}</b> after recency weighting
+          <div class="bar"><span style="width:${Math.min(100,shrink)}%"></span></div>
+          ${shrink<40?"Thin or dated — heavily shrunk toward the role average, so treat the score with care."
+                     :"Enough recent cricket to judge on."}</div>
+        <div class="hd" style="margin-top:1rem">Balls by competition</div>
+        <div class="kv">${comps}</div>
+      </article>
+    </div>
+    <div class="profile-main">
+      <article class="panel">
+        <header class="panel-head"><h2>Percentile detail</h2>
+          <p class="panel-sub">Adjusted value on the left, percentile among
+            ${esc(p.c)}s on the right.</p></header>
+        <div class="radar-key">
+          <div class="keyhead"><span>Metric</span><span>Value</span><span>Percentile</span></div>
+          ${mt.map(m => {
+            const v = p.pc[m];
+            return `<div class="keyrow"><span class="k">${esc(LABEL[m]||m)}</span>
+              <span class="v">${fmtMetric(p.ad[m])}</span>
+              <span class="p"><span class="pbar"><span style="width:${v ?? 0}%"></span></span>
+              <b>${v == null ? "—" : Math.round(v)}</b></span></div>`;
+          }).join("")}
+        </div>
+      </article>
+    </div>
   </div>`;
 }
+
 function paneSimilar(){
   const p=entry();
   if(!p) return `<div class="empty">Search a player first.</div>`;
@@ -260,6 +321,7 @@ function draw(){
   $("ccount").textContent = state.compare.length ? " "+state.compare.length : "";
   document.querySelectorAll("#tabs button").forEach(b=>
     b.setAttribute("aria-selected",String(b.dataset.tab===state.tab)));
+  playerbar();
   $("pane").innerHTML = state.tab==="profile"?paneProfile()
                       : state.tab==="similar"?paneSimilar():paneCompare();
   document.querySelectorAll("[data-f]").forEach(el=>{
@@ -312,6 +374,98 @@ $("sports").innerHTML = SPORTS.map(s => {
   return `<a class="sport" href="${esc(s.id === "football" ? "index" : s.id)}.html"
      aria-current="false">${esc(s.name)}</a>`;
 }).join("");
+
+/* ── radar, lifted from football's app.js ────────────────
+   Same drawing, same classes, so it inherits style.css and the two sports read
+   as one tool. */
+const isNarrow = () => (typeof window.matchMedia === "function"
+  ? window.matchMedia("(max-width: 680px)").matches : window.innerWidth <= 680);
+
+function wrapLabel(text){
+  const words = String(text).split(" ");
+  if (words.length < 3) return [text];
+  const mid = Math.ceil(words.length / 2);
+  return [words.slice(0, mid).join(" "), words.slice(mid).join(" ")];
+}
+function fmtMetric(v){
+  if (v == null) return "—";
+  return Math.abs(v) < 1 ? v.toFixed(2) : v.toFixed(Math.abs(v) < 10 ? 2 : 1);
+}
+function radarSvg(series, metrics, labels, opts = {}){
+  const compact = isNarrow();
+  const pad = compact ? 96 : 62;
+  const size = 300, cx = 150, cy = 150, r = compact ? 88 : 100, n = metrics.length;
+  const angle = i => (Math.PI * 2 * i) / n - Math.PI / 2;
+  const at = (i,f) => [cx + Math.cos(angle(i)) * r * f, cy + Math.sin(angle(i)) * r * f];
+  const pts = get => metrics.map((m,i) =>
+    at(i, Math.max(0.04, (get(m) ?? 0) / 100)).map(v => v.toFixed(1)).join(",")).join(" ");
+  const rings = [0.25,0.5,0.75,1].map(f => {
+    const cls = f === 1 ? " outer" : f === 0.5 ? " median" : "";
+    return `<polygon class="radar-ring${cls}" points="${
+      metrics.map((_,i) => at(i,f).map(v => v.toFixed(1)).join(",")).join(" ")}"/>`;
+  }).join("") + [[1,"100"],[0.5,"50"]].map(([f,t]) =>
+    `<text class="radar-tick" x="${cx+3}" y="${(cy-r*f+3).toFixed(1)}">${t}</text>`).join("");
+  const spokes = metrics.map((_,i) => {
+    const [x,y] = at(i,1);
+    return `<line class="radar-spoke" x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`;
+  }).join("");
+  const shapes = series.map((s,k) =>
+    `<polygon class="radar-area ${s.colour}${series.length>1&&k>0?" line":""}"
+      points="${pts(m => s.pct[m])}"/>`).join("");
+  const text = metrics.map((m,i) => {
+    const ang = angle(i);
+    const [lx,ly] = [cx + Math.cos(ang)*(r+(compact?24:30)), cy + Math.sin(ang)*(r+(compact?24:30))];
+    const anchor = Math.abs(Math.cos(ang)) < .25 ? "middle" : Math.cos(ang) > 0 ? "start" : "end";
+    const words = wrapLabel(labels[m] || m);
+    const lines = words.map((w,k) =>
+      `<tspan x="${lx.toFixed(1)}" dy="${k===0?0:10}">${esc(w)}</tspan>`).join("");
+    const vals = series.map(s => `<tspan class="p-${s.colour}">${Math.round(s.pct[m] ?? 0)}</tspan>`)
+      .join('<tspan class="ps">/</tspan>');
+    return `<text class="radar-label" x="${lx.toFixed(1)}" y="${(ly-5).toFixed(1)}"
+      text-anchor="${anchor}">${lines}</text>
+      <text class="radar-pair" x="${lx.toFixed(1)}"
+      y="${(ly+8+(words.length-1)*10).toFixed(1)}" text-anchor="${anchor}">${vals}</text>`;
+  }).join("");
+  return `<svg viewBox="${-pad} -26 ${size+pad*2} ${size+52}" role="img"
+    aria-label="${esc(opts.label || "Percentile profile")}">${rings}${spokes}${shapes}${text}</svg>`;
+}
+
+/* ── shortlist ───────────────────────────────────────────
+   Scoped per channel and per sport: this origin is shared with every other
+   project on the account, and football's list must not be touched. */
+const SL_KEY = `ps.${(window.PS_CHANNEL||{}).channel || "prod"}.cricket.shortlist`;
+function slRead(){
+  try { return JSON.parse(localStorage.getItem(SL_KEY) || "[]"); } catch { return []; }
+}
+function slWrite(v){ try { localStorage.setItem(SL_KEY, JSON.stringify(v)); } catch {} }
+function slToggle(uid){
+  const l = slRead(), i = l.indexOf(uid);
+  if (i >= 0) l.splice(i,1); else l.push(uid);
+  slWrite(l); renderShortlist(); draw();
+}
+function renderShortlist(){
+  const l = slRead().map(u => byUid[u]).filter(Boolean);
+  const btn = $("short-btn");
+  btn.disabled = false;
+  btn.querySelector("span").textContent = l.length ? `Shortlist ${l.length}` : "Shortlist";
+  $("short-list").innerHTML = l.length
+    ? l.map(x => `<li><span>${flag(x.nat)}${esc(x.f||x.n)}</span>
+        <button data-unsave="${x.u}" aria-label="Remove">&times;</button></li>`).join("")
+    : `<li class="sl-empty">Nothing saved yet.</li>`;
+  $("short-panel").querySelectorAll("[data-unsave]").forEach(b =>
+    b.onclick = () => slToggle(b.dataset.unsave));
+  $("sl-export").hidden = !l.length;
+  $("sl-export").onclick = () => {
+    const cols = ["name","country","role","age","exposure","balls","matches","last_seen"];
+    const rows = l.map(x => [x.f||x.n, x.nat||"", x.r||x.c, x.a?Math.floor(x.a):"",
+      x.e, x.b, x.m, x.ls||""]);
+    const csv = "\uFEFF" + [cols, ...rows].map(r =>
+      r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv"}));
+    a.download = "cricket-shortlist.csv"; a.click();
+  };
+}
 
 /* ── mode, chosen from the landing routes ───────────────
    Mode used to live in the tab row, which only exists after a search — so the
@@ -411,5 +565,6 @@ $("withheld").innerHTML = `<b>${D.withheld.matches} matches are missing by desig
   ${esc(D.withheld.summary)} ${esc(D.withheld.reason)}
   <a href="${D.withheld.link}">His explanation</a>.`;
 
+renderShortlist();
 draw();
 })();

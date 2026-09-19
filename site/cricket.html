@@ -36,12 +36,18 @@
         </div>
       </div>
       <div class="shortlist-wrap">
-        <button class="fresh-btn" id="short-btn" disabled title="Not built yet for cricket">
+        <button class="fresh-btn" id="short-btn" aria-expanded="false" aria-controls="short-panel">
           <svg viewBox="0 0 24 24" class="btn-icon" aria-hidden="true">
             <path d="M7 4h10v16l-5-4-5 4z" fill="none" stroke="currentColor" stroke-width="1.8"
                   stroke-linejoin="round"/></svg>
           <span>Shortlist</span>
         </button>
+        <div class="fresh-panel short-panel" id="short-panel" hidden>
+          <div class="fresh-head"><h2>Shortlist</h2></div>
+          <ul class="sl-list" id="short-list"></ul>
+          <button class="ghost" id="sl-export" hidden>Export CSV</button>
+          <p class="fresh-foot">Saved in this browser only.</p>
+        </div>
       </div>
     </div>
   </div>
@@ -106,6 +112,7 @@
       <div class="cover-card">
         <h2>What is in here</h2>
         <div class="bigstats" id="bigstats"></div>
+        <div class="listhead"><span>Competition</span><span>Players</span></div>
         <ul class="leaguelist" id="complist"></ul>
         <div class="posbars" id="rolebars"></div>
       </div>
@@ -176,10 +183,12 @@
       </div>
       <div class="mcol">
         <h3>Does it work</h3>
-        <div class="mrow"><span>Found</span><span class="mtrack"><i class="good" style="width:19%"></i></span><b>45th</b></div>
-        <div class="mrow"><span>Chance</span><span class="mtrack"><i class="dim" style="width:100%"></i></span><b>118th</b></div>
-        <p>Each player's matches split in two and the halves treated as
-        strangers. Lower is better.</p>
+        <div class="mfig"><b>2.6&times;</b><span>better than chance</span></div>
+        <div class="mrow"><span>This tool</span><span class="mtrack"><i class="good" style="width:81%"></i></span><b>top 19%</b></div>
+        <div class="mrow"><span>Guessing</span><span class="mtrack"><i class="dim" style="width:50%"></i></span><b>top 50%</b></div>
+        <p>Split a player's matches in two and treat the halves as strangers: the
+        tool puts him in the top fifth of his role, where guessing would land him
+        halfway down.</p>
       </div>
     </div>
   </details>
