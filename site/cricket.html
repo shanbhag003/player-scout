@@ -43,10 +43,15 @@
           <span>Shortlist</span>
         </button>
         <div class="fresh-panel short-panel" id="short-panel" hidden>
-          <div class="fresh-head"><h2>Shortlist</h2></div>
-          <ul class="sl-list" id="short-list"></ul>
-          <button class="ghost" id="sl-export" hidden>Export CSV</button>
-          <p class="fresh-foot">Saved in this browser only.</p>
+          <div class="fresh-head">
+            <h2>Your shortlist</h2>
+            <div class="short-actions">
+              <button class="ghost" id="sl-export">Export CSV</button>
+              <button class="ghost" id="sl-clear">Clear</button>
+            </div>
+          </div>
+          <ul class="short-list" id="short-list"></ul>
+          <p class="fresh-foot">Saved in this browser only. Nothing leaves your device.</p>
         </div>
       </div>
     </div>
@@ -167,11 +172,12 @@
         exact id. No name matching anywhere.</p>
       </div>
       <div class="mcol">
-        <h3>How a profile is built</h3>
-        <div class="mfig"><b>16</b><span>rates per batter</span></div>
-        <div class="mfig"><b>3 yr</b><span>recency half-life</span></div>
-        <p>Split by phase and by pace or spin. Thin records are pulled toward the
-        role average.</p>
+        <h3>What a player is measured on</h3>
+        <div class="mfig"><b>16</b><span>things counted per batter</span></div>
+        <div class="mfig"><b>3 yrs</b><span>before form counts half</span></div>
+        <p>Not just runs and wickets, but when in the match they came, and against
+        which kind of bowling. Recent seasons count for more, and a player with a
+        short record is treated cautiously rather than taken at face value.</p>
       </div>
       <div class="mcol">
         <h3>Levelling competitions</h3>

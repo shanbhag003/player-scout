@@ -294,7 +294,7 @@ function playerbar(){
       ${both?`<div class="segmented" role="group" aria-label="Discipline">
         <button data-disc="batting" aria-pressed="${p.d==="batting"}">Batting</button>
         <button data-disc="bowling" aria-pressed="${p.d==="bowling"}">Bowling</button></div>`:""}
-      <button class="ghost save" id="save-player" aria-pressed="${saved}">
+      <button class="ghost save${saved?" on":""}" id="save-player" aria-pressed="${saved}">
         <svg viewBox="0 0 24 24" class="btn-icon" aria-hidden="true">
           <path d="M7 4h10v16l-5-4-5 4z" fill="none" stroke="currentColor" stroke-width="1.8"
                 stroke-linejoin="round"/></svg><span> ${saved?"Saved":"Save to shortlist"}</span></button>
@@ -543,11 +543,22 @@ function renderShortlist(){
   const l = slRead().map(u => byUid[u]).filter(Boolean);
   const btn = $("short-btn");
   btn.disabled = false;
+  btn.classList.toggle("has", l.length > 0);
   btn.querySelector("span").textContent = l.length ? `Shortlist ${l.length}` : "Shortlist";
   $("short-list").innerHTML = l.length
-    ? l.map(x => `<li><span>${flag(x.nat)}${esc(x.f||x.n)}</span>
-        <button data-unsave="${x.u}" aria-label="Remove">&times;</button></li>`).join("")
-    : `<li class="sl-empty">Nothing saved yet.</li>`;
+    ? l.map(x => `<li>
+        <button class="short-open" data-open="${x.p}">${flag(x.nat)}
+          <span><b>${esc(x.f||x.n)}</b>
+          <em>${esc(titled(x.r||x.c))}${x.nat?` · ${esc(x.nat)}`:""}${
+            x.a?` · ${Math.floor(x.a)}`:""}</em></span></button>
+        <button class="dropbtn" data-unsave="${x.u}" aria-label="Remove">&times;</button>
+      </li>`).join("")
+    : `<li class="short-empty">Nothing saved yet. Open a player and use
+        <b>Save to shortlist</b>, or the bookmark on any result row.</li>`;
+  $("short-panel").querySelectorAll("[data-open]").forEach(b =>
+    b.onclick = () => { $("short-panel").hidden = true; select(b.dataset.open); });
+  $("sl-clear").hidden = !l.length;
+  $("sl-clear").onclick = () => { slWrite([]); renderShortlist(); draw(); };
   $("short-panel").querySelectorAll("[data-unsave]").forEach(b =>
     b.onclick = () => slToggle(b.dataset.unsave));
   $("short-btn").onclick = () => {
@@ -671,11 +682,16 @@ if (D.built){
   const days = Math.floor((Date.now() - d) / 864e5);
   $("fresh-label").textContent = days < 1 ? "Updated today"
     : days === 1 ? "Updated yesterday" : `Updated ${days} days ago`;
-  $("fresh-list").innerHTML = `<li><span>Model last run</span><b>${
-    d.toLocaleString("en-GB",{timeZone:"Asia/Kolkata",day:"numeric",month:"short",
-      year:"numeric",hour:"2-digit",minute:"2-digit",hour12:false})} IST</b></li>`;
+  $("fresh-list").innerHTML = `<li>
+    <span class="fl-title">Model last run</span>
+    <span class="fl-when">${d.toLocaleString("en-GB",{timeZone:"Asia/Kolkata",
+      day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",
+      hour12:false})} IST</span>
+    <span class="fl-since">${days < 1 ? "today" : days === 1 ? "yesterday" : days + " days ago"}</span>
+    <span class="fl-note">Cricsheet's rolling window is pulled on the same run.</span>
+  </li>`;
   $("fresh-foot").textContent =
-    "Cricsheet is pulled nightly and the model is rebuilt on the same run.";
+    "Match data is pulled nightly. A full re-parse of the archive runs monthly.";
   $("fresh-btn").onclick = () => {
     const panel = $("fresh-panel"), open = panel.hidden;
     panel.hidden = !open;
