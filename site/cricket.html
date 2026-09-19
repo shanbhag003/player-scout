@@ -22,10 +22,7 @@
       <span class="brand-mark" aria-hidden="true"></span>
       <span class="brand-name">Player Scout</span>
     </div>
-    <nav class="sports" aria-label="Sport">
-      <a class="sport" href="index.html">Football</a>
-      <button class="sport" type="button" aria-current="true">Cricket</button>
-    </nav>
+    <nav class="sports" id="sports" aria-label="Sport"></nav>
     <div class="statuswrap">
       <div class="freshness">
         <button class="fresh-btn" id="fresh-btn" aria-expanded="false" aria-controls="fresh-panel">
@@ -58,13 +55,13 @@
 
       <div class="finder">
         <div class="finder-field">
-          <label for="q">Search a player</label>
+          <label for="search">Search a player</label>
           <div class="input-wrap">
             <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="10.5" cy="10.5" r="6.6" fill="none" stroke="currentColor" stroke-width="1.7"/>
               <path d="M15.4 15.4L20 20" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
             </svg>
-            <input id="q" type="text" autocomplete="off" spellcheck="false"
+            <input id="search" type="text" autocomplete="off" spellcheck="false"
                    role="combobox" aria-expanded="false" aria-controls="sugg" aria-autocomplete="list"
                    placeholder="Virat Kohli, Jasprit Bumrah, Rashid Khan...">
             <button class="clear" id="clear" hidden aria-label="Clear search">&times;</button>
@@ -102,6 +99,7 @@
           </ol>
         </div>
       </div>
+      <p class="route-hint" id="route-hint"></p>
     </div>
 
     <aside class="hero-right">
@@ -155,26 +153,34 @@
   <details id="method-wrap">
     <summary>How these numbers are built</summary>
     <div class="method">
-      <div class="mcol"><h3>Where it comes from</h3>
-        <p>Every ball of 22,905 matches, from Cricsheet. Each file carries stable
-        player ids, so nothing depends on matching people by name.</p>
-        <p>Ages and full names join from Wikidata on an exact ESPNcricinfo id.
-        Country is read from who a player turns out for, not a passport.</p></div>
-      <div class="mcol"><h3>How a profile is built</h3>
-        <p>Sixteen rates per batter, eleven per bowler, split by phase and by
-        whether the bowler was pace or spin — both derived from the deliveries.</p>
-        <p>Thin records are pulled toward the role average. Old cricket counts
-        less, on a three-year half-life from a player's own last match.</p></div>
-      <div class="mcol"><h3>Levelling competitions</h3>
-        <p>One coefficient per metric per competition, fitted only from players
-        seen in more than one — the same person either side of a move.</p>
-        <p>Near-useless between similar competitions; cuts error by a quarter to
-        two-fifths across the widest gaps, which is what scouting needs.</p></div>
-      <div class="mcol"><h3>How similar is measured</h3>
-        <p>Metrics standardised within a role, compressed with PCA, similarity the
-        distance across the axes that remain.</p>
-        <p>Split each player's matches in two, treat the halves as strangers: a
-        top-order batter finds himself 45th of 235, chance says 118th.</p></div>
+      <div class="mcol">
+        <h3>Where it comes from</h3>
+        <div class="mfig"><b>22,905</b><span>matches, every ball</span></div>
+        <div class="mfig"><b>4.4M</b><span>deliveries parsed</span></div>
+        <p>Cricsheet for the cricket, Wikidata for ages and names, joined on an
+        exact id. No name matching anywhere.</p>
+      </div>
+      <div class="mcol">
+        <h3>How a profile is built</h3>
+        <div class="mfig"><b>16</b><span>rates per batter</span></div>
+        <div class="mfig"><b>3 yr</b><span>recency half-life</span></div>
+        <p>Split by phase and by pace or spin. Thin records are pulled toward the
+        role average.</p>
+      </div>
+      <div class="mcol">
+        <h3>Levelling competitions</h3>
+        <div class="mrow"><span>IPL</span><span class="mtrack"><i style="width:100%"></i></span><b>1.12</b></div>
+        <div class="mrow"><span>SMAT</span><span class="mtrack"><i style="width:83%"></i></span><b>0.93</b></div>
+        <div class="mrow"><span>Assoc.</span><span class="mtrack"><i style="width:68%"></i></span><b>0.77</b></div>
+        <p>Runs conceded per ball, same bowler, different competition.</p>
+      </div>
+      <div class="mcol">
+        <h3>Does it work</h3>
+        <div class="mrow"><span>Found</span><span class="mtrack"><i class="good" style="width:19%"></i></span><b>45th</b></div>
+        <div class="mrow"><span>Chance</span><span class="mtrack"><i class="dim" style="width:100%"></i></span><b>118th</b></div>
+        <p>Each player's matches split in two and the halves treated as
+        strangers. Lower is better.</p>
+      </div>
     </div>
   </details>
 </footer>

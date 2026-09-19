@@ -123,3 +123,40 @@ img.lmark.flag{width:1.35rem;height:1rem;border-radius:2px;object-fit:cover;
 @media (hover:hover){.chip button:hover{color:var(--gold)}}
 
 .warn{border-left:2px solid var(--gold);padding-left:.9rem;margin-top:.8rem;max-width:72ch}
+
+/* ── flags ─────────────────────────────────────────────
+   Football's .lmark is deliberately monochrome — league badges read better
+   flat. A flag is the opposite: the colour IS the information, and a grey one
+   is unreadable. So flags opt out of the filter and go round, which also stops
+   them being mistaken for league marks. */
+img.lmark.flag{width:1.4rem;height:1.4rem;border-radius:50%;object-fit:cover;
+  filter:none;opacity:1;box-shadow:0 0 0 1px rgba(255,255,255,.12)}
+.lmark.letters{border-radius:50%}
+.card h2 img.lmark.flag{width:1.7rem;height:1.7rem;margin-right:.6rem;vertical-align:-.25rem}
+.chip img.lmark.flag{width:1.15rem;height:1.15rem}
+.pick img.lmark.flag{width:1.1rem;height:1.1rem}
+
+/* ── links, so nothing renders as browser blue ─────────── */
+.foot a,.warn a,.note a{color:var(--muted);text-decoration:none;
+  border-bottom:1px solid var(--hairline);padding-bottom:1px}
+@media (hover:hover){.foot a:hover,.warn a:hover,.note a:hover{
+  color:var(--gold);border-bottom-color:var(--gold)}}
+.repo-line{margin-top:1.4rem}
+.repo-line a{border-bottom:0;padding-bottom:0}
+
+/* ── method, as figures rather than paragraphs ─────────── */
+.mfig{display:flex;align-items:baseline;gap:.5rem;margin-bottom:.45rem}
+.mfig b{font-family:var(--cond);font-weight:700;font-size:1.45rem;color:var(--gold);
+  line-height:1}
+.mfig span{font-size:.76rem;color:var(--faint)}
+.mrow{display:grid;grid-template-columns:3.4rem 1fr 2.4rem;gap:.5rem;align-items:center;
+  margin-bottom:.32rem;font-size:.76rem;color:var(--faint)}
+.mtrack{height:6px;background:var(--hairline);border-radius:3px;overflow:hidden}
+.mtrack i{display:block;height:100%;background:var(--blue)}
+.mtrack i.good{background:var(--gold)}
+.mtrack i.dim{background:var(--hairline-soft);box-shadow:inset 0 0 0 1px var(--hairline)}
+.mrow b{text-align:right;color:var(--muted);font-weight:600;font-size:.78rem}
+.mcol p{margin-top:.6rem}
+
+/* ── route hint ────────────────────────────────────────── */
+.route-hint{margin-top:.9rem;font-size:.82rem;color:var(--faint);min-height:1.2em}

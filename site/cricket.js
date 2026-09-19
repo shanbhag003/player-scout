@@ -103,14 +103,14 @@ function select(pid){
   state.sel=pid; state.compare=[];
   const e=byPlayer[pid];
   state.disc=e.some(x=>x.d==="batting")?"batting":"bowling";
-  $("sugg").hidden=true; $("q").value=e[0].f||e[0].n;
+  $("sugg").hidden=true; $("search").value=e[0].f||e[0].n;
   $("hero").hidden=true; $("workspace").hidden=false; $("clear").hidden=false;
   draw();
 }
 
 function toLanding(){
   state.sel=null; state.compare=[];
-  $("q").value=""; $("clear").hidden=true; $("sugg").hidden=true;
+  $("search").value=""; $("clear").hidden=true; $("sugg").hidden=true;
   $("hero").hidden=false; $("workspace").hidden=true;
 }
 const entry = () => (byPlayer[state.sel]||[]).find(e=>e.d===state.disc);
@@ -282,19 +282,36 @@ function draw(){
   document.querySelectorAll("[data-drop]").forEach(b=>b.onclick=()=>{
     state.compare=state.compare.filter(u=>u!==b.dataset.drop); draw();});
 }
-$("q").addEventListener("input",e=>{state.sugg=-1;renderSugg(e.target.value);});
-$("q").addEventListener("keydown",e=>{
+$("search").addEventListener("input",e=>{state.sugg=-1;renderSugg(e.target.value);});
+$("search").addEventListener("keydown",e=>{
   const box=$("sugg"); if(box.hidden) return;
   const n=box.querySelectorAll("li").length;
   if(e.key==="ArrowDown"){state.sugg=Math.min(n-1,state.sugg+1);e.preventDefault();}
   else if(e.key==="ArrowUp"){state.sugg=Math.max(0,state.sugg-1);e.preventDefault();}
   else if(e.key==="Enter"){const b=box.querySelectorAll("li")[Math.max(0,state.sugg)];if(b)b.click();return;}
   else if(e.key==="Escape"){box.hidden=true;return;} else return;
-  renderSugg($("q").value);
+  renderSugg($("search").value);
 });
 document.addEventListener("click",e=>{if(!e.target.closest(".finder"))$("sugg").hidden=true;});
 document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;draw();});
 document.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+
+/* ── sport switcher, from the channel ────────────────────
+   Rendered rather than hard-coded so a sport that is not live here shows
+   disabled, exactly as it does on the football page. */
+const SPORTS = (window.PS_CHANNEL && window.PS_CHANNEL.sports) || [
+  {id:"football", name:"Football", status:"live"},
+  {id:"cricket",  name:"Cricket",  status:"live"},
+  {id:"kabaddi",  name:"Kabaddi",  status:"soon"},
+];
+$("sports").innerHTML = SPORTS.map(s => {
+  if (s.id === "cricket")
+    return `<button class="sport" type="button" aria-current="true">${esc(s.name)}</button>`;
+  if (s.status !== "live")
+    return `<button class="sport" type="button" disabled aria-current="false">${esc(s.name)}</button>`;
+  return `<a class="sport" href="${esc(s.id === "football" ? "index" : s.id)}.html"
+     aria-current="false">${esc(s.name)}</a>`;
+}).join("");
 
 /* ── mode, chosen from the landing routes ───────────────
    Mode used to live in the tab row, which only exists after a search — so the
@@ -309,6 +326,10 @@ function setMode(mode, quiet){
   if (mode === "scout"){ state.f.minBalls = 300; state.f.active = true;
                          state.f.exposure = "uncapped"; state.showMore = true; }
   else { state.f.minBalls = 0; state.f.exposure = "any"; }
+  const hint = $("route-hint");
+  if (hint) hint.textContent = mode === "scout"
+    ? "Scouting: uncapped players only, 300 balls minimum, all filters open."
+    : "Exploring: the whole pool, no minimum.";
   if (!quiet) draw();
 }
 document.querySelectorAll(".route").forEach(r => {
