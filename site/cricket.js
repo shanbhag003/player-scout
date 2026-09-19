@@ -102,14 +102,21 @@ function found(term){
   return out.sort((a,b)=>b.m-a.m).slice(0,8);
 }
 function renderSugg(term){
-  const list=found(term), box=$("suggestions");
-  if(!list.length){ box.hidden=true; return; }
-  box.hidden=false;
-  box.innerHTML=list.map((p,i)=>`<button data-pid="${p.p}" class="${i===state.sugg?"on":""}">
-    <span>${p.f||p.n}${p.f&&p.f!==p.n?` <span class="meta">${p.n}</span>`:""}</span>
-    <span class="meta">${p.nat?p.nat+" · ":""}${p.r||""}${p.a?" · "+Math.floor(p.a):""}</span></button>`).join("");
-  box.querySelectorAll("button").forEach(b=>b.onclick=()=>select(b.dataset.pid));
+  const list = found(term), box = $("suggestions");
+  if (!list.length){
+    box.hidden = true; $("search").setAttribute("aria-expanded","false"); return;
+  }
+  box.hidden = false; $("search").setAttribute("aria-expanded","true");
+  // Football's exact row: a list item, never a button. A bare <button> here
+  // keeps its browser-default styling and renders as a white bar, which is what
+  // the search looked like for three rounds.
+  box.innerHTML = list.map((p,i) => `<li role="option" data-pid="${p.p}"
+      aria-selected="${i === state.sugg}">${flag(p.nat)}<span class="sug-name">${
+      esc(p.f || p.n)}</span><span class="sug-meta">${
+      esc(titled(p.r || p.c))}${p.a ? " · " + Math.floor(p.a) : ""}</span></li>`).join("");
+  box.querySelectorAll("li").forEach(li => li.onclick = () => select(li.dataset.pid));
 }
+
 function select(pid){
   state.sel=pid; state.compare=[];
   const e=byPlayer[pid];
@@ -551,14 +558,41 @@ function renderShortlist(){
   };
   $("sl-export").hidden = !l.length;
   $("sl-export").onclick = () => {
-    const cols = ["name","country","role","age","exposure","balls","matches","last_seen"];
-    const rows = l.map(x => [x.f||x.n, x.nat||"", x.r||x.c, x.a?Math.floor(x.a):"",
-      x.e, x.b, x.m, x.ls||""]);
-    const csv = "\uFEFF" + [cols, ...rows].map(r =>
-      r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+    // Everything held about a player, not a summary of it. A shortlist leaves
+    // this tool and gets worked on elsewhere, so the export is the handover.
+    const mt = u => D.spaces[u.d][u.c].mt;
+    const metrics = [...new Set(l.flatMap(mt))];
+    const head = ["name","short_name","country","discipline","role","cell","age",
+      "exposure","keeper","matches","balls","effective_balls","debut","last_seen",
+      "still_playing","cricinfo",
+      ...["runs","balls_faced","outs","fours","sixes","dots","wickets","conceded"]
+        .map(c => "career_" + c),
+      ...["international","franchise","domestic"].map(g => "balls_" + g),
+      ...Object.keys(D.compNames).map(c => "balls_" + c),
+      ...metrics.map(m => "adj_" + m), ...metrics.map(m => "pct_" + m)];
+    const rows = l.map(x => {
+      const t = (x.car || {}).total || {};
+      return [x.f || x.n, x.n, x.nat || "", x.d, titled(x.r || x.c), x.c,
+        x.a ? Math.floor(x.a) : "", EXPOSURE[x.e] || x.e, x.kp ? "yes" : "no",
+        x.m, x.b, x.eb, (x.fs||"").slice(0,10), (x.ls||"").slice(0,10),
+        x.act ? "yes" : "no", x.ci || "",
+        t.runs ?? "", t.balls_raw ?? "", t.outs ?? "", t.fours ?? "", t.sixes ?? "",
+        t.dots ?? "", t.wkts ?? "", x.d === "bowling" ? (t.runs ?? "") : "",
+        ...["international","franchise","domestic"].map(g =>
+          Object.entries(x.tb||{}).filter(([k]) =>
+            (k.startsWith("international") ? "international"
+             : k === "franchise" ? "franchise" : "domestic") === g)
+            .reduce((a,[,v]) => a+v, 0) || ""),
+        ...Object.keys(D.compNames).map(c => (x.cb||{})[c] ?? ""),
+        ...metrics.map(m => x.ad[m] ?? ""), ...metrics.map(m => x.pc[m] ?? "")];
+    });
+    // UTF-8 BOM so Excel opens it as UTF-8 rather than mangling the names.
+    const csv = "\uFEFF" + [head, ...rows].map(r =>
+      r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\r\n");
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv"}));
-    a.download = "cricket-shortlist.csv"; a.click();
+    a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv;charset=utf-8"}));
+    a.download = `cricket-shortlist-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
   };
 }
 

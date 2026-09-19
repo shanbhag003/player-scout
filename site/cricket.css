@@ -207,3 +207,19 @@ img.lmark.flag{width:1.4rem;height:1.4rem;border-radius:50%;object-fit:cover;
 /* Said out loud when the card is not the discipline the role implies. */
 .pb-note{flex-basis:100%;font-size:.78rem;color:var(--faint);margin-top:.35rem;
   max-width:52ch;line-height:1.45}
+
+/* ── footer, in football's order ────────────────────────
+   The divider is .foot's own border-top, so the GitHub pill has to come first
+   for the line to sit above it as it does on the football page. Attribution
+   follows the method block rather than preceding it. */
+.foot-source{margin-top:1.6rem;padding-top:1.1rem;border-top:1px solid var(--hairline-soft)}
+.foot .repo-line{margin:0 0 .9rem}
+
+/* ── profile columns end level ──────────────────────────
+   Two grids of unequal content left a ragged edge above the footer. Flex with a
+   growing last panel makes both sides finish together. */
+.profile-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);
+  gap:.9rem;align-items:stretch}
+@media (max-width:920px){.profile-grid{grid-template-columns:1fr}}
+.profile-left,.profile-main{display:flex;flex-direction:column;gap:.9rem}
+.profile-left > .panel:last-child,.profile-main > .panel:last-child{flex:1 1 auto}
