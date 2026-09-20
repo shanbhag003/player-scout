@@ -109,7 +109,7 @@ const BLANK = () => ({active:true, exposure:"any", age:"any", minBalls:0,
   country:[], comp:[], keeper:false});
 const state = {mode:"explore", tab:"profile", sel:null, disc:"batting", sugg:-1,
   compare:[], showMore:false, career:"total", f:BLANK(),
-  shape:null, limit:25, metricView:"adjusted", tz:"IST",
+  shape:null, limit:25, metricView:"actual", tz:"IST",
   wiz:{disc:null, cell:null, age:"any", exposure:"any", comps:[], countries:[], active:true}};
 
 const norm = s => (s||"").toLowerCase().replace(/[^a-z ]/g,"");
@@ -189,10 +189,13 @@ function ranked(){
   if (!p && state.shape){
     const {disc, cell, sort} = state.shape;
     const low = LOWER_BETTER.has(sort);
+    // Sort on whatever is being displayed. Ranking by the levelled number while
+    // showing the real one would put the list in an order the page contradicts.
+    const val = c => (state.metricView === "actual" ? c.act : c.ad)[sort];
     const out = D.players.filter(c => c.d === disc && c.c === cell && passes(c)
-                                   && c.ad[sort] != null);
-    out.sort((a,b) => low ? a.ad[sort] - b.ad[sort] : b.ad[sort] - a.ad[sort]);
-    return out.slice(0, state.limit || 25).map(c => [c.ad[sort], c]);
+                                   && val(c) != null);
+    out.sort((a,b) => low ? val(a) - val(b) : val(b) - val(a));
+    return out.slice(0, state.limit || 25).map(c => [val(c), c]);
   }
   if(!p) return [];
   const sp=D.spaces[p.d][p.c]; if(!sp) return [];
@@ -424,9 +427,10 @@ function paneProfile(){
       ${careerCard(p)}
       <article class="panel">
         <header class="panel-head"><h2>Percentile detail</h2>
-          <p class="panel-sub">Percentile always answers how good, never how
-            large — for economy and dot percentage a lower number is better, so
-            the rank is already the right way round.</p></header>
+          <p class="panel-sub">Values are what the player actually did. The
+            percentile is worked out after levelling for competition, and always
+            answers how good rather than how large — so for economy and dot
+            percentage a lower number still ranks high.</p></header>
         <div class="radar-key">
           <div class="keyhead"><span>Metric</span>
             <span class="mview"><button data-mview="adjusted" aria-pressed="${state.metricView!=="actual"}"
@@ -933,7 +937,14 @@ function renderShapeResults(){
     `No reference player, so there is no shape to measure against — this is
      sorted on one number. Open anyone to rank the rest by how closely they
      resemble him.
-     <span class="sortpick">Sorted by
+     <span class="sortpick">Showing
+       <span class="mview"><button data-mview="actual" aria-pressed="${
+         state.metricView === "actual"}" title="What the player actually did"
+         >Actual</button><button data-mview="adjusted" aria-pressed="${
+         state.metricView !== "actual"}"
+         title="Levelled so an over in one competition means the same as an over in another"
+         >Adjusted</button></span>
+       sorted by
        <select id="shape-sort">${mt.map(m =>
          `<option value="${m}"${m===sort?" selected":""}>${esc(LABEL[m]||m)}</option>`).join("")}</select>
        <em>${low ? "lowest first" : "highest first"}</em></span>`;
