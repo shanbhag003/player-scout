@@ -42,7 +42,8 @@ try {
         [c, {md:s.median_distance, n:s.players, mt:s.metrics}]))])),
     minSeasonBalls: (meta.thresholds || {}).min_season_balls || 60,
     withheld: meta.withheld, comps: meta.competitions,
-    compNames: meta.competition_names || {}, matches: meta.matches,
+    compNames: meta.competition_names || {},
+    compNotes: meta.competition_notes || {}, matches: meta.matches,
     built: meta.built_at
   };
 } catch (err) {
@@ -410,10 +411,24 @@ function chipsFor(a, b){
   const same = rows.filter(r => r.edge > 15).sort((p,q) => p.gap - q.gap)[0]
             || [...rows].sort((p,q) => p.gap - q.gap)[0];
   const diff = [...rows].sort((p,q) => q.gap - p.gap).slice(0,2);
-  const nm = m => (LABEL[m] || m).toLowerCase();
-  return [{cls:"same", text:`Similar ${nm(same.m)}`},
+  // Short labels on the chip, the full metric name on hover. "More balls in
+  // powerplay %" wrapped to three lines on one row and two on the next, which
+  // is what made the list look ragged.
+  const SHORT = {sr:"strike rate", bpd:"balls/out", bdry:"boundary %",
+    six_share:"six share", dot_pct:"dot %", sr_pp:"SR powerplay",
+    sr_mid:"SR middle", sr_death:"SR death", sh_pp:"PP share",
+    sh_death:"death share", sr_pace:"v pace", sr_spin:"v spin",
+    spin_bias:"spin bias", sr_first10:"SR first 10", accel:"acceleration",
+    bdry_spin:"boundary v spin", econ:"economy", wkt_rate:"wickets",
+    dot_rate:"dot %", bdry_conc:"boundary %", six_share_conc:"six share",
+    econ_pp:"econ powerplay", econ_mid:"econ middle", econ_death:"econ death",
+    wide_rate:"wides"};
+  const nm = m => SHORT[m] || (LABEL[m] || m).toLowerCase();
+  const full = m => (LABEL[m] || m);
+  return [{cls:"same", text:`Similar ${nm(same.m)}`, full:`Similar ${full(same.m)}`},
     ...diff.map(r => ({cls: r.y > r.x ? "more" : "less",
-      text:`${r.y > r.x ? "More" : "Less"} ${nm(r.m)}`}))];
+      text:`${r.y > r.x ? "More" : "Less"} ${nm(r.m)}`,
+      full:`${r.y > r.x ? "More" : "Less"} ${full(r.m)}`}))];
 }
 
 function seg(label, key, opts){
@@ -589,10 +604,10 @@ function renderResults(){
         </span>
         <span class="facts">${cells.map(([k,v]) =>
           `<span class="meta-cell"><i>${esc(k)}</i>${esc(v)}</span>`).join("")}</span>
-        <span class="reads">${chips.map(x =>
-          `<em class="tag ${x.cls}">${esc(x.text)}</em>`).join("")}</span>
         <span class="why">${esc(why(p, c))}</span>
       </button>
+      <span class="reads">${chips.map(x =>
+        `<em class="tag ${x.cls}" title="${esc(x.full)}">${esc(x.text)}</em>`).join("")}</span>
       <span class="rowacts">
         <button class="savebtn${isSaved?" on":""}" data-save="${c.u}" aria-pressed="${isSaved}"
           title="${isSaved?"Remove from shortlist":"Save to shortlist"}">
@@ -1041,8 +1056,10 @@ $("complist").innerHTML = Object.entries(seen)
   .map(([c,set]) => {
     const name = D.compNames[c] || c;
     const short = name.split(/\s+/).map(w => w[0]).join("").slice(0,3).toUpperCase();
-    return `<li><span class="lmark letters">${short}</span>
-      <span class="lname">${esc(name)}</span>
+    const note = D.compNotes[c];
+    return `<li${note ? ` title="${esc(note)}"` : ""}>
+      <span class="lmark letters">${short}</span>
+      <span class="lname">${esc(name)}${note ? ' <i class="qmark" aria-hidden="true">?</i>' : ""}</span>
       <span class="lcountry">${set.size.toLocaleString()}</span></li>`;
   }).join("");
 

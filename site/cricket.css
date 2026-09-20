@@ -85,9 +85,6 @@ img.lmark.flag{width:1.35rem;height:1rem;border-radius:2px;object-fit:cover;
 .chk{display:flex;align-items:center;gap:.4rem;font-size:.88rem;color:var(--muted);
   padding-bottom:.35rem;cursor:pointer;white-space:nowrap}
 .chk input{accent-color:var(--gold);width:1rem;height:1rem}
-.more{border:0;background:none;color:var(--muted);text-decoration:underline;
-  text-underline-offset:3px;cursor:pointer;font-size:.85rem;padding-bottom:.4rem}
-@media (hover:hover){.more:hover{color:var(--gold)}}
 .reset{margin-left:auto}
 
 /* Result rows. */
@@ -227,19 +224,32 @@ img.lmark.flag{width:1.4rem;height:1.4rem;border-radius:50%;object-fit:cover;
 
 /* The read chips describe the row; they are not controls. Inside the row button
    they were picking up its hover and looking clickable. */
-.match .reads .tag{pointer-events:none}
+/* The chips describe the row and are not controls, so they sit outside the row
+   button entirely. pointer-events:none was not enough — the click simply passed
+   through to the button underneath and opened the comparison. */
+.match{display:grid;grid-template-columns:minmax(0,1fr) minmax(9rem,13.5rem) auto;
+  align-items:stretch;gap:0}
+.match .match-btn{grid-column:1}
+.match .reads{grid-column:2;align-self:center;padding:.65rem .4rem}
+.match .rowacts{grid-column:3}
+/* Two fixed rows, so three chips always occupy the same height however long
+   their labels are. That was why one row sat taller than the next. */
+.reads{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-auto-rows:1.45rem;gap:.3rem;align-content:center;min-height:3.2rem}
+.reads .tag:first-child{grid-column:1/-1}
+.reads .tag{display:flex;align-items:center;justify-content:center;
+  font-size:.7rem;padding:.1rem .4rem;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;text-decoration:none}
 
 
 
 /* ── even rows ──────────────────────────────────────────
    Two chips or three changed the row height, so the list looked ragged. A
    minimum height and a reads column that starts at the top keeps them level. */
-.match-btn{grid-template-columns:1.3rem 3.2rem minmax(0,1fr) repeat(3,minmax(4rem,5.4rem)) minmax(9rem,13.5rem);
+.match-btn{grid-template-columns:1.3rem 3.2rem minmax(0,1fr) repeat(3,minmax(4rem,5.4rem));
   min-height:5.4rem;align-items:center}
 .match-btn .facts{display:contents}
-.reads{display:flex;flex-wrap:wrap;gap:.3rem;justify-content:flex-end;align-content:center;
-  min-height:3.1rem}
-.why{grid-column:3/-2;color:var(--faint);font-size:.81rem;margin-top:-.15rem}
+.why{grid-column:3/-1;color:var(--faint);font-size:.81rem;margin-top:-.15rem}
 .tray-score.na{opacity:.45;cursor:help}
 .ghost.cta{color:var(--blue);border-color:rgba(87,180,236,.4);background:var(--cool)}
 @media (hover:hover){.ghost.cta:hover{border-color:var(--blue)}}
@@ -269,7 +279,11 @@ img.lmark.flag{width:1.4rem;height:1.4rem;border-radius:50%;object-fit:cover;
   .match-btn{grid-template-columns:2.6rem minmax(0,1fr);min-height:0;
     align-items:start;gap:.2rem .55rem;padding:.55rem .7rem}
   .match-btn .facts{display:flex;flex-wrap:wrap;gap:.5rem .9rem;grid-column:1/-1}
-  .reads{grid-column:1/-1;justify-content:flex-start;min-height:0}
+  .match{grid-template-columns:minmax(0,1fr) auto}
+  .match .match-btn{grid-column:1}
+  .match .reads{grid-column:1;grid-row:2;padding:0 .7rem .6rem;
+    grid-template-columns:repeat(2,minmax(0,1fr));min-height:0}
+  .match .rowacts{grid-column:2;grid-row:1/3}
   .why{grid-column:1/-1;margin-top:.2rem}
   /* The trend is an SVG with a viewBox, so it scales rather than scrolls. */
   #cmp-trend{overflow:visible}
@@ -294,3 +308,10 @@ img.lmark.flag{width:1.4rem;height:1.4rem;border-radius:50%;object-fit:cover;
 .pb-note.warn-inline{color:var(--gold)}
 .ghost.small{padding:.2rem .7rem;font-size:.8rem}
 .multi-foot{display:flex;align-items:center;justify-content:space-between;gap:.6rem}
+
+/* Cricsheet's competition names are its own and some need a word of
+   explanation; a mark beats renaming them away from the source. */
+.qmark{display:inline-grid;place-items:center;width:.9rem;height:.9rem;
+  border-radius:50%;border:1px solid var(--hairline);color:var(--faint);
+  font-size:.6rem;font-style:normal;vertical-align:.05rem;margin-left:.25rem;cursor:help}
+.leaguelist li[title]{cursor:help}

@@ -347,6 +347,12 @@ def build_discipline(facts, roles, players, discipline, metrics, min_balls, cell
             "movers": movers, "profile": prof, "z": z_all}
 
 
+def _comp_cfg():
+    import yaml
+    with open(os.path.join("config", "cricket", "competitions.yml")) as fh:
+        return yaml.safe_load(fh)["competitions"]
+
+
 def percentiles(z: pd.DataFrame, cells: pd.Series, metrics) -> pd.DataFrame:
     """Rank each player against their own cell, not the whole pool.
 
@@ -567,9 +573,8 @@ def emit(bat, bowl, players, roles, facts, out_dir, half_life=HALF_LIFE, facts_r
         "pool": len(index), "players": len(detail),
         "matches": int(facts["match_id"].nunique()),
         "competitions": sorted(facts["comp_key"].unique().tolist()),
-        "competition_names": {c["key"]: c["name"] for c in
-                              __import__("yaml").safe_load(
-                                  open(os.path.join("config", "cricket", "competitions.yml")))["competitions"]},
+        "competition_names": {c["key"]: c["name"] for c in _comp_cfg()},
+        "competition_notes": {c["key"]: c["note"] for c in _comp_cfg() if c.get("note")},
         "spaces": {"batting": bat["spaces"], "bowling": bowl["spaces"]},
         "competition_effects": {"batting": bat["effects"], "bowling": bowl["effects"]},
         "movers": {"batting": bat["movers"], "bowling": bowl["movers"]},
