@@ -522,8 +522,12 @@ def emit(bat, bowl, players, roles, facts, out_dir, half_life=HALF_LIFE, facts_r
         return "franchise" if tier == "franchise" else "domestic"
 
     career = {}
+    # From the RAW record, never the weighted one. A career total is a count of
+    # what happened; discounting it by age gave Bumrah 3,631 balls for 1,520 runs
+    # — an economy of 2.51, which is not a number that exists in T20 cricket.
+    career_src = facts_raw if facts_raw is not None else facts
     for kind, disc in (("bat_phase", "batting"), ("bowl_phase", "bowling")):
-        sub = facts[facts["kind"] == kind]
+        sub = career_src[career_src["kind"] == kind]
         if sub.empty:
             continue
         cols = [c for c in ["balls_raw", "runs", "outs", "wkts", "fours", "sixes", "dots"]
