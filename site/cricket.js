@@ -1192,6 +1192,10 @@ function draw(){
   else renderCompare();
   document.querySelectorAll("[data-career]").forEach(b =>
     b.onclick = () => { state.career = b.dataset.career; draw(); });
+  // Wired here rather than inside each renderer, because the toggle appears in
+  // two panels and an unwired control is worse than no control.
+  document.querySelectorAll("[data-mview]").forEach(b =>
+    b.onclick = () => { state.metricView = b.dataset.mview; draw(); });
   document.querySelectorAll("[data-disc]").forEach(b =>
     b.onclick = () => { state.disc = b.dataset.disc; state.compare = []; draw(); });
 }
