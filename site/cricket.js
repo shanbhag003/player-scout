@@ -90,7 +90,9 @@ function whenSeen(iso){
 const BLANK = () => ({active:true, exposure:"any", age:"any", minBalls:0,
   country:[], comp:[], keeper:false});
 const state = {mode:"explore", tab:"profile", sel:null, disc:"batting", sugg:-1,
-  compare:[], showMore:false, career:"total", f:BLANK()};
+  compare:[], showMore:false, career:"total", f:BLANK(),
+  shape:null,
+  wiz:{disc:null, cell:null, age:"any", exposure:"any", comps:[], countries:[], active:true}};
 
 const norm = s => (s||"").toLowerCase().replace(/[^a-z ]/g,"");
 D.players.forEach(p => p._s = norm(p.n)+" "+norm(p.f));
@@ -142,7 +144,7 @@ function select(pid){
 }
 
 function toLanding(){
-  state.sel=null; state.compare=[];
+  state.sel=null; state.compare=[]; state.shape=null;
   $("search").value=""; $("clear").hidden=true; $("suggestions").hidden=true;
   $("hero").hidden=false; $("workspace").hidden=true;
 }
@@ -162,7 +164,19 @@ function passes(c){
   return true;
 }
 function ranked(){
-  const p=entry(); if(!p) return [];
+  const p = entry();
+  // Shape search: no reference player, so there is no distance to measure. It
+  // sorts on a metric instead, and says so — pretending a leaderboard is a
+  // similarity ranking would be the dishonest option.
+  if (!p && state.shape){
+    const {disc, cell, sort} = state.shape;
+    const low = LOWER_BETTER.has(sort);
+    const out = D.players.filter(c => c.d === disc && c.c === cell && passes(c)
+                                   && c.ad[sort] != null);
+    out.sort((a,b) => low ? a.ad[sort] - b.ad[sort] : b.ad[sort] - a.ad[sort]);
+    return out.slice(0, 25).map(c => [c.ad[sort], c]);
+  }
+  if(!p) return [];
   const sp=D.spaces[p.d][p.c]; if(!sp) return [];
   const out=[];
   for(const c of D.players){
@@ -253,7 +267,29 @@ function careerCard(p){
 }
 
 function playerbar(){
-  const p = entry(); if(!p){ $("playerbar").innerHTML=""; return; }
+  const p = entry();
+  if (!p && state.shape){
+    const {disc, cell} = state.shape;
+    const w = state.wiz, bits = [];
+    if (w.age !== "any") bits.push((AGE_BANDS.find(b => b[0] === w.age)||[,""])[1]);
+    if (w.exposure !== "any") bits.push(w.exposure === "uncapped" ? "Uncapped" : "Domestic only");
+    if (w.comps.length) bits.push(w.comps.map(k => D.compNames[k]||k).join(", "));
+    if (w.countries.length) bits.push(w.countries.join(", "));
+    $("playerbar").innerHTML = `<div class="pb-id">
+        <div><h1>${esc(titled(cell))} ${disc === "batting" ? "batters" : "bowlers"}</h1>
+          <p class="pb-role">${bits.length ? esc(bits.join(" · ")) : "no further conditions"}</p></div>
+      </div>
+      <div class="pb-actions">
+        <button class="ghost accent" id="clear-player">
+          <svg viewBox="0 0 24 24" aria-hidden="true" class="btn-icon">
+            <circle cx="10.5" cy="10.5" r="6.4" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M15.4 15.4L20 20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>Change what I am looking for</button>
+      </div>`;
+    $("clear-player").onclick = toLanding;
+    return;
+  }
+  if(!p){ $("playerbar").innerHTML=""; return; }
   const both = byPlayer[p.p].length > 1;
   const saved = slRead().includes(p.u);
   // A player whose role says bowler but who has no bowling profile is being
@@ -386,6 +422,141 @@ function paneProfile(){
   </div>`;
 }
 
+
+/* ── the scouting wizard ─────────────────────────────────
+   Exploring starts with a name. Scouting starts with a need: nobody opens this
+   thinking "find me someone like Ravi Bishnoi", they think "I need a young
+   uncapped wrist-spinner who has bowled in the middle overs".
+
+   Each answer narrows the pool and the count is live, so you can stop the moment
+   it is small enough to read. Only the first two steps are required — a path
+   that ends at one player has not scouted anything, it has described somebody. */
+const WIZ_ROLES = {
+  batting: [["opener","Opener"],["top middle","Top middle"],
+            ["middle","Middle order"],["finisher","Finisher"]],
+  bowling: [["pace","Pace"],["spin","Spin"]],
+};
+/* What to rank by when no reference player is given. Shape needs an anchor;
+   without one this is a leaderboard, so it says which number it is sorting on. */
+const SORT_DEFAULT = {opener:"sr", "top middle":"sr", middle:"sr",
+                      finisher:"sr_death", pace:"econ", spin:"econ"};
+
+function wizMatches(){
+  const w = state.wiz;
+  return D.players.filter(c => {
+    if (w.disc && c.d !== w.disc) return false;
+    if (w.cell && c.c !== w.cell) return false;
+    if (w.age !== "any" && !ageOk({a:c.a}, w.age)) return false;
+    if (w.exposure === "uncapped" && !(c.e === "domestic" || c.e === "franchise")) return false;
+    if (w.exposure === "domestic" && c.e !== "domestic") return false;
+    if (w.comps.length && !w.comps.some(k => (c.cb||{})[k])) return false;
+    if (w.countries.length && !w.countries.includes(c.nat)) return false;
+    if (w.active && !c.act) return false;
+    return true;
+  });
+}
+
+function wizStep(key, label, opts, hint){
+  const cur = state.wiz[key];
+  return `<div class="wiz-step"><span class="wiz-label">${esc(label)}${
+      hint ? ` <i class="qmark" title="${esc(hint)}" aria-hidden="true">?</i>` : ""}</span>
+    <div class="segmented" role="group" aria-label="${esc(label)}">${opts.map(([v,t]) =>
+      `<button data-wiz="${key}" data-v="${v}" aria-pressed="${String(cur) === v}"
+        >${esc(t)}</button>`).join("")}</div></div>`;
+}
+
+function wizMulti(key, label, options, anyText){
+  const chosen = state.wiz[key];
+  const summary = !chosen.length ? anyText
+    : chosen.length === 1 ? (options.find(o => o[0] === chosen[0]) || [,chosen[0]])[1]
+    : `${chosen.length} selected`;
+  return `<div class="wiz-step multi" data-wmulti="${key}">
+    <span class="wiz-label">${esc(label)}</span>
+    <button class="multi-btn${chosen.length?" on":""}" aria-expanded="false"
+      >${esc(summary)}<i class="caret"></i></button>
+    <div class="multi-panel" hidden>
+      <input class="multi-search" type="text" placeholder="Search…" aria-label="Search ${esc(label)}">
+      <div class="multi-list">${options.map(([v,t]) =>
+        `<label data-t="${esc(String(t).toLowerCase())}"><input type="checkbox" value="${esc(v)}"
+          ${chosen.includes(v)?"checked":""}><span>${esc(t)}</span></label>`).join("")}</div>
+      <div class="multi-foot"><button class="linkish" data-wclear>Clear</button>
+        <button class="ghost small" data-wdone>Done</button></div>
+    </div></div>`;
+}
+
+function renderWizard(){
+  const w = state.wiz, n = wizMatches().length;
+  const countries = [...new Set(D.players.map(x => x.nat).filter(Boolean))].sort().map(c => [c,c]);
+  const comps = CLUBCOMPS.map(c => [c, D.compNames[c] || c]).sort((a,b) => a[1].localeCompare(b[1]));
+
+  let html = wizStep("disc", "Discipline", [["batting","Batter"],["bowling","Bowler"]],
+    "An all-rounder appears under both. Pick the side of his game you are hiring.");
+  if (w.disc) html += wizStep("cell", "Role", WIZ_ROLES[w.disc]);
+  if (w.disc && w.cell){
+    html += wizStep("age", "Age", AGE_BANDS);
+    html += wizStep("exposure", "Exposure", [["any","Any"],["uncapped","Uncapped"],
+      ["domestic","Domestic only"]],
+      "Uncapped means no T20 internationals. Domestic only adds: no franchise league either.");
+    html += wizMulti("comps", "Has played in", comps, "Any competition");
+    html += wizMulti("countries", "Represents", countries, "Any country");
+  }
+  $("wiz-steps").innerHTML = html;
+
+  $("wiz-count").innerHTML = !w.disc ? "Start with the side of the game."
+    : !w.cell ? `${wizMatches().length.toLocaleString()} ${w.disc === "batting" ? "batters" : "bowlers"} — now the role.`
+    : `<b>${n.toLocaleString()}</b> player${n === 1 ? "" : "s"} match so far.`
+      + (n > 60 ? " Narrow further, or look now." : n ? " Small enough to read." : "");
+  $("wiz-go").hidden = !(w.disc && w.cell) || !n;
+  $("wiz-go").textContent = n ? `Show ${n.toLocaleString()} player${n === 1 ? "" : "s"}` : "";
+
+  $("wiz-steps").querySelectorAll("[data-wiz]").forEach(b => b.onclick = () => {
+    const k = b.dataset.wiz;
+    state.wiz[k] = state.wiz[k] === b.dataset.v && k !== "disc" ? "any" : b.dataset.v;
+    if (k === "disc") state.wiz.cell = null;
+    renderWizard();
+  });
+  $("wiz-steps").querySelectorAll("[data-wmulti]").forEach(box => {
+    const key = box.dataset.wmulti;
+    const btn = box.querySelector(".multi-btn"), panel = box.querySelector(".multi-panel");
+    const search = box.querySelector(".multi-search");
+    btn.onclick = e => { e.stopPropagation();
+      const open = panel.hidden;
+      document.querySelectorAll(".multi-panel").forEach(p => p.hidden = true);
+      panel.hidden = !open; btn.setAttribute("aria-expanded", String(open));
+      if (open && search.focus) search.focus(); };
+    search.oninput = () => { const t = search.value.toLowerCase();
+      box.querySelectorAll(".multi-list label").forEach(l =>
+        l.hidden = t && !l.dataset.t.includes(t)); };
+    box.querySelectorAll(".multi-list input").forEach(cb => cb.onchange = () => {
+      const set = new Set(state.wiz[key]);
+      cb.checked ? set.add(cb.value) : set.delete(cb.value);
+      state.wiz[key] = [...set];
+      renderWizard();
+      const again = $("wiz-steps").querySelector(`[data-wmulti="${key}"] .multi-panel`);
+      if (again) again.hidden = false;
+    });
+    box.querySelector("[data-wclear]").onclick = () => { state.wiz[key] = []; renderWizard(); };
+    box.querySelector("[data-wdone]").onclick = () => { panel.hidden = true; };
+  });
+}
+
+/* Carry the wizard's answers into the filter bar, so the controls on the results
+   page are the same state rather than a second copy of it. */
+function wizGo(){
+  const w = state.wiz;
+  state.shape = {disc: w.disc, cell: w.cell, sort: SORT_DEFAULT[w.cell] || "sr"};
+  state.sel = null; state.compare = [];
+  state.f = BLANK();
+  state.f.age = w.age; state.f.exposure = w.exposure;
+  state.f.comp = [...w.comps]; state.f.country = [...w.countries];
+  state.f.active = w.active; state.f.minBalls = 0;
+  state.showMore = true;
+  state.tab = "similar";
+  $("hero").hidden = true; $("workspace").hidden = false; $("clear").hidden = false;
+  draw();
+  if (typeof window.scrollTo === "function") window.scrollTo(0,0);
+}
+
 /* ── similar players, in football's structure ────────────
    Header, filter chips, tag key, then rows: rank, score with its track, flag and
    name, meta cells, the three read chips, the reason, save and add. Same markup,
@@ -395,8 +566,8 @@ const MAX_COMPARE = 6;
 const AGE_BANDS = [["any","Any"],["u23","Under 23"],["u26","Under 26"],
                    ["26-30","26–30"],["30-32","30–32"],["32+","32+"]];
 
-function ageOk(c){
-  const a = c.a; const b = state.f.age;
+function ageOk(c, band){
+  const a = c.a; const b = band || state.f.age;
   if (b === "any") return true;
   if (!a) return false;
   if (b === "u23") return a < 23;
@@ -557,7 +728,9 @@ function renderFilters(){
 }
 
 function renderResults(){
-  const p = entry(); if (!p) return;
+  const p = entry();
+  if (!p && state.shape) return renderShapeResults();
+  if (!p) return;
   const sp = D.spaces[p.d][p.c];
   const all = D.players.filter(c => c.u !== p.u && c.d === p.d && c.c === p.c);
   const eligible = all.filter(passes).length;
@@ -676,6 +849,76 @@ function scoreAgainst(base, c){
   let d = 0; for (let k=0;k<base.x.length;k++){const v=base.x[k]-c.x[k]; d+=v*v;}
   return 100 * Math.exp(-Math.LN2 * Math.sqrt(d) / sp.md);
 }
+
+function renderShapeResults(){
+  const {disc, cell, sort} = state.shape;
+  const rows = ranked();
+  const pool = D.players.filter(c => c.d === disc && c.c === cell);
+  const eligible = pool.filter(passes).length;
+  const low = LOWER_BETTER.has(sort);
+  const mt = D.spaces[disc][cell].mt;
+
+  $("results-title").textContent =
+    `${titled(cell)} ${disc === "batting" ? "batters" : "bowlers"}`;
+  $("results-note").innerHTML =
+    `No reference player, so there is no shape to measure against — this is
+     sorted on one number. Open anyone to rank the rest by how closely they
+     resemble him.
+     <span class="sortpick">Sorted by
+       <select id="shape-sort">${mt.map(m =>
+         `<option value="${m}"${m===sort?" selected":""}>${esc(LABEL[m]||m)}</option>`).join("")}</select>
+       <em>${low ? "lowest first" : "highest first"}</em></span>`;
+  const thinCount = rows.filter(([,c]) => c.thin).length;
+  $("results-count").innerHTML = `${rows.length} shown of <b>${eligible}</b> matching`
+    + (thinCount ? `<br><em class="thin-count">${thinCount} marked thin</em>` : "");
+  renderFilters();
+  $("tagkey").hidden = true;
+  $("thin").hidden = rows.length > 0;
+  $("thin").textContent = "Nothing matches these filters. Loosen one.";
+
+  const saved = slRead();
+  $("matches").innerHTML = rows.map(([val, c], i) => {
+    const t = (c.car||{}).total || {};
+    const bat = c.d === "batting";
+    const cells = bat
+      ? [["Age", c.a ? Math.floor(c.a) : "—"], ["Runs", (t.runs||0).toLocaleString()],
+         ["Balls", c.b.toLocaleString()]]
+      : [["Age", c.a ? Math.floor(c.a) : "—"], ["Wickets", t.wkts ?? "—"],
+         ["Balls", c.b.toLocaleString()]];
+    const isSaved = saved.includes(c.u);
+    return `<li class="match">
+      <button class="match-btn" data-open="${c.p}">
+        <span class="rank">${i + 1}</span>
+        <span class="score"><span class="score-num">${fmtMetric(val)}</span>
+          <span class="score-label">${esc((LABEL[sort]||sort).toLowerCase())}</span></span>
+        <span class="who">
+          <span class="who-top">${flag(c.nat)}<b>${esc(c.f||c.n)}</b>
+            ${c.act ? "" : '<em class="gone-tag">retired</em>'}
+            ${c.thin ? `<em class="thin-tag" title="Only ${c.b.toLocaleString()} balls">thin</em>` : ""}</span>
+          <span class="who-sub">${esc(titled(c.r||c.c))} · <b class="clubnow">${
+            esc(c.nat||"—")}</b> · ${esc(EXPOSURE[c.e]||titled(c.e))}</span>
+        </span>
+        <span class="facts">${cells.map(([k,v]) =>
+          `<span class="meta-cell"><i>${esc(k)}</i>${esc(v)}</span>`).join("")}</span>
+        <span class="why">Open to see his profile and who else looks like him.</span>
+      </button>
+      <span class="rowacts">
+        <button class="savebtn${isSaved?" on":""}" data-save="${c.u}" aria-pressed="${isSaved}"
+          title="${isSaved?"Remove from shortlist":"Save to shortlist"}">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v16l-5-4-5 4z"
+            fill="${isSaved?"currentColor":"none"}" stroke="currentColor" stroke-width="1.8"
+            stroke-linejoin="round"/></svg></button></span>
+    </li>`;
+  }).join("");
+
+  $("matches").querySelectorAll("[data-open]").forEach(b =>
+    b.onclick = () => select(b.dataset.open));
+  $("matches").querySelectorAll(".savebtn").forEach(b =>
+    b.onclick = () => slToggle(b.dataset.save));
+  const sel = $("shape-sort");
+  if (sel) sel.onchange = e => { state.shape.sort = e.target.value; draw(); };
+}
+
 function renderCompare(){
   const base = entry(); if (!base) return;
   const series = compareSeries(), saved = slRead();
@@ -822,6 +1065,10 @@ function renderTrend(series){
 function setTab(t){ state.tab = t; draw(); }
 
 function draw(){
+  const shapeOnly = !entry() && !!state.shape;
+  if (shapeOnly) state.tab = "similar";
+  ["profile","compare"].forEach(t =>
+    document.querySelectorAll(`#tabs [data-tab="${t}"]`).forEach(b => b.disabled = shapeOnly));
   $("ccount").textContent = state.compare.length ? ` (${state.compare.length + 1})` : "";
   ["profile","similar","compare"].forEach(t => {
     $("panel-" + t).hidden = state.tab !== t;
@@ -1025,12 +1272,21 @@ function setMode(mode, quiet){
   if (hint) hint.textContent = mode === "scout"
     ? "Scouting: domestic players only, 300 balls minimum, all filters open."
     : "Exploring: the whole pool, no minimum.";
+  const wiz = $("wizard");
+  if (wiz) wiz.hidden = mode !== "scout";
+  if (mode === "scout") renderWizard();
   if (!quiet) draw();
 }
 document.querySelectorAll(".route").forEach(r => {
   r.onclick = () => setMode(r.dataset.route);
   r.onkeydown = e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); r.click(); } };
 });
+$("wiz-go").onclick = wizGo;
+$("wiz-reset").onclick = () => {
+  state.wiz = {disc:null, cell:null, age:"any", exposure:"any",
+               comps:[], countries:[], active:true};
+  renderWizard();
+};
 setMode("explore", true);
 
 /* ── landing, in football's markup ──────────────────────── */

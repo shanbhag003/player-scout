@@ -327,3 +327,40 @@ img.lmark.flag{width:1.4rem;height:1.4rem;border-radius:50%;object-fit:cover;
 .thin-line{color:var(--gold);font-weight:600}
 .thin-count{display:inline-block;margin-top:.2rem;font-style:normal;color:var(--gold);
   font-size:.78rem}
+
+/* ── the scouting wizard ────────────────────────────────
+   Scouting starts from a need rather than a name, so the questions come first
+   and the count is live — you stop when the list is short enough to read. */
+.wizard{margin-top:1.2rem;background:var(--surface);border:1px solid rgba(87,180,236,.28);
+  border-radius:var(--radius);padding:1rem 1.1rem}
+.wiz-head{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;
+  flex-wrap:wrap;margin-bottom:.8rem}
+.wiz-head h2{font-size:1.15rem}
+.wiz-count{font-size:.85rem;color:var(--muted)}
+.wiz-count b{color:var(--blue);font-weight:600}
+.wiz-steps{display:grid;gap:.7rem}
+.wiz-step{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;position:relative}
+.wiz-label{font-size:.72rem;color:var(--faint);font-family:var(--cond);
+  text-transform:uppercase;letter-spacing:.06em;min-width:5.5rem}
+.wiz-step .segmented{flex-wrap:wrap}
+.wiz-actions{display:flex;align-items:center;gap:.9rem;margin-top:1rem;
+  padding-top:.9rem;border-top:1px solid var(--hairline-soft)}
+.wiz-step .multi-panel{top:calc(100% + .3rem);left:6.2rem}
+
+/* Shape results are a leaderboard, so the leading number is the metric itself
+   rather than a match score that does not exist. */
+.score-label{display:block;font-family:var(--sans);font-weight:400;font-size:.6rem;
+  color:var(--faint);text-transform:uppercase;letter-spacing:.04em;line-height:1.2;
+  margin-top:.1rem}
+.sortpick{display:block;margin-top:.4rem;color:var(--muted);font-size:.85rem}
+.sortpick select{background:var(--raised);border:1px solid var(--hairline);color:var(--ink);
+  border-radius:7px;padding:.18rem .45rem;font-size:.85rem;margin:0 .25rem}
+.sortpick select option{background:#17202D;color:#EAF1F8}
+.sortpick em{font-style:normal;color:var(--faint);font-size:.8rem}
+#tabs button:disabled{opacity:.35;cursor:not-allowed}
+@media (max-width:820px){
+  .wiz-step{align-items:flex-start;flex-direction:column;gap:.35rem}
+  .wiz-label{min-width:0}
+  .wiz-step .multi-panel{left:0;position:static;width:100%}
+  .wiz-actions{flex-wrap:wrap}
+}
