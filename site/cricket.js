@@ -109,7 +109,7 @@ const BLANK = () => ({active:true, exposure:"any", age:"any", minBalls:0,
   country:[], comp:[], keeper:false});
 const state = {mode:"explore", tab:"profile", sel:null, disc:"batting", sugg:-1,
   compare:[], showMore:false, career:"total", f:BLANK(),
-  shape:null, limit:25, metricView:"adjusted",
+  shape:null, limit:25, metricView:"adjusted", tz:"IST",
   wiz:{disc:null, cell:null, age:"any", exposure:"any", comps:[], countries:[], active:true}};
 
 const norm = s => (s||"").toLowerCase().replace(/[^a-z ]/g,"");
@@ -1456,65 +1456,73 @@ $("rolebars").innerHTML = `<h3>Players by role</h3>` + ROLES.map(r =>
     <span class="postrack"><span style="width:${(roleCount[r]/topRole*100).toFixed(1)}%"></span></span>
     <b>${roleCount[r]}</b></div>`).join("");
 
-/* ── freshness ──────────────────────────────────────────── */
-if (D.built){
-  const d = new Date(D.built);
-  const days = Math.floor((Date.now() - d) / 864e5);
-  $("fresh-label").textContent = days < 1 ? "Updated today"
-    : days === 1 ? "Updated yesterday" : `Updated ${days} days ago`;
-  $("fresh-list").innerHTML = `<li>
-    <span class="fl-title">Model last run</span>
-    <span class="fl-when">${d.toLocaleString("en-GB",{timeZone:"Asia/Kolkata",
-      day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",
-      hour12:false})} IST</span>
-    <span class="fl-since">${days < 1 ? "today" : days === 1 ? "yesterday" : days + " days ago"}</span>
-    <span class="fl-note">Cricsheet's rolling window is pulled on the same run.</span>
-  </li>`;
-  $("fresh-foot").textContent =
-    "Match data is pulled nightly. A full re-parse of the archive runs monthly.";
-  $("fresh-btn").onclick = () => {
-    const panel = $("fresh-panel"), open = panel.hidden;
-    panel.hidden = !open;
-    $("fresh-btn").setAttribute("aria-expanded", String(open));
-  };
-  document.addEventListener("click", e => {
-    if (!e.target.closest(".freshness")) $("fresh-panel").hidden = true;
-    if (!e.target.closest(".shortlist-wrap")) $("short-panel").hidden = true; });
+/* ── freshness ──────────────────────────────────────────
+   Same panel football has, including the time zone switch. The choice is
+   remembered, because someone who reads in UTC reads in UTC every time. */
+const TZ_KEY = `ps.${(window.PS_CHANNEL||{}).channel || "prod"}.tz`;
+try { state.tz = localStorage.getItem(TZ_KEY) || "IST"; } catch { state.tz = "IST"; }
+
+function fmtStamp(iso, tz){
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d)) return null;
+  return d.toLocaleString("en-GB", {
+    timeZone: tz === "UTC" ? "UTC" : "Asia/Kolkata",
+    day: "numeric", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  }).replace(",", "") + ` ${tz}`;
+}
+function sinceText(iso){
+  const days = Math.floor((Date.now() - new Date(iso)) / 864e5);
+  return days < 1 ? "today" : days === 1 ? "yesterday" : `${days} days ago`;
 }
 
-/* On a phone the four method columns become a swipeable strip with a pill nav,
-   exactly as football does. */
-(function methodNav(){
-  const nav = $("method-nav"), box = $("method-wrap");
-  const cols = [...document.querySelectorAll(".method .mcol")];
-  const strip = document.querySelector(".method");
-  if (!nav || !cols.length || !strip) return;
-  const SHORT = ["Sources","Measured on","Levelling","Does it work"];
-  nav.innerHTML = cols.map((c,i) =>
-    `<button role="tab" data-step="${i}" aria-selected="${i===0}">
-      <i>${i+1}</i>${esc(SHORT[i] || (c.querySelector("h3")||{}).textContent || "")}</button>`
-    ).join("");
-  const mark = i => nav.querySelectorAll("button").forEach((b,k) =>
-    b.setAttribute("aria-selected", String(k === i)));
-  nav.querySelectorAll("button").forEach(b => b.onclick = () => {
-    const i = +b.dataset.step, left = cols[i].offsetLeft - strip.offsetLeft;
-    if (typeof strip.scrollTo === "function"){
-      try { strip.scrollTo({left, behavior:"smooth"}); } catch { strip.scrollLeft = left; }
-    } else strip.scrollLeft = left;
-    mark(i);
-  });
-  // The pill has to follow a swipe too, or it points at the wrong panel the
-  // moment someone scrolls by hand rather than tapping.
-  let tick;
-  strip.addEventListener("scroll", () => {
-    clearTimeout(tick);
-    tick = setTimeout(() => {
-      const i = Math.round(strip.scrollLeft / Math.max(1, strip.clientWidth));
-      mark(Math.min(Math.max(i,0), cols.length - 1));
-    }, 90);
-  }, {passive:true});
-  mark(0);
-})();
+function renderFreshness(){
+  if (!D.built) return;
+  const tz = state.tz;
+  $("fresh-label").textContent = `Updated ${sinceText(D.built)}`;
+  $("fresh-btn").title = fmtStamp(D.built, tz) || "";
+
+  // Three things get called "updated" and people conflate them: when the model
+  // last ran, how far the cricket goes, and how much of it there is.
+  const latest = D.players.reduce((a,p) => p.ls && p.ls > a ? p.ls : a, "");
+  const scored = new Set(D.players.map(p => p.p)).size;
+  const metrics = new Set(Object.values(D.spaces)
+    .flatMap(v => Object.values(v).flatMap(s => s.mt))).size;
+  const rows = [
+    ["Model run", fmtStamp(D.built, tz), sinceText(D.built),
+     `${scored.toLocaleString()} players scored across ${metrics} metrics`],
+    ["Latest match included", latest ? whenSeen(latest) : "—", "",
+     `${D.matches.toLocaleString()} matches, ${D.comps.length} competitions`],
+  ];
+  $("fresh-list").innerHTML = rows.map(([k, when, ago, note]) => `<li>
+    <span class="fl-title">${esc(k)}</span>
+    <span class="fl-when">${esc(when || "—")}</span>
+    ${ago ? `<span class="fl-since">${esc(ago)}</span>` : "<span></span>"}
+    <span class="fl-note">${esc(note)}</span></li>`).join("");
+  $("fresh-foot").textContent =
+    "Cricsheet's rolling window is pulled nightly. A full re-parse of the archive "
+    + "runs monthly, which is when revised scorecards are picked up.";
+  document.querySelectorAll("[data-tz]").forEach(b =>
+    b.setAttribute("aria-pressed", String(b.dataset.tz === tz)));
+}
+
+renderFreshness();
+$("fresh-btn").onclick = () => {
+  const panel = $("fresh-panel"), open = panel.hidden;
+  panel.hidden = !open;
+  $("fresh-btn").setAttribute("aria-expanded", String(open));
+  $("short-panel").hidden = true;
+};
+document.querySelectorAll("[data-tz]").forEach(b => b.onclick = () => {
+  state.tz = b.dataset.tz;
+  try { localStorage.setItem(TZ_KEY, state.tz); } catch {}
+  renderFreshness();
+});
+document.addEventListener("click", e => {
+  if (!e.target.closest(".freshness")) $("fresh-panel").hidden = true;
+  if (!e.target.closest(".shortlist-wrap")) $("short-panel").hidden = true;
+});
 
 $("clear").onclick = toLanding;
 $("brand").onclick = e => { e.preventDefault(); toLanding(); };
