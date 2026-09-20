@@ -1585,6 +1585,41 @@ document.addEventListener("click", e => {
 });
 document.addEventListener("keydown", e => { if (e.key === "Escape") hintPop.close(); });
 
+/* ── method strip ───────────────────────────────────────
+   Below 980px the four columns become a swipeable strip with a pill nav, as
+   football's does. The pill follows a swipe as well as a tap, or it points at
+   the wrong panel the moment someone scrolls by hand. */
+(function methodNav(){
+  const nav = $("method-nav");
+  const cols = [...document.querySelectorAll(".method .mcol")];
+  const strip = document.querySelector(".method");
+  if (!nav || !cols.length || !strip) return;
+  const SHORT = ["Sources", "Measured on", "Levelling", "Does it work"];
+  nav.innerHTML = cols.map((c, i) =>
+    `<button role="tab" data-step="${i}" aria-selected="${i === 0}">
+      <i>${i + 1}</i>${esc(SHORT[i] || ((c.querySelector("h3") || {}).textContent || ""))}</button>`
+    ).join("");
+  const mark = i => nav.querySelectorAll("button").forEach((b, k) =>
+    b.setAttribute("aria-selected", String(k === i)));
+  nav.querySelectorAll("button").forEach(b => b.onclick = () => {
+    const i = +b.dataset.step;
+    const left = cols[i].offsetLeft - strip.offsetLeft;
+    if (typeof strip.scrollTo === "function"){
+      try { strip.scrollTo({left, behavior: "smooth"}); } catch { strip.scrollLeft = left; }
+    } else strip.scrollLeft = left;
+    mark(i);
+  });
+  let tick;
+  strip.addEventListener("scroll", () => {
+    clearTimeout(tick);
+    tick = setTimeout(() => {
+      const i = Math.round(strip.scrollLeft / Math.max(1, strip.clientWidth));
+      mark(Math.min(Math.max(i, 0), cols.length - 1));
+    }, 90);
+  }, {passive: true});
+  mark(0);
+})();
+
 $("clear").onclick = toLanding;
 $("brand").onclick = e => { e.preventDefault(); toLanding(); };
 
