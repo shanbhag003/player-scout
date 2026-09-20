@@ -31,7 +31,7 @@ try {
         c:e.cell, r:e.role, x:e.coords, b:e.balls, eb:e.effective_balls, m:e.matches,
         a:e.age, nat:e.nationality, e:e.exposure, tb:e.tier_balls||{},
         cb:e.competition_balls||{}, kp:!!e.keeper, act:e.active,
-        partial:!!e.partial_record,
+        partial:!!e.partial_record, thin:!!e.thin,
         ls:e.last_seen, fs:e.first_seen, pc:d.percentile||{}, ad:d.adjusted||{},
         sea:d.seasons||[],
         car:(((detail[e.player_id]||{}).career)||{})[e.discipline]||null,
@@ -41,6 +41,7 @@ try {
       [k, Object.fromEntries(Object.entries(v).map(([c,s]) =>
         [c, {md:s.median_distance, n:s.players, mt:s.metrics}]))])),
     minSeasonBalls: (meta.thresholds || {}).min_season_balls || 60,
+    thinBalls: (meta.thresholds || {}).thin_balls || 300,
     withheld: meta.withheld, comps: meta.competitions,
     compNames: meta.competition_names || {},
     compNotes: meta.competition_notes || {}, matches: meta.matches,
@@ -353,8 +354,13 @@ function paneProfile(){
         <div class="prov"><b>${p.b.toLocaleString()}</b> balls,
           <b>${p.eb.toLocaleString()}</b> after recency weighting
           <div class="bar"><span style="width:${Math.min(100,shrink)}%"></span></div>
-          ${shrink<40?"Thin or dated — heavily shrunk toward the role average, so treat the score with care."
-                     :"Enough recent cricket to judge on."}</div>
+          ${p.thin
+            ? `<b class="thin-line">Under ${D.thinBalls} balls.</b> Enough to place him, not
+               enough to test: splitting a career this short leaves too little on either side.
+               Treat what follows as a lead rather than a finding.`
+            : shrink < 40
+            ? "Thin or dated — heavily shrunk toward the role average, so treat the score with care."
+            : "Enough recent cricket to judge on."}</div>
         <div class="hd" style="margin-top:1rem">Balls by competition</div>
         <div class="kv">${comps}</div>
       </article>
@@ -562,13 +568,16 @@ function renderResults(){
   $("results-note").textContent = p.d === "batting"
     ? "Scoring rate, shape and match-up — how and when runs come, not only how many."
     : "Economy, wickets and phase — where in an innings a bowler works and what it costs.";
+  const thinCount = rows.filter(([,c]) => c.thin).length;
   const anyPartial = rows.some(([,c]) => c.partial) || p.partial;
   $("results-note").innerHTML = ($("results-note").textContent || "")
     + (anyPartial ? ` <em class="warn-inline">Afghanistan's matches are withheld
       from this archive, so Afghan players' records here are franchise cricket
       only — their international careers are missing, not zero.</em>` : "");
   $("results-count").innerHTML = rows.length
-    ? `${rows.length} shown of <b>${eligible}</b> in the pool` : "";
+    ? `${rows.length} shown of <b>${eligible}</b> in the pool`
+      + (thinCount ? `<br><em class="thin-count">${thinCount} marked thin</em>` : "")
+    : "";
   renderFilters();
 
   if (!rows.length){
@@ -609,7 +618,10 @@ function renderResults(){
           <span class="score-track"><span style="width:${Math.min(100,score).toFixed(1)}%"></span></span></span>
         <span class="who">
           <span class="who-top">${flag(c.nat)}<b>${esc(c.f||c.n)}</b>
-            ${c.act ? "" : '<em class="gone-tag">retired</em>'}</span>
+            ${c.act ? "" : '<em class="gone-tag">retired</em>'}
+            ${c.thin ? `<em class="thin-tag" title="Only ${c.b.toLocaleString()} balls — `
+              + `too little to test this profile against itself, so treat the score as a `
+              + `lead rather than a finding">thin</em>` : ""}</span>
           <span class="who-sub">${esc(titled(c.r||c.c))} · <b class="clubnow">${
             esc(c.nat || "—")}</b> · ${esc(EXPOSURE[c.e] || titled(c.e))}</span>
         </span>

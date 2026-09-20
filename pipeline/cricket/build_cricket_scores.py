@@ -45,9 +45,14 @@ OUT = os.path.join("site", "data", "cricket")
 
 FORMAT = "T20"
 GENDER = "male"
-MIN_BALLS_BAT = 300          # to enter the batting pool
-MIN_BALLS_BOWL = 300
+MIN_BALLS_BAT = 150         # enough to place a player; not enough to trust him
+MIN_BALLS_BOWL = 150
 MIN_HALF = 150               # per half, to be testable
+# Below this a profile is in the pool but cannot be validated: splitting the
+# career in two leaves too little on either side to test. Flagged, not hidden —
+# Ayush Mhatre had 240 balls after one breakout IPL, and a scouting tool that
+# hides him is failing at the job it exists for.
+THIN_BALLS = 300
 MIN_CELL_SCORE = 12          # players needed to fit a cell at all
 MIN_CELL_VALIDATE = 25
 SHRINK_K = 250               # balls at which a profile is half its own
@@ -536,6 +541,7 @@ def emit(bat, bowl, players, roles, facts, out_dir, half_life=HALF_LIFE, facts_r
                               if pid in bio.index and pd.notna(bio.at[pid, "full_name"]) else None),
                 "nationality": nationality_of(pid),
                 "keeper": pid in keepers,
+                "thin": int(row["balls_raw"]) < THIN_BALLS,
                 "partial_record": nationality_of(pid) in AFFECTED,
                 "age": (round(float((as_of - bio.at[pid, "dob"]).days / 365.25), 1)
                         if pid in bio.index and pd.notna(bio.at[pid, "dob"]) else None),
@@ -595,7 +601,8 @@ def emit(bat, bowl, players, roles, facts, out_dir, half_life=HALF_LIFE, facts_r
         "validation": bat["validation"] + bowl["validation"],
         "exposure_ladder": EXPOSURE_LADDER,
         "bio_coverage": {"age": None, "nationality": None},
-        "thresholds": {"min_season_balls": MIN_SEASON_BALLS, "min_balls_batting": MIN_BALLS_BAT, "min_balls_bowling": MIN_BALLS_BOWL,
+        "thresholds": {"min_season_balls": MIN_SEASON_BALLS, "thin_balls": THIN_BALLS,
+                       "min_balls_batting": MIN_BALLS_BAT, "min_balls_bowling": MIN_BALLS_BOWL,
                        "shrinkage_k": SHRINK_K, "variance": VARIANCE,
                        "recency_half_life_years": half_life},
         "source": "Cricsheet (https://cricsheet.org), Open Data Commons Attribution Licence",

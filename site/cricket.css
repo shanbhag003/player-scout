@@ -317,3 +317,13 @@ img.lmark.flag{width:1.4rem;height:1.4rem;border-radius:50%;object-fit:cover;
 .leaguelist li[title]{cursor:help}
 .filter-label .qmark{vertical-align:0}
 .filter-label[title]{cursor:help}
+
+/* A thin profile is in the pool because hiding a breakout player defeats the
+   point of a scouting tool — but it must never look like a settled one. */
+.thin-tag{font-style:normal;font-size:.62rem;text-transform:uppercase;
+  letter-spacing:.06em;padding:.05rem .35rem;border-radius:99px;
+  border:1px solid rgba(240,188,99,.4);color:var(--gold);background:var(--warm);
+  margin-left:.4rem;cursor:help}
+.thin-line{color:var(--gold);font-weight:600}
+.thin-count{display:inline-block;margin-top:.2rem;font-style:normal;color:var(--gold);
+  font-size:.78rem}
