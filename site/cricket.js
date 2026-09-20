@@ -23,7 +23,7 @@ function shapePlayer(e, d){
   return {u:e.uid, p:e.player_id, n:e.name, f:e.full_name, d:e.discipline,
     c:e.cell, r:e.role, x:e.coords, b:e.balls, eb:e.effective_balls, m:e.matches,
     a:e.age, nat:e.nationality, e:e.exposure, tb:e.tier_balls||{},
-    cb:e.competition_balls||{}, kp:!!e.keeper, act:e.active,
+    cb:e.competition_balls||{}, kp:!!e.keeper, playing:e.active,
     partial:!!e.partial_record, thin:!!e.thin,
     ls:e.last_seen, fs:e.first_seen,
     pc:d.percentile||{}, ad:d.adjusted||{}, sea:d.seasons||[],
@@ -56,7 +56,8 @@ try {
     D.players.forEach(x => {
       const rec = det[x.p] || {};
       const d = rec[x.d] || {};
-      x.pc = d.percentile || {}; x.ad = d.adjusted || {}; x.sea = d.seasons || [];
+      x.pc = d.percentile || {}; x.ad = d.adjusted || {}; x.act = d.actual || {};
+      x.sea = d.seasons || [];
       x.car = (rec.career || {})[x.d] || null; x.ci = rec.cricinfo || null;
     });
     D.ready = true;
@@ -108,7 +109,7 @@ const BLANK = () => ({active:true, exposure:"any", age:"any", minBalls:0,
   country:[], comp:[], keeper:false});
 const state = {mode:"explore", tab:"profile", sel:null, disc:"batting", sugg:-1,
   compare:[], showMore:false, career:"total", f:BLANK(),
-  shape:null, limit:25,
+  shape:null, limit:25, metricView:"adjusted",
   wiz:{disc:null, cell:null, age:"any", exposure:"any", comps:[], countries:[], active:true}};
 
 const norm = s => (s||"").toLowerCase().replace(/[^a-z ]/g,"");
@@ -169,7 +170,7 @@ const entry = () => (byPlayer[state.sel]||[]).find(e=>e.d===state.disc);
 
 function passes(c){
   const f=state.f;
-  if(f.active&&!c.act) return false;
+  if(f.active&&!c.playing) return false;
   if(f.exposure==="uncapped" && !(c.e==="domestic"||c.e==="franchise")) return false;
   if(f.exposure==="domestic" && c.e!=="domestic") return false;
   if(f.country.length && !f.country.includes(c.nat)) return false;
@@ -338,8 +339,8 @@ function playerbar(){
       ${flag(p.nat)}
       <div><h1>${esc(p.f||p.n)}</h1>
         <p class="pb-role">${esc(titled(p.r || p.c))}${p.kp ? " · Wicketkeeper" : ""}</p></div>
-      <span class="availability ${p.act?"active":"gone"}">${
-        p.act ? "Currently playing" : `Last seen ${whenSeen(p.ls)}`}</span>
+      <span class="availability ${p.playing?"active":"gone"}">${
+        p.playing ? "Currently playing" : `Last seen ${whenSeen(p.ls)}`}</span>
       ${p.partial ? `<span class="pb-note warn-inline">Afghanistan's matches are
         withheld from this archive. What is shown is franchise cricket only —
         this player's international record is missing, not zero.</span>` : ""}
@@ -423,14 +424,20 @@ function paneProfile(){
       ${careerCard(p)}
       <article class="panel">
         <header class="panel-head"><h2>Percentile detail</h2>
-          <p class="panel-sub">Adjusted value on the left, percentile among
-            ${esc(titled(p.c))}s on the right.</p></header>
+          <p class="panel-sub">Percentile always answers how good, never how
+            large — for economy and dot percentage a lower number is better, so
+            the rank is already the right way round.</p></header>
         <div class="radar-key">
-          <div class="keyhead"><span>Metric</span><span>Value</span><span>Percentile</span></div>
+          <div class="keyhead"><span>Metric</span>
+            <span class="mview"><button data-mview="adjusted" aria-pressed="${state.metricView!=="actual"}"
+              title="Levelled so competitions compare">Adjusted</button><button data-mview="actual"
+              aria-pressed="${state.metricView==="actual"}"
+              title="What he actually did, before levelling">Actual</button></span>
+            <span>Percentile</span></div>
           ${mt.map(m => {
             const v = p.pc[m];
             return `<div class="keyrow"><span class="k">${esc(LABEL[m]||m)}</span>
-              <span class="v">${fmtMetric(p.ad[m])}</span>
+              <span class="v">${fmtMetric((state.metricView==="actual"?p.act:p.ad)[m])}</span>
               <span class="p"><span class="pbar"><span style="width:${v ?? 0}%"></span></span>
               <b>${v == null ? "—" : Math.round(v)}</b></span></div>`;
           }).join("")}
@@ -472,7 +479,7 @@ function wizMatches(skip){
     }
     if (on("comps") && w.comps.length && !w.comps.some(k => (c.cb||{})[k])) return false;
     if (on("countries") && w.countries.length && !w.countries.includes(c.nat)) return false;
-    if (w.active && !c.act) return false;
+    if (w.active && !c.playing) return false;
     return true;
   });
 }
@@ -494,10 +501,12 @@ function wizStep(key, label, opts, hint){
   return `<div class="wiz-step"><span class="wiz-label">${esc(label)}${
       hint ? ` <i class="qmark" title="${esc(hint)}" aria-hidden="true">?</i>` : ""}</span>
     <div class="segmented" role="group" aria-label="${esc(label)}">${opts.map(([v,t]) => {
+      // The count decides whether an answer is offered at all; it does not need
+      // to be printed on every chip as well.
       const n = count(v);
       return `<button data-wiz="${key}" data-v="${v}" aria-pressed="${String(cur) === v}"
         ${n ? "" : "disabled"} title="${n.toLocaleString()} player${n===1?"":"s"}"
-        >${esc(t)}<i class="opt-n">${n.toLocaleString()}</i></button>`;
+        >${esc(t)}</button>`;
     }).join("")}</div></div>`;
 }
 
@@ -842,7 +851,7 @@ function renderResults(){
           <span class="score-track"><span style="width:${Math.min(100,score).toFixed(1)}%"></span></span></span>
         <span class="who">
           <span class="who-top">${flag(c.nat)}<b>${esc(c.f||c.n)}</b>
-            ${c.act ? "" : '<em class="gone-tag">retired</em>'}
+            ${c.playing ? "" : '<em class="gone-tag">retired</em>'}
             ${c.thin ? `<em class="thin-tag" title="Only ${c.b.toLocaleString()} balls — `
               + `too little to test this profile against itself, so treat the score as a `
               + `lead rather than a finding">thin</em>` : ""}</span>
@@ -886,7 +895,12 @@ function renderResults(){
    Tray of chips, one radar carrying everyone, a season trend, and every metric
    as a span with a dot per player. */
 function compareSeries(){
-  const p = entry(); if (!p) return [];
+  const p = entry();
+  // A shape search has no reference player, but the players it found still
+  // compare against each other — which is most of what a shortlist is for.
+  if (!p) return state.compare
+    .map((u,i) => ({p: byUid[u], colour: SERIES[i % SERIES.length]}))
+    .filter(x => x.p);
   const out = [{p, colour: SERIES[0]}];
   state.compare.forEach((u,i) => {
     const c = byUid[u];
@@ -894,6 +908,7 @@ function compareSeries(){
   });
   return out;
 }
+
 function scoreAgainst(base, c){
   const sp = D.spaces[base.d][base.c];
   if (!sp || c.c !== base.c || c.d !== base.d) return null;
@@ -926,7 +941,14 @@ function renderShapeResults(){
   $("results-count").innerHTML = `${rows.length} shown of <b>${eligible}</b> matching`
     + (thinCount ? `<br><em class="thin-count">${thinCount} marked thin</em>` : "");
   renderFilters();
-  $("tagkey").hidden = true;
+  $("tagkey").hidden = false;
+  $("tagkey").innerHTML = `<button class="ghost small" id="shape-export">Export these
+    ${eligible.toLocaleString()} players to CSV</button>
+    <span class="tagkey-add">Every column the tool holds, not just what is on screen.</span>`;
+  const ex = $("shape-export");
+  if (ex) ex.onclick = () => exportCsv(
+    D.players.filter(c => c.d === disc && c.c === cell && passes(c)),
+    `cricket-${cell.replace(/\s+/g,"-")}-${disc}`);
   $("thin").hidden = rows.length > 0;
   $("thin").textContent = "Nothing matches these filters. Loosen one.";
 
@@ -947,7 +969,7 @@ function renderShapeResults(){
         <span class="score"><span class="score-num">${fmtMetric(val)}</span></span>
         <span class="who">
           <span class="who-top">${flag(c.nat)}<b>${esc(c.f||c.n)}</b>
-            ${c.act ? "" : '<em class="gone-tag">retired</em>'}
+            ${c.playing ? "" : '<em class="gone-tag">retired</em>'}
             ${c.thin ? `<em class="thin-tag" title="Only ${c.b.toLocaleString()} balls">thin</em>` : ""}</span>
           <span class="who-sub">${esc(titled(c.r||c.c))} · <b class="clubnow">${
             esc(c.nat||"—")}</b> · ${esc(EXPOSURE[c.e]||titled(c.e))}</span>
@@ -994,8 +1016,9 @@ function renderShapeResults(){
 }
 
 function renderCompare(){
-  const base = entry(); if (!base) return;
   const series = compareSeries(), saved = slRead();
+  const base = entry() || (series[0] || {}).p;
+  if (!base) return;
   $("tray").innerHTML = series.map((s,i) => {
     const on = saved.includes(s.p.u);
     const sv = `<button class="traysave${on?" on":""}" data-tsave="${s.p.u}"
@@ -1006,7 +1029,7 @@ function renderCompare(){
     const sc = i === 0 ? null : scoreAgainst(base, s.p);
     return `<span class="trayitem ${s.colour}">
       <i class="swatch"></i>${flag(s.p.nat)}<b>${esc(s.p.f||s.p.n)}</b>
-      ${i===0 ? '<span class="base-tag">searched</span>' + sv
+      ${i===0 && entry() ? '<span class="base-tag">searched</span>' + sv
         : `<span class="tray-score${sc==null?" na":""}" title="${sc==null
              ? `Different role (${esc(titled(s.p.c))} against ${esc(titled(base.c))}) — the two are scored in separate spaces, so there is no distance between them`
              : `Match score against ${esc(base.f||base.n)}`}">${
@@ -1052,18 +1075,27 @@ function renderCompare(){
 }
 function renderCompareMetrics(series, mt){
   const el = $("cmp-metrics");
+  // Adjusted is what the model compares on; actual is what the player did. Both
+  // are worth seeing, and which one you are looking at should never be a guess.
+  const useActual = state.metricView === "actual";
+  const valOf = (p, m) => (useActual ? p.act : p.ad)[m];
   if (el.style && el.style.setProperty) el.style.setProperty("--cols", series.length);
   el.innerHTML = `<div class="mlegend">${series.map(s =>
-      `<span class="lg"><i class="sw ${s.colour}"></i>${esc(s.p.f||s.p.n)}</span>`).join("")}</div>`
+      `<span class="lg"><i class="sw ${s.colour}"></i>${esc(s.p.f||s.p.n)}</span>`).join("")}
+      <span class="mview"><button data-mview="adjusted" aria-pressed="${!useActual}"
+        title="Levelled so competitions compare — what this would be worth against a common standard"
+        >Adjusted</button><button data-mview="actual" aria-pressed="${useActual}"
+        title="What the player actually did, before any levelling">Actual</button></span></div>`
     + mt.map(m => {
-    const vals = series.map(s => ({...s, pct:s.p.pc[m] ?? 50, val:s.p.ad[m]}));
-    const best = LOWER_BETTER.has(m) ? Math.min(...vals.map(v=>v.pct)) : Math.max(...vals.map(v=>v.pct));
+    const vals = series.map(s => ({...s, pct:s.p.pc[m] ?? 50, val:valOf(s.p, m)}));
+    const best = Math.max(...vals.map(v=>v.pct));
     const lo = Math.min(...vals.map(v=>v.pct)), hi = Math.max(...vals.map(v=>v.pct));
     return `<div class="mrow"><span class="mlabel">${esc(LABEL[m]||m)}</span>
       <span class="mtrack"><span class="mmid"></span>
         <span class="mspan" style="left:${lo}%;width:${(hi-lo).toFixed(1)}%"></span>
         ${vals.map(v => `<span class="mdot ${v.colour}" style="left:${v.pct}%"
-          title="${esc(v.p.f||v.p.n)}: ${fmtMetric(v.val)} (${Math.round(v.pct)}th)"></span>`).join("")}
+          title="${esc(v.p.f||v.p.n)}: ${fmtMetric(v.val)} — ${Math.round(v.pct)}th percentile among ${
+            esc(titled(v.p.c))}s"></span>`).join("")}
       </span>${vals.map(v => `<span class="mv ${v.colour}${v.pct===best?" lead":""}"
         >${fmtMetric(v.val)}</span>`).join("")}</div>`;
   }).join("");
@@ -1140,10 +1172,15 @@ function setTab(t){ state.tab = t; draw(); }
 
 function draw(){
   const shapeOnly = !entry() && !!state.shape;
-  if (shapeOnly) state.tab = "similar";
-  ["profile","compare"].forEach(t =>
-    document.querySelectorAll(`#tabs [data-tab="${t}"]`).forEach(b => b.disabled = shapeOnly));
-  $("ccount").textContent = state.compare.length ? ` (${state.compare.length + 1})` : "";
+  // Compare stays open in a shape search as soon as two players are picked;
+  // only the profile needs someone opened.
+  const canCompare = !shapeOnly || state.compare.length >= 2;
+  if (shapeOnly && state.tab === "profile") state.tab = "similar";
+  if (state.tab === "compare" && !canCompare) state.tab = "similar";
+  document.querySelectorAll('#tabs [data-tab="profile"]').forEach(b => b.disabled = shapeOnly);
+  document.querySelectorAll('#tabs [data-tab="compare"]').forEach(b => b.disabled = !canCompare);
+  $("ccount").textContent = state.compare.length
+    ? ` (${state.compare.length + (entry() ? 1 : 0)})` : "";
   ["profile","similar","compare"].forEach(t => {
     $("panel-" + t).hidden = state.tab !== t;
     document.querySelectorAll(`#tabs [data-tab="${t}"]`).forEach(b =>
@@ -1290,43 +1327,50 @@ function renderShortlist(){
     $("fresh-panel").hidden = true;
   };
   $("sl-export").hidden = !l.length;
-  $("sl-export").onclick = () => {
-    // Everything held about a player, not a summary of it. A shortlist leaves
-    // this tool and gets worked on elsewhere, so the export is the handover.
-    const mt = u => D.spaces[u.d][u.c].mt;
-    const metrics = [...new Set(l.flatMap(mt))];
-    const head = ["name","short_name","country","discipline","role","cell","age",
-      "exposure","keeper","matches","balls","effective_balls","debut","last_seen",
-      "still_playing","cricinfo",
-      ...["runs","balls_faced","outs","fours","sixes","dots","wickets","conceded"]
-        .map(c => "career_" + c),
-      ...["international","franchise","domestic"].map(g => "balls_" + g),
-      ...Object.keys(D.compNames).map(c => "balls_" + c),
-      ...metrics.map(m => "adj_" + m), ...metrics.map(m => "pct_" + m)];
-    const rows = l.map(x => {
-      const t = (x.car || {}).total || {};
-      return [x.f || x.n, x.n, x.nat || "", x.d, titled(x.r || x.c), x.c,
-        x.a ? Math.floor(x.a) : "", EXPOSURE[x.e] || x.e, x.kp ? "yes" : "no",
-        x.m, x.b, x.eb, (x.fs||"").slice(0,10), (x.ls||"").slice(0,10),
-        x.act ? "yes" : "no", x.ci || "",
-        t.runs ?? "", t.balls_raw ?? "", t.outs ?? "", t.fours ?? "", t.sixes ?? "",
-        t.dots ?? "", t.wkts ?? "", x.d === "bowling" ? (t.runs ?? "") : "",
-        ...["international","franchise","domestic"].map(g =>
-          Object.entries(x.tb||{}).filter(([k]) =>
-            (k.startsWith("international") ? "international"
-             : k === "franchise" ? "franchise" : "domestic") === g)
-            .reduce((a,[,v]) => a+v, 0) || ""),
-        ...Object.keys(D.compNames).map(c => (x.cb||{})[c] ?? ""),
-        ...metrics.map(m => x.ad[m] ?? ""), ...metrics.map(m => x.pc[m] ?? "")];
-    });
-    // UTF-8 BOM so Excel opens it as UTF-8 rather than mangling the names.
-    const csv = "\uFEFF" + [head, ...rows].map(r =>
-      r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\r\n");
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv;charset=utf-8"}));
-    a.download = `cricket-shortlist-${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
-  };
+  $("sl-export").onclick = () => exportCsv(l, "cricket-shortlist");
+}
+
+/* Every column the tool holds, for a list of players. A shortlist leaves here
+   and is worked on elsewhere, so the export is the handover, not a summary. */
+function exportCsv(list, stem){
+  if (!list.length) return;
+  const mt = u => (D.spaces[u.d] && D.spaces[u.d][u.c] ? D.spaces[u.d][u.c].mt : []);
+  const metrics = [...new Set(list.flatMap(mt))];
+  const head = ["name","short_name","country","discipline","role","cell","age",
+    "exposure","keeper","thin","matches","balls","effective_balls","debut",
+    "last_played","still_playing","cricinfo",
+    ...["runs","balls_faced","outs","fours","sixes","dots","wickets"].map(c => "career_" + c),
+    ...["international","franchise","domestic"].map(g => "balls_" + g),
+    ...Object.keys(D.compNames).map(c => "balls_" + c),
+    ...metrics.map(m => "actual_" + m),
+    ...metrics.map(m => "adjusted_" + m),
+    ...metrics.map(m => "percentile_" + m)];
+  const rows = list.map(x => {
+    const t = (x.car || {}).total || {};
+    const grp = g => Object.entries(x.tb || {}).filter(([k]) =>
+      (k.startsWith("international") ? "international"
+       : k === "franchise" ? "franchise" : "domestic") === g)
+      .reduce((a,[,v]) => a + v, 0) || "";
+    return [x.f || x.n, x.n, x.nat || "", x.d, titled(x.r || x.c), x.c,
+      x.a ? Math.floor(x.a) : "", EXPOSURE[x.e] || x.e, x.kp ? "yes" : "no",
+      x.thin ? "yes" : "no", x.m, x.b, x.eb,
+      (x.fs||"").slice(0,10), (x.ls||"").slice(0,10), x.playing ? "yes" : "no",
+      x.ci || "",
+      t.runs ?? "", t.balls_raw ?? "", t.outs ?? "", t.fours ?? "", t.sixes ?? "",
+      t.dots ?? "", t.wkts ?? "",
+      ...["international","franchise","domestic"].map(grp),
+      ...Object.keys(D.compNames).map(c => (x.cb||{})[c] ?? ""),
+      ...metrics.map(m => (x.act||{})[m] ?? ""),
+      ...metrics.map(m => (x.ad||{})[m] ?? ""),
+      ...metrics.map(m => (x.pc||{})[m] ?? "")];
+  });
+  // UTF-8 BOM so Excel reads the names properly rather than mangling them.
+  const csv = "\uFEFF" + [head, ...rows].map(r =>
+    r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv;charset=utf-8"}));
+  a.download = `${stem}-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
 }
 
 /* ── mode, chosen from the landing routes ───────────────
@@ -1371,7 +1415,7 @@ $("examples").innerHTML = PICKS.map(n => {
 document.querySelectorAll(".pick").forEach(b => b.onclick = () => select(b.dataset.pid));
 
 const people = new Set(D.players.map(p => p.p));
-const playing = new Set(D.players.filter(p => p.act).map(p => p.p));
+const playing = new Set(D.players.filter(p => p.playing).map(p => p.p));
 $("bigstats").innerHTML = [
   [people.size.toLocaleString(), "players"],
   [playing.size.toLocaleString(), "still playing"],

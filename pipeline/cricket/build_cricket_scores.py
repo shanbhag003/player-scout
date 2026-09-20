@@ -291,6 +291,9 @@ def build_discipline(facts, roles, players, discipline, metrics, min_balls, cell
 
     per_comp = profile(facts, by).reset_index()
     prof = apply_adjustment(per_comp, eff, metrics)
+    # The same profile with no competition levelling applied: what the player
+    # actually did, before the model decides what it would be worth elsewhere.
+    prof_actual = apply_adjustment(per_comp, {}, metrics)
     # Pool entry is judged on real balls faced, not on what the weighting left.
     prof = prof[prof["balls_raw"] >= min_balls]
     if prof.empty:
@@ -348,6 +351,7 @@ def build_discipline(facts, roles, players, discipline, metrics, min_balls, cell
             "loadings": [[round(float(x), 4) for x in comp] for comp in pca.components_],
         }
     return {"spaces": spaces, "coords": coords, "validation": validation,
+            "actual": prof_actual,
             "effects": {m: {k: round(float(v), 4) for k, v in e.items()} for m, e in eff.items()},
             "movers": movers, "profile": prof, "z": z_all}
 
@@ -358,17 +362,31 @@ def _comp_cfg():
         return yaml.safe_load(fh)["competitions"]
 
 
-def percentiles(z: pd.DataFrame, cells: pd.Series, metrics) -> pd.DataFrame:
-    """Rank each player against their own cell, not the whole pool.
+# Metrics where a smaller number is the better one. Their percentile has to be
+# flipped, or the best economy in the world reads as the 0th percentile and a
+# radar that claims "higher is better" tells the opposite of the truth.
+LOWER_IS_BETTER = {"dot_pct", "econ", "econ_pp", "econ_mid", "econ_death",
+                   "bdry_conc", "six_share_conc", "wide_rate"}
 
-    An opener's dot percentage means nothing measured against finishers.
+
+def percentiles(z: pd.DataFrame, cells: pd.Series, metrics) -> pd.DataFrame:
+    """How good a player is at each metric, against their own cell.
+
+    An opener's dot percentage means nothing measured against finishers. And the
+    number always answers "how good", never "how large" — for economy and the
+    other lower-is-better metrics the rank is inverted here, once, rather than
+    left for every reader and every chart to remember.
     """
     out = pd.DataFrame(index=z.index, columns=metrics, dtype=float)
     for _, idx in cells.groupby(cells):
         sub = z.loc[z.index.intersection(idx.index)]
         if len(sub) < 5:
             continue
-        out.loc[sub.index, metrics] = sub[metrics].rank(pct=True).to_numpy() * 100
+        ranked = sub[metrics].rank(pct=True) * 100
+        for m in metrics:
+            if m in LOWER_IS_BETTER:
+                ranked[m] = 100 - ranked[m]
+        out.loc[sub.index, metrics] = ranked.to_numpy()
     return out
 
 
@@ -582,6 +600,10 @@ def emit(bat, bowl, players, roles, facts, out_dir, half_life=HALF_LIFE, facts_r
                 "effective_balls": int(row["balls"]),
                 "adjusted": {m: (None if pd.isna(row[m]) else round(float(row[m]), 2))
                              for m in metrics},
+                "actual": {m: (None if pid not in res["actual"].index
+                                     or pd.isna(res["actual"].at[pid, m])
+                               else round(float(res["actual"].at[pid, m]), 2))
+                           for m in metrics},
                 "percentile": {m: (None if pd.isna(pct.at[pid, m]) else round(float(pct.at[pid, m]), 1))
                                for m in metrics},
                 "seasons": hist.get(pid, []),
@@ -619,6 +641,7 @@ def emit(bat, bowl, players, roles, facts, out_dir, half_life=HALF_LIFE, facts_r
             "link": ("https://cricsheet.org/article/"
                      "explanation-for-withholding-of-afghanistani-matches/"),
         },
+        "lower_is_better": sorted(LOWER_IS_BETTER),
         "limits": ("No ball tracking, shot type or fielding positions exist in the open "
                    "data, so players are compared on outcomes rather than technique."),
     }
