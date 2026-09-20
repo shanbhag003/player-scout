@@ -13,6 +13,10 @@
      sports are one click apart, so anything that differs reads as a mistake. -->
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="cricket.css">
+<!-- The other sport is a separate page, so give the browser a head start on it
+     and on the file it will need first. -->
+<link rel="prefetch" href="index.html" as="document">
+<link rel="prefetch" href="data/index.json" as="fetch" crossorigin>
 </head>
 <body>
 

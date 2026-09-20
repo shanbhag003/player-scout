@@ -12,31 +12,33 @@ const BASE = "data/cricket";
 const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g,
   c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
-let D, FLAGS = {};
+let D, FLAGS = {}, DETAIL = null;
+
+/* Loaded in two passes. index.json is 1.5 MB and holds everything the landing
+   and the search need; detail.json is 3.6 MB and is only wanted once a player is
+   opened. Waiting for both left the page blank for the whole download, which is
+   what made switching sports feel like a stall. */
+function shapePlayer(e, d){
+  d = d || {};
+  return {u:e.uid, p:e.player_id, n:e.name, f:e.full_name, d:e.discipline,
+    c:e.cell, r:e.role, x:e.coords, b:e.balls, eb:e.effective_balls, m:e.matches,
+    a:e.age, nat:e.nationality, e:e.exposure, tb:e.tier_balls||{},
+    cb:e.competition_balls||{}, kp:!!e.keeper, act:e.active,
+    partial:!!e.partial_record, thin:!!e.thin,
+    ls:e.last_seen, fs:e.first_seen,
+    pc:d.percentile||{}, ad:d.adjusted||{}, sea:d.seasons||[],
+    car:null, ci:null};
+}
 
 try {
-  const [index, detail, meta, flags] = await Promise.all([
-    ...["index","detail","meta"].map(n =>
-      fetch(`${BASE}/${n}.json`).then(r => {
-        if (!r.ok) throw new Error(`${n}.json ${r.status}`);
-        return r.json();
-      })),
+  const [index, meta, flags] = await Promise.all([
+    fetch(`${BASE}/index.json`).then(r => { if (!r.ok) throw new Error(`index.json ${r.status}`); return r.json(); }),
+    fetch(`${BASE}/meta.json`).then(r => { if (!r.ok) throw new Error(`meta.json ${r.status}`); return r.json(); }),
     fetch("assets/cricket-countries.json").then(r => r.ok ? r.json() : {}).catch(() => ({})),
   ]);
   FLAGS = flags || {};
   D = {
-    players: index.map(e => {
-      const d = (detail[e.player_id] || {})[e.discipline] || {};
-      return {u:e.uid, p:e.player_id, n:e.name, f:e.full_name, d:e.discipline,
-        c:e.cell, r:e.role, x:e.coords, b:e.balls, eb:e.effective_balls, m:e.matches,
-        a:e.age, nat:e.nationality, e:e.exposure, tb:e.tier_balls||{},
-        cb:e.competition_balls||{}, kp:!!e.keeper, act:e.active,
-        partial:!!e.partial_record, thin:!!e.thin,
-        ls:e.last_seen, fs:e.first_seen, pc:d.percentile||{}, ad:d.adjusted||{},
-        sea:d.seasons||[],
-        car:(((detail[e.player_id]||{}).career)||{})[e.discipline]||null,
-        ci:(detail[e.player_id]||{}).cricinfo||null};
-    }),
+    players: index.map(e => shapePlayer(e, null)),
     spaces: Object.fromEntries(Object.entries(meta.spaces).map(([k,v]) =>
       [k, Object.fromEntries(Object.entries(v).map(([c,s]) =>
         [c, {md:s.median_distance, n:s.players, mt:s.metrics}]))])),
@@ -45,13 +47,28 @@ try {
     withheld: meta.withheld, comps: meta.competitions,
     compNames: meta.competition_names || {},
     compNotes: meta.competition_notes || {}, matches: meta.matches,
-    built: meta.built_at
+    built: meta.built_at, ready: false,
   };
+  // The detail arrives behind the first paint and is merged in place.
+  fetch(`${BASE}/detail.json`).then(r => r.ok ? r.json() : null).then(det => {
+    if (!det) return;
+    DETAIL = det;
+    D.players.forEach(x => {
+      const rec = det[x.p] || {};
+      const d = rec[x.d] || {};
+      x.pc = d.percentile || {}; x.ad = d.adjusted || {}; x.sea = d.seasons || [];
+      x.car = (rec.career || {})[x.d] || null; x.ci = rec.cricinfo || null;
+    });
+    D.ready = true;
+    document.body.classList.remove("loading-detail");
+    if (state.sel || state.shape) draw();
+  }).catch(() => {});
 } catch (err) {
   $("pane").innerHTML = `<div class="empty">Cricket data could not be loaded ` +
     `(${esc(err.message)}). If this is staging, the daily job may not have run yet.</div>`;
   return;
 }
+document.body.classList.add("loading-detail");
 
 /* A flag where there is one, a lettered badge where there is not. West Indies
    and an ICC XI are teams rather than countries and have no ISO code. */
@@ -91,7 +108,7 @@ const BLANK = () => ({active:true, exposure:"any", age:"any", minBalls:0,
   country:[], comp:[], keeper:false});
 const state = {mode:"explore", tab:"profile", sel:null, disc:"batting", sugg:-1,
   compare:[], showMore:false, career:"total", f:BLANK(),
-  shape:null,
+  shape:null, limit:25,
   wiz:{disc:null, cell:null, age:"any", exposure:"any", comps:[], countries:[], active:true}};
 
 const norm = s => (s||"").toLowerCase().replace(/[^a-z ]/g,"");
@@ -174,7 +191,7 @@ function ranked(){
     const out = D.players.filter(c => c.d === disc && c.c === cell && passes(c)
                                    && c.ad[sort] != null);
     out.sort((a,b) => low ? a.ad[sort] - b.ad[sort] : b.ad[sort] - a.ad[sort]);
-    return out.slice(0, 25).map(c => [c.ad[sort], c]);
+    return out.slice(0, state.limit || 25).map(c => [c.ad[sort], c]);
   }
   if(!p) return [];
   const sp=D.spaces[p.d][p.c]; if(!sp) return [];
@@ -359,6 +376,7 @@ function playerbar(){
 function paneProfile(){
   const p = entry();
   if(!p) return `<div class="empty">Search a player to begin.</div>`;
+  if(!D.ready) return `<div class="empty">Loading the detail for ${esc(p.f||p.n)}…</div>`;
   const mt = D.spaces[p.d][p.c].mt;
   // Eight axes on the radar; a sixteen-spoke chart is unreadable. The rest are
   // in the table beside it, which is where football puts the detail too.
@@ -441,16 +459,19 @@ const WIZ_ROLES = {
 const SORT_DEFAULT = {opener:"sr", "top middle":"sr", middle:"sr",
                       finisher:"sr_death", pace:"econ", spin:"econ"};
 
-function wizMatches(){
+function wizMatches(skip){
   const w = state.wiz;
+  const on = k => k !== skip;
   return D.players.filter(c => {
-    if (w.disc && c.d !== w.disc) return false;
-    if (w.cell && c.c !== w.cell) return false;
-    if (w.age !== "any" && !ageOk({a:c.a}, w.age)) return false;
-    if (w.exposure === "uncapped" && !(c.e === "domestic" || c.e === "franchise")) return false;
-    if (w.exposure === "domestic" && c.e !== "domestic") return false;
-    if (w.comps.length && !w.comps.some(k => (c.cb||{})[k])) return false;
-    if (w.countries.length && !w.countries.includes(c.nat)) return false;
+    if (on("disc") && w.disc && c.d !== w.disc) return false;
+    if (on("cell") && w.cell && c.c !== w.cell) return false;
+    if (on("age") && w.age !== "any" && !ageOk({a:c.a}, w.age)) return false;
+    if (on("exposure")){
+      if (w.exposure === "uncapped" && !(c.e === "domestic" || c.e === "franchise")) return false;
+      if (w.exposure === "domestic" && c.e !== "domestic") return false;
+    }
+    if (on("comps") && w.comps.length && !w.comps.some(k => (c.cb||{})[k])) return false;
+    if (on("countries") && w.countries.length && !w.countries.includes(c.nat)) return false;
     if (w.active && !c.act) return false;
     return true;
   });
@@ -458,11 +479,26 @@ function wizMatches(){
 
 function wizStep(key, label, opts, hint){
   const cur = state.wiz[key];
+  // Count each answer against everything else already chosen. An option that
+  // leads nowhere is a dead end you cannot see until you have clicked it.
+  const base = wizMatches(key);
+  const count = v => {
+    if (v === "any" || v == null) return base.length;
+    if (key === "disc") return base.filter(c => c.d === v).length;
+    if (key === "cell") return base.filter(c => c.c === v).length;
+    if (key === "age") return base.filter(c => ageOk({a:c.a}, v)).length;
+    if (key === "exposure") return base.filter(c =>
+      v === "uncapped" ? (c.e === "domestic" || c.e === "franchise") : c.e === "domestic").length;
+    return base.length;
+  };
   return `<div class="wiz-step"><span class="wiz-label">${esc(label)}${
       hint ? ` <i class="qmark" title="${esc(hint)}" aria-hidden="true">?</i>` : ""}</span>
-    <div class="segmented" role="group" aria-label="${esc(label)}">${opts.map(([v,t]) =>
-      `<button data-wiz="${key}" data-v="${v}" aria-pressed="${String(cur) === v}"
-        >${esc(t)}</button>`).join("")}</div></div>`;
+    <div class="segmented" role="group" aria-label="${esc(label)}">${opts.map(([v,t]) => {
+      const n = count(v);
+      return `<button data-wiz="${key}" data-v="${v}" aria-pressed="${String(cur) === v}"
+        ${n ? "" : "disabled"} title="${n.toLocaleString()} player${n===1?"":"s"}"
+        >${esc(t)}<i class="opt-n">${n.toLocaleString()}</i></button>`;
+    }).join("")}</div></div>`;
 }
 
 function wizMulti(key, label, options, anyText){
@@ -486,8 +522,18 @@ function wizMulti(key, label, options, anyText){
 
 function renderWizard(){
   const w = state.wiz, n = wizMatches().length;
-  const countries = [...new Set(D.players.map(x => x.nat).filter(Boolean))].sort().map(c => [c,c]);
-  const comps = CLUBCOMPS.map(c => [c, D.compNames[c] || c]).sort((a,b) => a[1].localeCompare(b[1]));
+  // Only competitions and countries that actually hold someone matching the
+  // rest of the answers, each with its count.
+  const forComps = wizMatches("comps"), forCountries = wizMatches("countries");
+  const compN = {}; forComps.forEach(c =>
+    Object.keys(c.cb||{}).forEach(k => compN[k] = (compN[k]||0) + 1));
+  const countryN = {}; forCountries.forEach(c =>
+    { if (c.nat) countryN[c.nat] = (countryN[c.nat]||0) + 1; });
+  const comps = CLUBCOMPS.filter(c => compN[c])
+    .map(c => [c, `${D.compNames[c] || c} (${compN[c]})`])
+    .sort((a,b) => a[1].localeCompare(b[1]));
+  const countries = Object.keys(countryN).sort()
+    .map(c => [c, `${c} (${countryN[c]})`]);
 
   let html = wizStep("disc", "Discipline", [["batting","Batter"],["bowling","Bowler"]],
     "An all-rounder appears under both. Pick the side of his game you are hiring.");
@@ -496,7 +542,9 @@ function renderWizard(){
     html += wizStep("age", "Age", AGE_BANDS);
     html += wizStep("exposure", "Exposure", [["any","Any"],["uncapped","Uncapped"],
       ["domestic","Domestic only"]],
-      "Uncapped means no T20 internationals. Domestic only adds: no franchise league either.");
+      "Uncapped: has never played a T20 international, though he may be an IPL or "
+      + "Big Bash regular. Domestic only: has never played an international AND has "
+      + "never played a franchise league — purely state, county or provincial cricket.");
     html += wizMulti("comps", "Has played in", comps, "Any competition");
     html += wizMulti("countries", "Represents", countries, "Any country");
   }
@@ -545,6 +593,7 @@ function renderWizard(){
 function wizGo(){
   const w = state.wiz;
   state.shape = {disc: w.disc, cell: w.cell, sort: SORT_DEFAULT[w.cell] || "sr"};
+  state.limit = 25;
   state.sel = null; state.compare = [];
   state.f = BLANK();
   state.f.age = w.age; state.f.exposure = w.exposure;
@@ -690,11 +739,11 @@ function renderFilters(){
     seg("Exposure", "exposure", [
       ["any", "Any", "Everyone in the pool."],
       ["uncapped", "Uncapped",
-       "Has never played a T20 international. May well play franchise cricket — "
-       + "this is what an auction means by uncapped."],
+       "Has never played a T20 international, though he may be an IPL or Big Bash "
+       + "regular. This is what an auction means by uncapped."],
       ["domestic", "Domestic only",
-       "Has never played a T20 international and has never played a top franchise "
-       + "league either. Purely domestic cricket."]],
+       "Has never played an international AND has never played a franchise league. "
+       + "Purely state, county or provincial cricket."]],
       "Measured in T20 cricket only, and a level counts once a player has faced or "
       + "bowled 60 balls at it. So a Test great with one T20I appearance still reads "
       + "as uncapped here.") +
@@ -721,7 +770,7 @@ function renderFilters(){
   };
   $("filters").querySelector("[data-reset]").onclick = () => {
     state.f = BLANK();
-    if (state.mode === "scout"){ state.f.minBalls = 300; state.f.exposure = "domestic"; }
+    if (state.mode === "scout") state.f.minBalls = 300;
     draw();
   };
   wireMulti();
@@ -780,10 +829,12 @@ function renderResults(){
     const cells = bat
       ? [["Age", c.a ? Math.floor(c.a) : "—"],
          ["Runs", (t.runs||0).toLocaleString()],
-         ["Strike rate", t.balls_raw ? (t.runs/t.balls_raw*100).toFixed(1) : "—"]]
+         ["Strike rate", t.balls_raw ? (t.runs/t.balls_raw*100).toFixed(1) : "—"],
+         ["Last played", whenSeen(c.ls)]]
       : [["Age", c.a ? Math.floor(c.a) : "—"],
          ["Wickets", t.wkts ?? "—"],
-         ["Economy", t.balls_raw ? (t.runs/t.balls_raw*6).toFixed(2) : "—"]];
+         ["Economy", t.balls_raw ? (t.runs/t.balls_raw*6).toFixed(2) : "—"],
+         ["Last played", whenSeen(c.ls)]];
     return `<li class="match${inCmp ? " is-open" : ""}">
       <button class="match-btn" data-uid="${c.u}">
         <span class="rank">${i + 1}</span>
@@ -851,10 +902,13 @@ function scoreAgainst(base, c){
 }
 
 function renderShapeResults(){
+  if (!D.ready){ $("matches").innerHTML =
+    `<li class="empty">Loading…</li>`; return; }
   const {disc, cell, sort} = state.shape;
   const rows = ranked();
   const pool = D.players.filter(c => c.d === disc && c.c === cell);
   const eligible = pool.filter(passes).length;
+  const full = state.compare.length >= MAX_COMPARE - 1;
   const low = LOWER_BETTER.has(sort);
   const mt = D.spaces[disc][cell].mt;
 
@@ -882,15 +936,15 @@ function renderShapeResults(){
     const bat = c.d === "batting";
     const cells = bat
       ? [["Age", c.a ? Math.floor(c.a) : "—"], ["Runs", (t.runs||0).toLocaleString()],
-         ["Balls", c.b.toLocaleString()]]
+         ["Balls", c.b.toLocaleString()], ["Last played", whenSeen(c.ls)]]
       : [["Age", c.a ? Math.floor(c.a) : "—"], ["Wickets", t.wkts ?? "—"],
-         ["Balls", c.b.toLocaleString()]];
+         ["Balls", c.b.toLocaleString()], ["Last played", whenSeen(c.ls)]];
     const isSaved = saved.includes(c.u);
-    return `<li class="match">
+    const inCmp = state.compare.includes(c.u);
+    return `<li class="match shape${inCmp ? " is-open" : ""}">
       <button class="match-btn" data-open="${c.p}">
         <span class="rank">${i + 1}</span>
-        <span class="score"><span class="score-num">${fmtMetric(val)}</span>
-          <span class="score-label">${esc((LABEL[sort]||sort).toLowerCase())}</span></span>
+        <span class="score"><span class="score-num">${fmtMetric(val)}</span></span>
         <span class="who">
           <span class="who-top">${flag(c.nat)}<b>${esc(c.f||c.n)}</b>
             ${c.act ? "" : '<em class="gone-tag">retired</em>'}
@@ -907,16 +961,36 @@ function renderShapeResults(){
           title="${isSaved?"Remove from shortlist":"Save to shortlist"}">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v16l-5-4-5 4z"
             fill="${isSaved?"currentColor":"none"}" stroke="currentColor" stroke-width="1.8"
-            stroke-linejoin="round"/></svg></button></span>
+            stroke-linejoin="round"/></svg></button>
+        <button class="addbtn${inCmp?" on":""}" data-add="${c.u}" aria-pressed="${inCmp}"
+          ${!inCmp && full ? "disabled" : ""}
+          title="${inCmp?"Remove from comparison":full?"Comparison is full":"Add to comparison"}"
+          >${inCmp ? "&minus;" : "+"}</button></span>
     </li>`;
   }).join("");
 
+  // 25 at a time, because a list of 639 is not a list.
+  if (rows.length < eligible){
+    const more = Math.min(25, eligible - rows.length);
+    $("matches").insertAdjacentHTML("beforeend",
+      `<li class="more-row"><button class="ghost" id="show-more"
+        >Show ${more} more — ${(eligible - rows.length).toLocaleString()} left</button></li>`);
+    const btn = $("show-more");
+    if (btn) btn.onclick = () => { state.limit = (state.limit || 25) + 25; draw(); };
+  }
+
   $("matches").querySelectorAll("[data-open]").forEach(b =>
     b.onclick = () => select(b.dataset.open));
+  $("matches").querySelectorAll(".addbtn").forEach(b => b.onclick = () => {
+    const i = state.compare.indexOf(b.dataset.add);
+    if (i >= 0) state.compare.splice(i,1);
+    else if (state.compare.length < MAX_COMPARE - 1) state.compare.push(b.dataset.add);
+    draw();
+  });
   $("matches").querySelectorAll(".savebtn").forEach(b =>
     b.onclick = () => slToggle(b.dataset.save));
   const sel = $("shape-sort");
-  if (sel) sel.onchange = e => { state.shape.sort = e.target.value; draw(); };
+  if (sel) sel.onchange = e => { state.shape.sort = e.target.value; state.limit = 25; draw(); };
 }
 
 function renderCompare(){
@@ -1265,12 +1339,11 @@ function setMode(mode, quiet){
     x.setAttribute("aria-pressed", String(x.dataset.mode === mode)));
   document.querySelectorAll(".route").forEach(r =>
     r.setAttribute("aria-pressed", String(r.dataset.route === mode)));
-  if (mode === "scout"){ state.f.minBalls = 300; state.f.active = true;
-                         state.f.exposure = "domestic"; state.showMore = true; }
+  if (mode === "scout"){ state.f.minBalls = 300; state.f.active = true; state.showMore = true; }
   else { state.f.minBalls = 0; state.f.exposure = "any"; state.showMore = false; }
   const hint = $("route-hint");
   if (hint) hint.textContent = mode === "scout"
-    ? "Scouting: domestic players only, 300 balls minimum, all filters open."
+    ? "Scouting: describe the player you want. 300 balls minimum, all filters open."
     : "Exploring: the whole pool, no minimum.";
   const wiz = $("wizard");
   if (wiz) wiz.hidden = mode !== "scout";

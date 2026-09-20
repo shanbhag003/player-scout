@@ -364,3 +364,20 @@ img.lmark.flag{width:1.4rem;height:1.4rem;border-radius:50%;object-fit:cover;
   .wiz-step .multi-panel{left:0;position:static;width:100%}
   .wiz-actions{flex-wrap:wrap}
 }
+
+/* ── four meta cells now, and a metric column wide enough for its number ── */
+.match-btn{grid-template-columns:1.3rem 3.2rem minmax(0,1fr) repeat(4,minmax(3.9rem,5.2rem))}
+.match.shape .match-btn{grid-template-columns:1.3rem 4.4rem minmax(0,1fr) repeat(4,minmax(3.9rem,5.2rem))}
+/* The metric name is in the header — "Sorted by Acceleration" — so repeating it
+   under every number only overlapped the column beside it. */
+.match.shape .score-num{font-size:1.15rem}
+.more-row{list-style:none;display:flex;justify-content:center;padding:.5rem 0 .2rem}
+.more-row .ghost{min-width:14rem;justify-content:center}
+
+/* While the detail file is still in flight the page is usable — search, the
+   landing and the wizard all run off the index alone. */
+body.loading-detail .radar-wrap,body.loading-detail .cmp-metrics{opacity:.45}
+
+@media (max-width:820px){
+  .match-btn,.match.shape .match-btn{grid-template-columns:2.6rem minmax(0,1fr)}
+}
