@@ -503,7 +503,8 @@ function wizStep(key, label, opts, hint){
     return base.length;
   };
   return `<div class="wiz-step"><span class="wiz-label">${esc(label)}${
-      hint ? ` <i class="qmark" title="${esc(hint)}" aria-hidden="true">?</i>` : ""}</span>
+      hint ? ` <button type="button" class="qmark" data-hint="${esc(hint)}"
+        title="${esc(hint)}" aria-label="What this means">?</button>` : ""}</span>
     <div class="segmented" role="group" aria-label="${esc(label)}">${opts.map(([v,t]) => {
       // The count decides whether an answer is offered at all; it does not need
       // to be printed on every chip as well.
@@ -671,12 +672,13 @@ function chipsFor(a, b){
 }
 
 function seg(label, key, opts, hint){
-  return `<div class="filter"><span class="filter-label"
-      ${hint ? `title="${esc(hint)}"` : ""}>${esc(label)}${
-      hint ? ' <i class="qmark" aria-hidden="true">?</i>' : ""}</span>
+  return `<div class="filter"><span class="filter-label">${esc(label)}${
+      hint ? ` <button type="button" class="qmark" data-hint="${esc(hint)}"
+        title="${esc(hint)}" aria-label="What this means">?</button>` : ""}</span>
     <div class="segmented" role="group" aria-label="${esc(label)}">${opts.map(([v,t,tip]) =>
       `<button data-f="${key}" data-v="${v}" aria-pressed="${String(state.f[key]) === v}"
-        ${tip ? `title="${esc(tip)}"` : ""}>${esc(t)}</button>`).join("")}</div></div>`;
+        ${tip ? `title="${esc(tip)}" data-tip="${esc(tip)}"` : ""}>${esc(t)}</button>`).join("")}</div>
+    ${opts.some(o => o[2]) ? `<p class="opt-tip" data-tipfor="${key}"></p>` : ""}</div>`;
 }
 
 /* A multi-select with its own search, because "Represents" has eighty options
@@ -773,6 +775,13 @@ function renderFilters(){
   $("filters").querySelectorAll("[data-f]").forEach(b => b.onclick = () => {
     state.f[b.dataset.f] = b.dataset.f === "minBalls" ? +b.dataset.v : b.dataset.v;
     draw();
+  });
+  // Show the chosen option's explanation under the row, where a phone can read
+  // it. On desktop the same text is still the tooltip.
+  $("filters").querySelectorAll("[data-tipfor]").forEach(p => {
+    const key = p.dataset.tipfor;
+    const on = $("filters").querySelector(`[data-f="${key}"][aria-pressed="true"]`);
+    p.textContent = on && on.dataset.tip ? on.dataset.tip : "";
   });
   $("filters").querySelectorAll("[data-chk]").forEach(el =>
     el.onchange = e => { state.f[el.dataset.chk] = e.target.checked; draw(); });
@@ -1453,7 +1462,8 @@ $("complist").innerHTML = Object.entries(seen)
     const note = D.compNotes[c];
     return `<li${note ? ` title="${esc(note)}"` : ""}>
       <span class="lmark letters">${short}</span>
-      <span class="lname">${esc(name)}${note ? ' <i class="qmark" aria-hidden="true">?</i>' : ""}</span>
+      <span class="lname">${esc(name)}${note ? ` <button type="button" class="qmark"
+        data-hint="${esc(note)}" aria-label="What this competition is">?</button>` : ""}</span>
       <span class="lcountry">${set.size.toLocaleString()}</span></li>`;
   }).join("");
 
@@ -1534,6 +1544,46 @@ document.addEventListener("click", e => {
   if (!e.target.closest(".freshness")) $("fresh-panel").hidden = true;
   if (!e.target.closest(".shortlist-wrap")) $("short-panel").hidden = true;
 });
+
+
+/* ── hints you can actually reach ────────────────────────
+   A title attribute is a hover, and a phone has no hover, so every "?" on the
+   page was decoration on mobile. They are buttons now, and tapping one opens the
+   text beside it. */
+const hintPop = (() => {
+  let box = null;
+  function close(){ if (box) box.hidden = true; }
+  function open(el, text){
+    if (!box){
+      box = document.createElement("div");
+      box.className = "hintpop";
+      box.setAttribute("role", "status");
+      document.body.appendChild(box);
+    }
+    box.textContent = text;
+    box.hidden = false;
+    if (el.getBoundingClientRect && box.style){
+      const r = el.getBoundingClientRect();
+      const w = Math.min(280, (window.innerWidth || 360) - 24);
+      box.style.width = w + "px";
+      box.style.left = Math.max(12, Math.min(r.left, (window.innerWidth || 360) - w - 12)) + "px";
+      box.style.top = (r.bottom + 8) + "px";
+    }
+  }
+  return {open, close, last: null, isOpen: () => !!(box && !box.hidden)};
+})();
+
+document.addEventListener("click", e => {
+  const mark = e.target.closest && e.target.closest("[data-hint]");
+  if (mark){
+    e.preventDefault(); e.stopPropagation();
+    if (hintPop.isOpen() && mark === hintPop.last){ hintPop.close(); hintPop.last = null; }
+    else { hintPop.open(mark, mark.dataset.hint); hintPop.last = mark; }
+    return;
+  }
+  hintPop.close();
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape") hintPop.close(); });
 
 $("clear").onclick = toLanding;
 $("brand").onclick = e => { e.preventDefault(); toLanding(); };
