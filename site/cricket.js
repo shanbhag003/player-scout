@@ -150,8 +150,8 @@ const entry = () => (byPlayer[state.sel]||[]).find(e=>e.d===state.disc);
 function passes(c){
   const f=state.f;
   if(f.active&&!c.act) return false;
-  if(f.exposure==="uncapped"&&c.e!=="domestic") return false;
-  if(f.exposure==="unfranchised"&&!(c.e==="domestic"||c.e==="franchise")) return false;
+  if(f.exposure==="uncapped" && !(c.e==="domestic"||c.e==="franchise")) return false;
+  if(f.exposure==="domestic" && c.e!=="domestic") return false;
   if(f.country.length && !f.country.includes(c.nat)) return false;
   if(f.comp.length && !f.comp.some(k => (c.cb||{})[k])) return false;
   if(f.keeper&&!c.kp) return false;
@@ -431,11 +431,13 @@ function chipsFor(a, b){
       full:`${r.y > r.x ? "More" : "Less"} ${full(r.m)}`}))];
 }
 
-function seg(label, key, opts){
-  return `<div class="filter"><span class="filter-label">${esc(label)}</span>
-    <div class="segmented" role="group" aria-label="${esc(label)}">${opts.map(([v,t]) =>
+function seg(label, key, opts, hint){
+  return `<div class="filter"><span class="filter-label"
+      ${hint ? `title="${esc(hint)}"` : ""}>${esc(label)}${
+      hint ? ' <i class="qmark" aria-hidden="true">?</i>' : ""}</span>
+    <div class="segmented" role="group" aria-label="${esc(label)}">${opts.map(([v,t,tip]) =>
       `<button data-f="${key}" data-v="${v}" aria-pressed="${String(state.f[key]) === v}"
-        >${esc(t)}</button>`).join("")}</div></div>`;
+        ${tip ? `title="${esc(tip)}"` : ""}>${esc(t)}</button>`).join("")}</div></div>`;
 }
 
 /* A multi-select with its own search, because "Represents" has eighty options
@@ -508,8 +510,17 @@ function renderFilters(){
     .sort((a,b) => a[1].localeCompare(b[1]));
   $("filters").innerHTML =
     seg("Age", "age", AGE_BANDS) +
-    seg("Exposure", "exposure", [["any","Any"],["unfranchised","No internationals"],
-                                 ["uncapped","Uncapped only"]]) +
+    seg("Exposure", "exposure", [
+      ["any", "Any", "Everyone in the pool."],
+      ["uncapped", "Uncapped",
+       "Has never played a T20 international. May well play franchise cricket — "
+       + "this is what an auction means by uncapped."],
+      ["domestic", "Domestic only",
+       "Has never played a T20 international and has never played a top franchise "
+       + "league either. Purely domestic cricket."]],
+      "Measured in T20 cricket only, and a level counts once a player has faced or "
+      + "bowled 60 balls at it. So a Test great with one T20I appearance still reads "
+      + "as uncapped here.") +
     seg("Balls faced", "minBalls", [["0","Any"],["300","300+"],["1000","1,000+"]]) +
     (more ? multi("country", "Represents", countries, "Any country")
           + multi("comp", "Has played in", comps, "Any competition") : "") +
@@ -533,7 +544,7 @@ function renderFilters(){
   };
   $("filters").querySelector("[data-reset]").onclick = () => {
     state.f = BLANK();
-    if (state.mode === "scout"){ state.f.minBalls = 300; state.f.exposure = "uncapped"; }
+    if (state.mode === "scout"){ state.f.minBalls = 300; state.f.exposure = "domestic"; }
     draw();
   };
   wireMulti();
@@ -728,35 +739,18 @@ function renderCompareMetrics(series, mt){
         >${fmtMetric(v.val)}</span>`).join("")}</div>`;
   }).join("");
 }
-/* A season is named by its competition: the IPL calls it "2024", the Big Bash
-   "2023/24". Plotting the raw labels puts both on the axis, so a player who only
-   appears in one of them shows a dot, then a gap, then a dot — a broken line
-   that says nothing about his form. Everything is folded onto the calendar year
-   the season ends in. */
-function seasonYear(s){
-  const t = String(s);
-  const m = t.match(/^(\d{4})\/(\d{2})$/);
-  return m ? +(m[1].slice(0,2) + m[2]) : +t.slice(0,4);
-}
-
 function renderTrend(series){
   const bat = series[0].p.d === "batting", key = bat ? "sr" : "econ";
+  // The pipeline already keys history by the calendar year the cricket was
+  // played in, read from match dates rather than from the season label — the
+  // label said 2020/21 for an IPL played entirely inside 2020.
   const years = [...new Set(series.flatMap(s =>
-    (s.p.sea||[]).filter(r => r[key] != null).map(r => seasonYear(r.season))))]
+    (s.p.sea||[]).filter(r => r[key] != null).map(r => +r.season)))]
     .filter(Number.isFinite).sort((a,b) => a-b);
   const seasons = years.map(String);
   const lines = series.map(s => {
-    // Two competitions can land in the same year; weight them by balls rather
-    // than letting whichever came last win.
-    const byYear = new Map();
-    (s.p.sea||[]).filter(r => r[key] != null).forEach(r => {
-      const y = seasonYear(r.season); if (!Number.isFinite(y)) return;
-      const a = byYear.get(y) || {sum:0, balls:0, seasons:[]};
-      a.sum += r[key] * (r.balls || 1); a.balls += (r.balls || 1);
-      a.seasons.push(r.season); byYear.set(y, a);
-    });
-    const map = new Map([...byYear].map(([y,a]) =>
-      [String(y), {[key]: a.sum / a.balls, balls: a.balls, seasons: a.seasons}]));
+    const map = new Map((s.p.sea||[]).filter(r => r[key] != null)
+      .map(r => [String(r.season), r]));
     return {...s, points: seasons.map(x => map.get(x) || null)};
   });
   const vals = lines.flatMap(l => l.points.filter(Boolean).map(r => r[key]));
@@ -799,7 +793,7 @@ function renderTrend(series){
     const dots = l.points.map((d,i)=> d
       ? `<circle class="tdot ${l.colour}" cx="${x(i).toFixed(1)}" cy="${y(d[key]).toFixed(1)}" r="3.6">
           <title>${esc(l.p.f||l.p.n)} — ${esc(seasons[i])}: ${d[key].toFixed(bat?1:2)} from ${
-            d.balls} balls (${esc((d.seasons||[]).join(", "))})</title></circle>` : "").join("");
+            d.balls} balls${d.from ? ` (${esc(d.from)})` : ""}</title></circle>` : "").join("");
     return `<g class="tline ${l.colour}">${chunks.map(c=>`<polyline points="${c.join(" ")}"/>`).join("")}</g>${dots}`;
   }).join("");
   const xl = seasons.map((sn,i) => `<text class="taxis" x="${x(i).toFixed(1)}" y="${H-padB+18}"
@@ -1013,11 +1007,11 @@ function setMode(mode, quiet){
   document.querySelectorAll(".route").forEach(r =>
     r.setAttribute("aria-pressed", String(r.dataset.route === mode)));
   if (mode === "scout"){ state.f.minBalls = 300; state.f.active = true;
-                         state.f.exposure = "uncapped"; state.showMore = true; }
+                         state.f.exposure = "domestic"; state.showMore = true; }
   else { state.f.minBalls = 0; state.f.exposure = "any"; state.showMore = false; }
   const hint = $("route-hint");
   if (hint) hint.textContent = mode === "scout"
-    ? "Scouting: uncapped players only, 300 balls minimum, all filters open."
+    ? "Scouting: domestic players only, 300 balls minimum, all filters open."
     : "Exploring: the whole pool, no minimum.";
   if (!quiet) draw();
 }

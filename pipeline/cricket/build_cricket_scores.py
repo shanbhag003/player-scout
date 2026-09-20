@@ -379,7 +379,20 @@ def season_history(facts, profile_fn, metrics, keep=("sr", "bdry", "dot_pct", "e
     Bumrah's 2015/16 held 565 balls and disappeared entirely, and his 2019 read
     71 balls when he had bowled 526.
     """
-    h = profile_fn(facts, ["player_id", "season"])
+    # Group by the calendar year the cricket was actually played in, not by the
+    # season label. Cricsheet calls IPL 2020 "2020/21" because of its own
+    # numbering, but every match of it fell in 2020 — reading the label filed
+    # Dhoni's 172 balls under 2021 and left 2020 looking empty.
+    f = facts.copy()
+    f["year"] = pd.to_datetime(f["date"], errors="coerce").dt.year
+    f = f[f["year"].notna()]
+    f["year"] = f["year"].astype(int).astype(str)
+    labels = (f.groupby(["player_id", "year"])["season"]
+              .agg(lambda s: ", ".join(sorted(set(s)))).to_dict())
+    # Drop the original label first: renaming onto an existing column name leaves
+    # two called "season" and the groupby silently keeps the wrong one.
+    f = f.drop(columns=["season"]).rename(columns={"year": "season"})
+    h = profile_fn(f, ["player_id", "season"])
     cols = [c for c in keep if c in h.columns]
     h = h[h["balls_raw"] >= MIN_SEASON_BALLS].copy()
     h["balls"] = h["balls_raw"]
@@ -387,6 +400,7 @@ def season_history(facts, profile_fn, metrics, keep=("sr", "bdry", "dot_pct", "e
     out = {}
     for (pid, season), row in h.iterrows():
         out.setdefault(pid, []).append({"season": season, "balls": int(row["balls"]),
+                                        "from": labels.get((pid, season), ""),
                                         **{c: (None if pd.isna(row[c]) else float(row[c]))
                                            for c in cols}})
     return out

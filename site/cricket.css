@@ -315,3 +315,5 @@ img.lmark.flag{width:1.4rem;height:1.4rem;border-radius:50%;object-fit:cover;
   border-radius:50%;border:1px solid var(--hairline);color:var(--faint);
   font-size:.6rem;font-style:normal;vertical-align:.05rem;margin-left:.25rem;cursor:help}
 .leaguelist li[title]{cursor:help}
+.filter-label .qmark{vertical-align:0}
+.filter-label[title]{cursor:help}
