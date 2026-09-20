@@ -54,11 +54,16 @@ competitions:
   # ── internationals ─────────────────────────────────────────────────────────
   - key: t20s
     name: T20 Internationals
+    note: Official T20 internationals, split by the standard of the two sides.
     format: T20
     genders: [male, female]
     tier_by_teams: true          # splits into full / established / minor
   - key: it20s
     name: Other international T20s
+    note: >-
+      Matches between national sides that the ICC did not grant official T20
+      international status — mostly associate and affiliate fixtures played
+      before those teams were granted full T20I recognition in 2019.
     format: T20
     genders: [male, female]
     tier_by_teams: true
@@ -69,6 +74,9 @@ competitions:
     tier_by_teams: true
   - key: odms
     name: Other one-day internationals
+    note: >-
+      One-day matches between national sides without official ODI status, plus
+      tour matches against touring teams.
     format: ODI
     genders: [male, female]
     tier_by_teams: true
@@ -79,6 +87,9 @@ competitions:
     tier: international
   - key: mdms
     name: Other multi-day matches
+    note: >-
+      First-class cricket that is not a Test — domestic multi-day competitions
+      and tour matches.
     format: FIRST_CLASS
     genders: [male]
     tier: international
