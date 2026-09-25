@@ -131,7 +131,31 @@ def fetch_wikidata(retries: int = 4):
     return got, failed
 
 
-def build(register_path: str, wikidata) -> pd.DataFrame:
+def load_aliases(path: str) -> dict:
+    """Cricsheet's names.csv: every spelling it has ever seen, per person.
+
+    This is the right source for search. Wikidata's label is one name and
+    sometimes not even that — it returned "Q9488" for Sachin Tendulkar — whereas
+    this file is the scorecard names themselves, which is what people type.
+    """
+    if not path or not os.path.exists(path):
+        return {}
+    df = pd.read_csv(path, low_memory=False)
+    # Column names have varied; take the identifier column and the name column
+    # whatever they are called.
+    idc = next((c for c in df.columns if c.lower() in ("identifier", "unique_name", "id")), None)
+    namec = next((c for c in df.columns if c.lower() in ("name", "alt_name", "alias")), None)
+    if not idc or not namec:
+        return {}
+    out = {}
+    for pid, nm in zip(df[idc], df[namec]):
+        if pd.isna(pid) or pd.isna(nm):
+            continue
+        out.setdefault(str(pid), set()).add(str(nm).strip())
+    return {k: sorted(v) for k, v in out.items()}
+
+
+def build(register_path: str, wikidata, names_path: str = None) -> pd.DataFrame:
     reg = pd.read_csv(register_path, low_memory=False)
     reg["key_cricinfo"] = pd.to_numeric(reg["key_cricinfo"], errors="coerce")
 
@@ -144,6 +168,13 @@ def build(register_path: str, wikidata) -> pd.DataFrame:
     out["full_name"] = None
     out["nationality"] = None
     out["dob"] = pd.NaT
+
+    # Known spellings, from the register's own names file where it is available.
+    aka = load_aliases(names_path)
+    out["aka"] = out["player_id"].map(lambda p: "; ".join(aka.get(str(p), [])) or None)
+    if aka:
+        print(f"name variants   {sum(1 for v in out['aka'] if v):,} people "
+              f"({sum(len(v) for v in aka.values()):,} spellings)")
 
     if wikidata is None or len(wikidata) == 0:
         return out
@@ -175,6 +206,8 @@ def build(register_path: str, wikidata) -> pd.DataFrame:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--register", default="data/cricket/raw/people.csv")
+    ap.add_argument("--names", default="data/cricket/raw/names.csv",
+                    help="Cricsheet's names.csv — every spelling per person")
     ap.add_argument("--wikidata-csv", help="a saved export, used instead of querying")
     ap.add_argument("--fallback-csv", help="used only if the live query fails")
     ap.add_argument("--out", default="data/cricket/bio.parquet")
@@ -216,7 +249,7 @@ def main():
             print("continuing without ages, nationalities or full names.",
                   file=sys.stderr)
 
-    bio = build(args.register, wd)
+    bio = build(args.register, wd, args.names)
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     bio.to_parquet(args.out, index=False)
 
@@ -225,6 +258,7 @@ def main():
     print(f"  full name     {bio['full_name'].notna().mean():.1%}")
     print(f"  date of birth {bio['dob'].notna().mean():.1%}")
     print(f"  nationality   {bio['nationality'].notna().mean():.1%}")
+    print(f"  name variants {bio['aka'].notna().mean():.1%}")
     print(f"wrote {args.out}")
     return 0
 

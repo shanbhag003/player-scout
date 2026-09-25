@@ -113,7 +113,9 @@ const state = {mode:"explore", tab:"profile", sel:null, disc:"batting", sugg:-1,
   wiz:{disc:null, cell:null, age:"any", exposure:"any", comps:[], countries:[], active:true}};
 
 const norm = s => (s||"").toLowerCase().replace(/[^a-z ]/g,"");
-D.players.forEach(p => p._s = norm(p.n)+" "+norm(p.f));
+// Search across the scorecard name, the full name and every spelling the
+// archive knows. "Sachin" is not in "SR Tendulkar", and nobody types initials.
+D.players.forEach(p => p._s = norm(p.n) + " " + norm(p.f) + " " + norm(p.aka));
 const byPlayer = {}, byUid = {};
 D.players.forEach(p => { (byPlayer[p.p] = byPlayer[p.p]||[]).push(p); byUid[p.u]=p; });
 const COUNTRIES = [...new Set(D.players.map(p=>p.nat).filter(Boolean))].sort();

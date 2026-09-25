@@ -563,6 +563,11 @@ def emit(bat, bowl, players, roles, facts, out_dir, half_life=HALF_LIFE, facts_r
                               if pid in bio.index and pd.notna(bio.at[pid, "full_name"]) else None),
                 "nationality": nationality_of(pid),
                 "keeper": pid in keepers,
+                # Every spelling the archive knows, so the search matches what a
+                # person actually types rather than the scorecard abbreviation.
+                "aka": (bio.at[pid, "aka"]
+                        if pid in bio.index and "aka" in bio
+                        and pd.notna(bio.at[pid, "aka"]) else None),
                 "thin": int(row["balls_raw"]) < THIN_BALLS,
                 "partial_record": nationality_of(pid) in AFFECTED,
                 "age": (round(float((as_of - bio.at[pid, "dob"]).days / 365.25), 1)
