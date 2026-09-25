@@ -1,0 +1,17 @@
+# Full names the automatic sources do not supply.
+#
+# Cricsheet records scorecard names — "SR Tendulkar" — and nobody searches for
+# initials. Wikidata usually fills the gap, but its label service returned a bare
+# Q-number for six players in the pool, and they happen to be among the most
+# searched names in the game.
+#
+# Keyed on the ESPNcricinfo id, which is stable and is what the register joins on.
+# Anything here wins over Wikidata. Add a line whenever a well-known player
+# cannot be found by the name people actually type.
+cricinfo,full_name
+28081,MS Dhoni
+35320,Sachin Tendulkar
+29264,Harbhajan Singh
+51880,Chris Gayle
+36084,Yuvraj Singh
+1350768,Prince Yadav

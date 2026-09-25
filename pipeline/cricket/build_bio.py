@@ -22,6 +22,7 @@ Two things learned from a real run:
 from __future__ import annotations
 
 import argparse
+import csv
 import io
 import json
 import re
@@ -155,6 +156,31 @@ def load_aliases(path: str) -> dict:
     return {k: sorted(v) for k, v in out.items()}
 
 
+ALIASES = os.path.join("config", "cricket", "name_aliases.csv")
+
+
+def load_name_aliases(path: str = ALIASES) -> dict:
+    """Hand-written full names, keyed on the Cricinfo id.
+
+    Wikidata's label service returns a bare Q-number for a handful of items, and
+    the handful happens to include Tendulkar, Dhoni, Gayle and Yuvraj. A person
+    writing the name down is more reliable than hoping the service behaves, so
+    these win outright.
+    """
+    if not os.path.exists(path):
+        return {}
+    out = {}
+    with open(path) as fh:
+        for row in csv.DictReader(r for r in fh if not r.startswith("#")):
+            ci, nm = row.get("cricinfo"), row.get("full_name")
+            if ci and nm:
+                try:
+                    out[float(ci)] = nm.strip()
+                except ValueError:
+                    pass
+    return out
+
+
 def build(register_path: str, wikidata, names_path: str = None) -> pd.DataFrame:
     reg = pd.read_csv(register_path, low_memory=False)
     reg["key_cricinfo"] = pd.to_numeric(reg["key_cricinfo"], errors="coerce")
@@ -196,6 +222,11 @@ def build(register_path: str, wikidata, names_path: str = None) -> pd.DataFrame:
         return None
     w["name"] = w.apply(pick, axis=1)
     out["full_name"] = out["cricinfo"].map(w["name"])
+    hand = load_name_aliases()
+    if hand:
+        fixed = out["cricinfo"].map(hand)
+        out["full_name"] = fixed.where(fixed.notna(), out["full_name"])
+        print(f"hand-written names applied: {int(fixed.notna().sum())}")
     if "countryLabel" in w:
         out["nationality"] = out["cricinfo"].map(w["countryLabel"])
     out["dob"] = pd.to_datetime(out["cricinfo"].map(w["dob"]),
