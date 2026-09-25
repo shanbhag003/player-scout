@@ -92,24 +92,65 @@ class Store:
                     "application/json")
 
     def pull(self):
-        """Fetch every asset into the local directory."""
+        """Fetch every asset into the local directory.
+
+        This had its own bare urlopen, so none of the retry logic in `_req`
+        applied to it: one 500 from GitHub ended a run that had already fetched
+        seventy-six of ninety files. It now retries, skips what it already has at
+        the right size, and reports what it could not get rather than dying on
+        the first failure.
+        """
         if not self.remote:
             print(f"store: local only ({self.local})")
-            return
-        rel = self._release()
+            return []
         import fnmatch
+        rel = self._release()
+        got, skipped, failed = 0, 0, []
         for asset in rel.get("assets", []):
-            if not fnmatch.fnmatch(asset["name"], self.pattern):
+            name = asset["name"]
+            if not fnmatch.fnmatch(name, self.pattern):
+                continue
+            dest = os.path.join(self.local, name)
+            if os.path.exists(dest) and os.path.getsize(dest) == asset.get("size"):
+                skipped += 1
                 continue
             url = f"{API}/repos/{self.repo}/releases/assets/{asset['id']}"
-            headers = {"Accept": "application/octet-stream"}
-            req = urllib.request.Request(url, headers={
-                **headers, "Authorization": f"Bearer {self.token}",
-                "User-Agent": "player-scout"})
-            with urllib.request.urlopen(req, timeout=600) as r, \
-                    open(os.path.join(self.local, asset["name"]), "wb") as fh:
-                shutil.copyfileobj(r, fh)
-            print(f"  pulled {asset['name']}")
+            last = None
+            for attempt in range(1, 6):
+                try:
+                    req = urllib.request.Request(url, headers={
+                        "Accept": "application/octet-stream",
+                        "Authorization": f"Bearer {self.token}",
+                        "User-Agent": "player-scout"})
+                    tmp = dest + ".part"
+                    with urllib.request.urlopen(req, timeout=600) as r, open(tmp, "wb") as fh:
+                        shutil.copyfileobj(r, fh)
+                    # Rename only once the whole file is down, so an interrupted
+                    # download cannot be mistaken for a complete one next time.
+                    os.replace(tmp, dest)
+                    got += 1
+                    print(f"  pulled {name}", flush=True)
+                    last = None
+                    break
+                except urllib.error.HTTPError as e:
+                    last = e
+                    if e.code not in RETRYABLE:
+                        break
+                except (urllib.error.URLError, TimeoutError, OSError) as e:
+                    last = e
+                if attempt < 5:
+                    wait = min(60, 4 * 2 ** (attempt - 1))
+                    print(f"    retry {attempt}/4 in {wait}s ({last})", flush=True)
+                    time.sleep(wait)
+            if last is not None:
+                failed.append(name)
+                print(f"  FAILED {name}: {last}", file=sys.stderr, flush=True)
+        print(f"\npulled {got}, already had {skipped}, failed {len(failed)}")
+        if failed:
+            print("could not fetch:", file=sys.stderr)
+            for f in failed:
+                print(f"  {f}", file=sys.stderr)
+        return failed
 
     def push(self, names=None):
         """Replace assets, resumably.
@@ -202,8 +243,7 @@ def main():
 
     store = Store(args.repo, args.tag, local=args.local, pattern=args.pattern)
     if args.action == "pull":
-        store.pull()
-        return 0
+        return 1 if store.pull() else 0
     if args.action == "push":
         failed = store.push()
     else:
