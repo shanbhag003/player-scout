@@ -32,7 +32,7 @@ OUT = os.path.join(HERE, "_site")
 CHANNELS = {
     "production": {
         "sports": [{"id": "football", "name": "Football", "status": "live"},
-                   {"id": "cricket", "name": "Cricket", "status": "soon"},
+                   {"id": "cricket", "name": "Cricket", "status": "live"},
                    {"id": "kabaddi", "name": "Kabaddi", "status": "soon"}],
         "analytics": True, "noindex": False, "banner": None, "subdir": "",
     },
