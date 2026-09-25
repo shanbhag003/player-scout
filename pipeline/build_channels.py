@@ -32,7 +32,7 @@ OUT = os.path.join(HERE, "_site")
 CHANNELS = {
     "production": {
         "sports": [{"id": "football", "name": "Football", "status": "live"},
-                   {"id": "cricket", "name": "Cricket", "status": "live"},
+                   {"id": "cricket", "name": "Cricket", "status": "soon"},
                    {"id": "kabaddi", "name": "Kabaddi", "status": "soon"}],
         "analytics": True, "noindex": False, "banner": None, "subdir": "",
     },
@@ -54,34 +54,51 @@ BANNER_CSS = """
 
 
 def stamp(root: str, channel: str) -> str:
-    """Version the stylesheet and script.
+    """Version every local asset, on every page of the channel.
 
-    The channel goes into the hash so staging and production can never be served
-    each other's cached assets.
+    This used to rewrite index.html only, and only for app.js and style.css.
+    Two things fell through:
+
+      channel.js  — the file that says which sports are live here. Promoting
+                    cricket changed it and browsers kept serving the old copy,
+                    so the tab stayed dead.
+      cricket.*   — cricket.html was never touched at all, so every fix shipped
+                    to cricket.js could be served stale.
+
+    The channel name goes into the hash as well, so staging and production can
+    never be handed each other's cached files.
     """
-    digest = hashlib.sha1(channel.encode())
-    # The banner needs a rule and it must exist in both stylesheets, because the
-    # two sports do not share one.
+    # The banner needs a rule in both stylesheets, because the two sports do not
+    # share one.
     for sheet in ("style.css", "cricket.css"):
         sp = os.path.join(root, sheet)
         if os.path.exists(sp) and "staging-banner" not in open(sp).read():
             with open(sp, "a") as f:
                 f.write(BANNER_CSS)
 
-    for name in ("app.js", "style.css"):
+    assets = ["app.js", "style.css", "cricket.js", "cricket.css", "channel.js"]
+    digest = hashlib.sha1(channel.encode())
+    for name in assets:
         p = os.path.join(root, name)
         if os.path.exists(p):
             with open(p, "rb") as f:
                 digest.update(f.read())
     v = digest.hexdigest()[:8]
-    page = os.path.join(root, "index.html")
-    with open(page) as f:
-        html = f.read()
-    html = re.sub(r'href="style\.css(\?v=[a-f0-9]+)?"', f'href="style.css?v={v}"', html)
-    html = re.sub(r'src="app\.js(\?v=[a-f0-9]+)?"', f'src="app.js?v={v}"', html)
-    with open(page, "w") as f:
-        f.write(html)
+
+    for page in os.listdir(root):
+        if not page.endswith(".html"):
+            continue
+        fp = os.path.join(root, page)
+        with open(fp) as f:
+            html = f.read()
+        for name in assets:
+            esc = re.escape(name)
+            html = re.sub(rf'href="{esc}(\?v=[a-f0-9]+)?"', f'href="{name}?v={v}"', html)
+            html = re.sub(rf'src="{esc}(\?v=[a-f0-9]+)?"', f'src="{name}?v={v}"', html)
+        with open(fp, "w") as f:
+            f.write(html)
     return v
+
 
 
 def build(channel: str, out_root: str, base_url: str) -> str | None:
