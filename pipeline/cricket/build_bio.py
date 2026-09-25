@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import io
 import json
+import re
 import os
 import sys
 import time
@@ -42,17 +43,21 @@ UA = ("player-scout/1.0 (+https://shanbhag003.github.io/player-scout) "
 # rows and finishes well inside the timeout.
 CHUNKS = list("0123456789")
 
+# The label service silently returns the Q-number for some items — Sachin
+# Tendulkar came back as "Q9488" — so rdfs:label is asked for as well and
+# preferred when the service fails.
 QUERY = """
-SELECT ?cricinfo ?personLabel ?dob ?countryLabel WHERE {
+SELECT ?cricinfo ?personLabel ?enLabel ?dob ?countryLabel WHERE {
   ?person wdt:P2697 ?cricinfo .
   FILTER(STRSTARTS(?cricinfo, "%s"))
   OPTIONAL { ?person wdt:P569 ?dob }
   OPTIONAL { ?person wdt:P27 ?country }
+  OPTIONAL { ?person rdfs:label ?enLabel FILTER(LANG(?enLabel) = "en") }
   SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
 }
 """
 
-FIELDS = ["cricinfo", "personLabel", "dob", "countryLabel"]
+FIELDS = ["cricinfo", "personLabel", "enLabel", "dob", "countryLabel"]
 
 
 def _parse(body: str) -> pd.DataFrame:
@@ -151,14 +156,19 @@ def build(register_path: str, wikidata) -> pd.DataFrame:
     w = (w.sort_values("dob", na_position="last")
            .drop_duplicates("cricinfo").set_index("cricinfo"))
 
-    out["full_name"] = out["cricinfo"].map(w["personLabel"])
+    # Prefer whichever of the two is an actual name.
+    def pick(row):
+        for key in ("personLabel", "enLabel"):
+            v = row.get(key)
+            if isinstance(v, str) and v and not re.match(r"^Q\d+$", v):
+                return v
+        return None
+    w["name"] = w.apply(pick, axis=1)
+    out["full_name"] = out["cricinfo"].map(w["name"])
     if "countryLabel" in w:
         out["nationality"] = out["cricinfo"].map(w["countryLabel"])
     out["dob"] = pd.to_datetime(out["cricinfo"].map(w["dob"]),
                                 errors="coerce", utc=True).dt.tz_localize(None)
-    # A label that is only a Q-number means the item has no English label. That
-    # is not a name and must not be shown as one.
-    out.loc[out["full_name"].astype(str).str.match(r"^Q\d+$", na=False), "full_name"] = None
     return out
 
 

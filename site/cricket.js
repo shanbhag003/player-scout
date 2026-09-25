@@ -1493,15 +1493,23 @@ function fmtStamp(iso, tz){
     hour: "2-digit", minute: "2-digit", hour12: false,
   }).replace(",", "") + ` ${tz}`;
 }
-function sinceText(iso){
-  const days = Math.floor((Date.now() - new Date(iso)) / 864e5);
-  return days < 1 ? "today" : days === 1 ? "yesterday" : `${days} days ago`;
+function sinceText(iso, tz){
+  // Calendar days in the zone on screen, not elapsed hours. A run at 08:50 on
+  // the 22nd read "today" all through the 23rd, because 23 hours floors to nought.
+  const zone = tz === "UTC" ? "UTC" : "Asia/Kolkata";
+  const dayIn = d => {
+    const p = new Intl.DateTimeFormat("en-CA", {timeZone: zone,
+      year: "numeric", month: "2-digit", day: "numeric"}).format(d);
+    return Date.UTC(+p.slice(0,4), +p.slice(5,7) - 1, +p.slice(8,10));
+  };
+  const days = Math.round((dayIn(new Date()) - dayIn(new Date(iso))) / 864e5);
+  return days <= 0 ? "today" : days === 1 ? "yesterday" : `${days} days ago`;
 }
 
 function renderFreshness(){
   if (!D.built) return;
   const tz = state.tz;
-  $("fresh-label").textContent = `Updated ${sinceText(D.built)}`;
+  $("fresh-label").textContent = `Updated ${sinceText(D.built, tz)}`;
   $("fresh-btn").title = fmtStamp(D.built, tz) || "";
 
   // Three things get called "updated" and people conflate them: when the model
@@ -1511,7 +1519,7 @@ function renderFreshness(){
   const metrics = new Set(Object.values(D.spaces)
     .flatMap(v => Object.values(v).flatMap(s => s.mt))).size;
   const rows = [
-    ["Model run", fmtStamp(D.built, tz), sinceText(D.built),
+    ["Model run", fmtStamp(D.built, tz), sinceText(D.built, tz),
      `${scored.toLocaleString()} players scored across ${metrics} metrics`],
     ["Latest match included", latest ? whenSeen(latest) : "—", "",
      `${D.matches.toLocaleString()} matches, ${D.comps.length} competitions`],
