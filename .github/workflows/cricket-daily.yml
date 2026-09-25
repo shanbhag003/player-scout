@@ -73,6 +73,7 @@ jobs:
       - name: Refresh biography
         run: |
           curl -sSL -o data/cricket/raw/people.csv https://cricsheet.org/register/people.csv
+          curl -sSL -o data/cricket/raw/names.csv  https://cricsheet.org/register/names.csv
           python pipeline/cricket/build_bio.py --register data/cricket/raw/people.csv --fallback-csv data/cricket/wikidata-fallback.csv
 
       - name: Rebuild master and model
