@@ -45,6 +45,16 @@ jobs:
             --window ${{ inputs.window || '7' }} --out data/cricket/raw
 
       - name: Bring down what is already stored
+        id: pull
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python pipeline/cricket/store.py pull --repo ${{ github.repository }}
+
+      # Assets already down at the right size are skipped, so a second pass
+      # fetches only what the first could not.
+      - name: Fetch anything the pull missed
+        if: steps.pull.outcome == 'failure'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python pipeline/cricket/store.py pull --repo ${{ github.repository }}
