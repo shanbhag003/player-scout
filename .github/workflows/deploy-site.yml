@@ -47,9 +47,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p site/data/cricket
-          if ! python pipeline/cricket/store.py pull \
+          if ! python pipeline/cricket/store.py pull --tree \
               --repo ${{ github.repository }} --tag cricket-site \
-              --local site/data/cricket --pattern "*.json"; then
+              --local site/data/cricket; then
             echo "::error::Could not fetch the cricket-site release."
             echo "::error::If this repository has never run Cricket daily, run it"
             echo "::error::once — it creates that release. Refusing to deploy a"

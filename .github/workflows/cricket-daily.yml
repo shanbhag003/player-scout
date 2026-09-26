@@ -98,9 +98,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          python pipeline/cricket/store.py push \
+          python pipeline/cricket/store.py push --tree \
             --repo ${{ github.repository }} --tag cricket-site \
-            --local site/data/cricket --pattern "*.json"
+            --local site/data/cricket
 
       - name: Build the staging channel
         run: python pipeline/build_channels.py --staging-only

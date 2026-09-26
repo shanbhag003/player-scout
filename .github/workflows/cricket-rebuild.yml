@@ -75,9 +75,14 @@ jobs:
           python pipeline/cricket/build_cricket_scores.py \
             --half-life ${{ inputs.half_life }} --out site/data/cricket
 
-      - name: Keep the built site data for the deploy to pick up
-        uses: actions/upload-artifact@v4
-        with:
-          name: cricket-site-data
-          path: site/data/cricket
-          retention-days: 7
+      # Publish the whole built tree — index/detail/meta AND the per-player
+      # matches/ folder — as one release asset the deploy unpacks. The old
+      # throwaway artifact was never picked up by deploy-site, so the match
+      # files never reached production.
+      - name: Publish the built site data
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python pipeline/cricket/store.py push --tree \
+            --repo ${{ github.repository }} --tag cricket-site \
+            --local site/data/cricket
