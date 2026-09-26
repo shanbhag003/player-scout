@@ -694,8 +694,11 @@ def write_match_logs(facts, apps, players, out_dir):
         if pid not in scored:
             continue
         rows = []
-        # One innings is one row; a player rarely has two in a T20, but sum guards it.
-        for (mid, ino), r in g.groupby(["match_id", "innings"]):
+        # One match is one row. In a two-innings game a player can bat in one and
+        # bowl in the other; grouping by innings there produced two rows for a
+        # single match. Merge the whole match: bat from where they batted, bowl
+        # from where they bowled.
+        for mid, r in g.groupby("match_id"):
             r0 = r.iloc[0]
             bat_balls = int(r["bat_balls"].sum())
             bat_runs = int(r["bat_runs"].sum())
@@ -706,7 +709,11 @@ def write_match_logs(facts, apps, players, out_dir):
                                         and not (isinstance(r0.get("out_kind"), float)
                                                  and math.isnan(r0.get("out_kind"))))
             did_bowl = bowl_balls > 0
-            ok = r0.get("out_kind")
+            # The dismissal belongs to the innings the player batted in, not
+            # necessarily the first row in the group.
+            batrow = r[r["bat_balls"] > 0]
+            ok = (batrow.iloc[0].get("out_kind") if not batrow.empty
+                  else r0.get("out_kind"))
             ok = None if (ok is None or (isinstance(ok, float) and math.isnan(ok))) else str(ok)
             row = {
                 "date": r0.get("date"),

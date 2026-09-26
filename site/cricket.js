@@ -164,10 +164,8 @@ async function openMatchLog(pid){
   })();
   document.body.classList.add("mlog-open");
   back.innerHTML = `<div class="mlog" role="dialog" aria-modal="true" aria-label="Match log">
-    <button class="mlog-x" aria-label="Close">&times;</button>
     <div class="mlog-body"><p class="mlog-loading">Loading ${esc(p.f||p.n)}'s matches…</p></div>
   </div>`;
-  back.querySelector(".mlog-x").onclick = closeMatchLog;
 
   let data = matchLogCache[pid];
   if (!data){
@@ -220,8 +218,10 @@ function drawMatchLog(p, rows){
     return `<tr>
       <td class="nowrap">${fmtDate(m.date)}</td>
       <td><span class="fmt-pill">${esc(m.fmt || "")}</span></td>
-      <td class="l nowrap">${flag(natFor(m.team))}<span>${esc(short(m.team))}</span>
-        <span class="vs">v</span> ${flag(natFor(m.opp))}<span>${esc(short(m.opp))}</span></td>
+      <td class="l match-cell" title="${esc(m.team || "")} v ${esc(m.opp || "")}">
+        <span class="side">${flag(natFor(m.team))}<b>${esc(short(m.team))}</b></span>
+        <span class="vs">v</span>
+        <span class="side">${flag(natFor(m.opp))}<b>${esc(short(m.opp))}</b></span></td>
       <td><span class="res ${resCls}">${resText}</span></td>
       ${showBat ? (b
         ? `<td>${runCell}</td><td>${b.b}</td><td>${b["4"]}</td><td>${b["6"]}</td>
@@ -233,12 +233,34 @@ function drawMatchLog(p, rows){
     </tr>`;
   }).join("");
 
+  // Career totals for the strip, straight from the same object the profile card
+  // reads, so the numbers cannot disagree. Batting or bowling to match the role,
+  // both for an all-rounder.
+  const t = (p.car || {}).total || {};
+  const isBat = anyBat || String(p.r||"").toLowerCase().indexOf("bowler") < 0;
+  const statFig = [];
+  if (anyBat || t.runs){
+    statFig.push(["Matches", rows.length]);
+    statFig.push(["Runs", (t.runs||0).toLocaleString()]);
+    statFig.push(["SR", t.balls_raw ? (t.runs/t.balls_raw*100).toFixed(1) : "—"]);
+    statFig.push(["Avg", t.outs ? (t.runs/t.outs).toFixed(1) : "—"]);
+  }
+  if (anyBowl || t.wkts){
+    if (!anyBat && !t.runs) statFig.push(["Matches", rows.length]);
+    statFig.push(["Wickets", t.wkts ?? "—"]);
+    statFig.push(["Econ", t.balls_raw ? (t.runs/t.balls_raw*6).toFixed(2) : "—"]);
+  }
   const header = `<div class="mlog-head">
-    <div class="mlog-id">${flag(p.nat)}
-      <div><h2>${esc(p.f||p.n)}</h2>
-        <p>${esc(titled(p.r||p.c))}${p.nat ? ` · ${esc(p.nat)}` : ""}</p></div>
+    <button class="mlog-x" aria-label="Close">&times;</button>
+    <div class="mlog-top">
+      <div class="mlog-id">${flag(p.nat)}
+        <div><h2>${esc(p.f||p.n)}</h2>
+          <p>${esc(titled(p.r||p.c))}${p.nat ? ` · ${esc(p.nat)}` : ""}</p></div>
+      </div>
+      <button class="ghost accent mlog-profile">Open full profile</button>
     </div>
-    <button class="ghost accent mlog-profile">Open full profile</button>
+    <dl class="mlog-stats">${statFig.map(([k,v]) =>
+      `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>
   </div>`;
 
   const el = document.querySelector("#mlog .mlog-body");
@@ -249,6 +271,8 @@ function drawMatchLog(p, rows){
         full re-parse of the archive — run Cricket rebuild.</p>`;
   const pb = document.querySelector("#mlog .mlog-profile");
   if (pb) pb.onclick = () => { closeMatchLog(); select(p.p); };
+  const xb = document.querySelector("#mlog .mlog-x");
+  if (xb) xb.onclick = closeMatchLog;
 }
 
 // helpers the modal leans on
@@ -257,13 +281,32 @@ function fmtDate(iso){
   const [y,m,d] = String(iso).split("-");
   return d ? `${+d} ${MON[+m-1]} ${y}` : (y || "—");
 }
+const TEAM_ABBR = {"India":"IND","Australia":"AUS","England":"ENG","Pakistan":"PAK",
+  "South Africa":"RSA","New Zealand":"NZ","Sri Lanka":"SL","Bangladesh":"BAN",
+  "West Indies":"WI","Afghanistan":"AFG","Zimbabwe":"ZIM","Ireland":"IRE",
+  "Netherlands":"NED","Scotland":"SCO","United Arab Emirates":"UAE","Nepal":"NEP",
+  "Papua New Guinea":"PNG","Cook Islands":"COK","Hong Kong":"HK","Kenya":"KEN",
+  "Namibia":"NAM","Oman":"OMA","United States of America":"USA","Canada":"CAN",
+  "Uganda":"UGA","Jersey":"JEY","Guernsey":"GGY","Italy":"ITA","Germany":"GER",
+  "Denmark":"DEN","Malaysia":"MAS","Singapore":"SGP","Bahrain":"BHR","Qatar":"QAT",
+  "Kuwait":"KUW","Saudi Arabia":"KSA","Nigeria":"NGA","Ghana":"GHA","Rwanda":"RWA",
+  "Tanzania":"TAN","Botswana":"BOT","Malawi":"MWI","Mozambique":"MOZ","Japan":"JPN",
+  "Indonesia":"INA","Thailand":"THA","Philippines":"PHI","Vanuatu":"VAN","Samoa":"SAM",
+  "Fiji":"FIJ","Bhutan":"BHU","Maldives":"MDV","Bermuda":"BER","Cayman Islands":"CAY",
+  "Argentina":"ARG","Portugal":"POR","Spain":"ESP","France":"FRA","Belgium":"BEL",
+  "Austria":"AUT","Czech Republic":"CZE","Romania":"ROU","Bulgaria":"BUL","Serbia":"SRB",
+  "Isle of Man":"IOM","Gibraltar":"GIB","Sweden":"SWE","Norway":"NOR","Finland":"FIN",
+  "Estonia":"EST","Hungary":"HUN","Mexico":"MEX","Panama":"PAN","Bahamas":"BAH",
+  "Turkey":"TUR","Greece":"GRE","Cyprus":"CYP","Malta":"MLT","Luxembourg":"LUX",
+  "Switzerland":"SUI","Croatia":"CRO","Slovenia":"SVN","Seychelles":"SEY"};
 function short(team){
   if (!team) return "—";
-  const AB = {"India":"IND","Australia":"AUS","England":"ENG","Pakistan":"PAK",
-    "South Africa":"RSA","New Zealand":"NZ","Sri Lanka":"SL","Bangladesh":"BAN",
-    "West Indies":"WI","Afghanistan":"AFG","Zimbabwe":"ZIM","Ireland":"IRE",
-    "Netherlands":"NED","Scotland":"SCO","United Arab Emirates":"UAE"};
-  return AB[team] || team;
+  if (TEAM_ABBR[team]) return TEAM_ABBR[team];
+  // Fall back to a code rather than the full name, or the row wraps. Drop the
+  // small words, take the initials of what's left, cap at four.
+  const words = team.split(/\s+/).filter(w => !/^(and|of|the)$/i.test(w));
+  if (words.length > 1) return words.map(w => w[0]).join("").slice(0,4).toUpperCase();
+  return team.slice(0,3).toUpperCase();
 }
 function natFor(team){ return FLAGS[team] ? team : (team || null); }
 function dismissalText(b){
@@ -1490,11 +1533,51 @@ function renderShortlist(){
     $("fresh-panel").hidden = true;
   };
   $("sl-export").hidden = !l.length;
-  $("sl-export").onclick = () => exportCsv(l, "cricket-shortlist");
+  $("sl-export").onclick = async () => {
+    exportCsv(l, "cricket-shortlist");
+    await exportMatchesCsv(l, "cricket-shortlist-matches");
+  };
 }
 
 /* Every column the tool holds, for a list of players. A shortlist leaves here
    and is worked on elsewhere, so the export is the handover, not a summary. */
+async function exportMatchesCsv(list, stem){
+  // A second table — every innings of every shortlisted player — so the export
+  // carries the match log, not only the summary. Fetched per player, the same
+  // files the modal uses; a player with no match file is simply skipped.
+  const head = ["player","country","date","format","team","opponent","result",
+    "runs","not_out","balls","fours","sixes","strike_rate",
+    "overs","runs_conceded","wickets","economy","dismissal"];
+  const rows = [];
+  for (const p of list){
+    let data = matchLogCache[p.p];
+    if (!data){
+      try {
+        const r = await fetch(`${BASE}/matches/${p.p}.json`);
+        data = r.ok ? await r.json() : {matches: []};
+      } catch { data = {matches: []}; }
+      matchLogCache[p.p] = data;
+    }
+    for (const m of (data.matches || [])){
+      const b = m.bat, w = m.bowl;
+      rows.push([
+        p.f || p.n, p.nat || "", m.date || "", m.fmt || "",
+        m.team || "", m.opp || "", m.result || "",
+        b ? b.r : "", b ? (b.no ? "yes" : "no") : "", b ? b.b : "",
+        b ? b["4"] : "", b ? b["6"] : "", b && b.sr != null ? b.sr : "",
+        w ? w.o : "", w ? w.r : "", w ? w.w : "", w && w.econ != null ? w.econ : "",
+        b ? (b.no ? "not out" : (b.out || "")) : ""]);
+    }
+  }
+  if (!rows.length) return;
+  const csv = "\uFEFF" + [head, ...rows].map(r =>
+    r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv;charset=utf-8"}));
+  a.download = `${stem}-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
 function exportCsv(list, stem){
   if (!list.length) return;
   const mt = u => (D.spaces[u.d] && D.spaces[u.d][u.c] ? D.spaces[u.d][u.c].mt : []);

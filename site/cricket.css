@@ -483,3 +483,34 @@ body.mlog-open{overflow:hidden}
   .mlog-id h2{font-size:1.3rem}
   .mlog-table{font-size:.82rem}
 }
+
+/* ── match log header, corrected ─────────────────────────
+   The close button had the same corner as "Open full profile". It now sits
+   above the row, clear of it, and a career-stats strip sits under the identity —
+   the same figures the profile shows. */
+.mlog-head{padding-top:2.6rem}
+.mlog-x{position:absolute; top:.55rem; right:.7rem; z-index:4}
+.mlog-top{display:flex; align-items:center; justify-content:space-between; gap:1rem;
+  flex-wrap:wrap}
+.mlog-stats{display:flex; flex-wrap:wrap; gap:1.6rem; margin-top:.9rem;
+  padding-top:.9rem; border-top:1px solid var(--hairline-soft)}
+.mlog-stats div{min-width:3.4rem}
+.mlog-stats dt{font-size:.68rem; color:var(--faint); font-family:var(--cond);
+  text-transform:uppercase; letter-spacing:.05em; margin-bottom:.1rem}
+.mlog-stats dd{margin:0; font-family:var(--cond); font-weight:700; font-size:1.35rem;
+  color:var(--ink)}
+
+/* ── match cell always one line ──────────────────────────
+   Abbreviated codes plus a small flag; the full names are on the row's title.
+   nowrap on the whole cell stops an associate fixture wrapping to two lines. */
+.match-cell{white-space:nowrap}
+.match-cell .side{display:inline-flex; align-items:center; gap:.3rem}
+.match-cell .side b{font-weight:600}
+.match-cell .vs{color:var(--faint); margin:0 .4rem}
+.match-cell img.lmark.flag{width:1.1rem; height:1.1rem; vertical-align:-.15rem}
+
+@media (max-width:640px){
+  .mlog-head{padding-top:2.4rem}
+  .mlog-stats{gap:1.1rem}
+  .mlog-stats dd{font-size:1.2rem}
+}
