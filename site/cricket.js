@@ -1750,7 +1750,7 @@ function renderFreshness(){
   const rows = [
     ["Model run", fmtStamp(D.built, tz), sinceText(D.built, tz),
      `${scored.toLocaleString()} players scored across ${metrics} metrics`],
-    ["Latest match included", latest ? whenSeen(latest) : "—", "",
+    ["Latest match included", latest ? fmtDate(latest) : "—", "",
      `${D.matches.toLocaleString()} matches, ${D.comps.length} competitions`],
   ];
   $("fresh-list").innerHTML = rows.map(([k, when, ago, note]) => `<li>
