@@ -198,6 +198,68 @@ class Store:
                 print(f"  {f}", file=sys.stderr)
         return failed
 
+    def push_tree(self, src_dir):
+        """Pack a directory tree into one asset and replace it. Used for the site
+        data, whose matches/ subfolder a flat release of individual files cannot
+        represent."""
+        if not self.remote:
+            print("store: local only, nothing pushed"); return []
+        import tempfile
+        rel = self._release()
+        name = f"{self.tag}.tar.gz"
+        existing = {a["name"]: a["id"] for a in rel.get("assets", [])}
+        tar = os.path.join(tempfile.gettempdir(), name)
+        pack_tree(src_dir, tar)
+        size = os.path.getsize(tar)
+        try:
+            if name in existing:
+                _req(f"{API}/repos/{self.repo}/releases/assets/{existing[name]}",
+                     self.token, "DELETE")
+            with open(tar, "rb") as fh:
+                blob = fh.read()
+            url = (f"{UPLOADS}/repos/{self.repo}/releases/{rel['id']}/assets"
+                   f"?{urllib.parse.urlencode({'name': name})}")
+            _req(url, self.token, "POST", blob, "application/octet-stream")
+            print(f"  pushed {name} ({size/1e6:.1f} MB, whole tree)")
+            return []
+        except Exception as e:
+            print(f"  FAILED {name}: {e}", file=sys.stderr); return [name]
+
+    def pull_tree(self, dest_dir):
+        """Fetch the tree asset and unpack it. Retries like the file pull."""
+        if not self.remote:
+            print(f"store: local only ({self.local})"); return []
+        import tempfile
+        rel = self._release()
+        name = f"{self.tag}.tar.gz"
+        asset = next((a for a in rel.get("assets", []) if a["name"] == name), None)
+        if not asset:
+            print(f"  {name} not found in release {self.tag}", file=sys.stderr)
+            return [name]
+        url = f"{API}/repos/{self.repo}/releases/assets/{asset['id']}"
+        tar = os.path.join(tempfile.gettempdir(), name)
+        last = None
+        for attempt in range(1, 6):
+            try:
+                req = urllib.request.Request(url, headers={
+                    "Accept": "application/octet-stream",
+                    "Authorization": f"Bearer {self.token}",
+                    "User-Agent": "player-scout"})
+                with urllib.request.urlopen(req, timeout=600) as r, open(tar, "wb") as fh:
+                    shutil.copyfileobj(r, fh)
+                unpack_tree(tar, dest_dir)
+                print(f"  pulled {name} -> {dest_dir}")
+                return []
+            except urllib.error.HTTPError as e:
+                last = e
+                if e.code not in RETRYABLE: break
+            except (urllib.error.URLError, TimeoutError, OSError) as e:
+                last = e
+            if attempt < 5:
+                time.sleep(min(60, 4 * 2 ** (attempt - 1)))
+        print(f"  FAILED {name}: {last}", file=sys.stderr)
+        return [name]
+
     # ── the actual merge ────────────────────────────────────────────────
     def upsert(self, incoming_dir: str):
         """Fold freshly parsed competitions into what is already stored.
@@ -230,6 +292,24 @@ class Store:
         return touched, summary
 
 
+def pack_tree(src_dir, tar_path):
+    """Everything under src_dir into one .tar.gz — releases are flat, so a tree
+    with a matches/ subfolder cannot go up as individual assets."""
+    import tarfile
+    with tarfile.open(tar_path, "w:gz") as t:
+        for root, _dirs, files in os.walk(src_dir):
+            for f in files:
+                full = os.path.join(root, f)
+                t.add(full, arcname=os.path.relpath(full, src_dir))
+
+
+def unpack_tree(tar_path, dest_dir):
+    import tarfile
+    os.makedirs(dest_dir, exist_ok=True)
+    with tarfile.open(tar_path, "r:gz") as t:
+        t.extractall(dest_dir)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("action", choices=["pull", "push", "upsert"])
@@ -238,10 +318,18 @@ def main():
     ap.add_argument("--local", default="data/cricket/facts")
     ap.add_argument("--pattern", default="*.parquet",
                     help="which files in --local this store holds")
+    ap.add_argument("--tree", action="store_true",
+                    help="treat --local as a directory tree packed into one asset")
     ap.add_argument("--incoming", default="data/cricket/incoming")
     args = ap.parse_args()
 
     store = Store(args.repo, args.tag, local=args.local, pattern=args.pattern)
+    if args.tree:
+        if args.action == "pull":
+            return 1 if store.pull_tree(args.local) else 0
+        if args.action == "push":
+            return 1 if store.push_tree(args.local) else 0
+        print("--tree supports pull and push only", file=sys.stderr); return 2
     if args.action == "pull":
         return 1 if store.pull() else 0
     if args.action == "push":
