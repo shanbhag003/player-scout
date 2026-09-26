@@ -422,10 +422,14 @@ button.qmark:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
    Uses the site's own surfaces, hairlines and type. The header stays put while
    the table scrolls, and the table scrolls sideways on a phone rather than
    forcing the whole modal to. */
-.mlog-back{position:fixed; inset:0; z-index:120; background:rgba(4,7,12,.72);
-  backdrop-filter:blur(3px); display:flex; align-items:flex-start;
-  justify-content:center; padding:5vh 3vw; overflow:auto}
-body.mlog-open{overflow:hidden}
+.mlog-back{position:fixed; top:0; left:0; right:0; bottom:0; z-index:120;
+  background:rgba(4,7,12,.72); backdrop-filter:blur(3px);
+  display:flex; align-items:flex-start; justify-content:center;
+  padding:5vh 3vw calc(5vh + env(safe-area-inset-bottom,0px)); overflow:auto;
+  -webkit-overflow-scrolling:touch}
+/* position:fixed, not overflow:hidden — iOS Safari honours only the former for
+   locking the background. The inline top offset (set in JS) holds the place. */
+body.mlog-open{position:fixed; left:0; right:0; width:100%; overflow:hidden}
 .mlog{position:relative; width:min(1040px,96vw); background:var(--surface);
   border:1px solid var(--hairline); border-radius:var(--radius);
   box-shadow:0 24px 70px rgba(0,0,0,.6); max-height:90vh; display:flex; flex-direction:column}
@@ -433,12 +437,12 @@ body.mlog-open{overflow:hidden}
   color:var(--faint); font-size:1.7rem; line-height:1; cursor:pointer; padding:.2rem .45rem}
 @media (hover:hover){.mlog-x:hover{color:var(--ink)}}
 .mlog-body{display:flex; flex-direction:column; min-height:0; overflow:hidden}
+.mlog-scroll{flex:1 1 auto; min-height:0}
 .mlog-loading{padding:2.4rem; text-align:center; color:var(--faint)}
 
 /* header — sticky, so it stays while the innings scroll */
-.mlog-head{position:sticky; top:0; z-index:2; display:flex; align-items:center;
-  justify-content:space-between; gap:1rem; flex-wrap:wrap;
-  padding:1.1rem 1.3rem; border-bottom:1px solid var(--hairline);
+.mlog-head{position:relative; padding:2.6rem 1.3rem 1rem;
+  border-bottom:1px solid var(--hairline);
   background:var(--surface); border-radius:var(--radius) var(--radius) 0 0}
 .mlog-id{display:flex; align-items:center; gap:.7rem}
 .mlog-id h2{font-family:var(--cond); font-weight:600; font-size:1.5rem; line-height:1}
@@ -450,7 +454,7 @@ body.mlog-open{overflow:hidden}
 .mlog-table th,.mlog-table td{padding:.5rem .7rem; text-align:right;
   border-bottom:1px solid var(--hairline-soft)}
 .mlog-table th.l,.mlog-table td.l{text-align:left}
-.mlog-table thead th{position:sticky; top:0; background:var(--raised); color:var(--muted);
+.mlog-table thead th{position:-webkit-sticky; position:sticky; top:0; background:var(--raised); color:var(--muted);
   font-family:var(--cond); font-weight:600; text-transform:uppercase; letter-spacing:.04em;
   font-size:.72rem; border-bottom:1px solid var(--hairline)}
 .mlog-table tbody tr:hover{background:rgba(255,255,255,.02)}
@@ -477,18 +481,28 @@ body.mlog-open{overflow:hidden}
 @media (hover:hover){.logbtn:hover{border-color:var(--gold); color:var(--gold)}}
 
 @media (max-width:640px){
-  .mlog-back{padding:2vh 0 0}
-  .mlog{width:100vw; max-height:98vh; border-radius:var(--radius) var(--radius) 0 0}
-  .mlog-head{padding:.9rem 1rem}
-  .mlog-id h2{font-size:1.3rem}
-  .mlog-table{font-size:.82rem}
+  .mlog-back{padding:0}
+  .mlog{width:100vw; height:100vh; height:100dvh; max-height:100dvh;
+    border-radius:0; padding-bottom:env(safe-area-inset-bottom,0px)}
+  .mlog-head{padding:2.4rem 1rem .8rem}
+  .mlog-id h2{font-size:1.25rem}
+  .mlog-id img.lmark.flag{width:1.6rem; height:1.6rem}
+  .mlog-top{gap:.6rem}
+  .mlog-profile{padding:.3rem .7rem; font-size:.82rem}
+  .mlog-stats{gap:1rem; margin-top:.7rem; padding-top:.7rem}
+  .mlog-stats dd{font-size:1.15rem}
+  .mlog-table{font-size:.8rem}
+  .mlog-table th,.mlog-table td{padding:.42rem .55rem}
+  /* Date and the fixture are the anchors; keep them while the rest scrolls. */
+  .mlog-table th:first-child,.mlog-table td:first-child{position:-webkit-sticky;
+    position:sticky; left:0; background:var(--surface); z-index:1}
+  .mlog-table thead th:first-child{background:var(--raised); z-index:3}
 }
 
 /* ── match log header, corrected ─────────────────────────
    The close button had the same corner as "Open full profile". It now sits
    above the row, clear of it, and a career-stats strip sits under the identity —
    the same figures the profile shows. */
-.mlog-head{padding-top:2.6rem}
 .mlog-x{position:absolute; top:.55rem; right:.7rem; z-index:4}
 .mlog-top{display:flex; align-items:center; justify-content:space-between; gap:1rem;
   flex-wrap:wrap}
@@ -509,8 +523,4 @@ body.mlog-open{overflow:hidden}
 .match-cell .vs{color:var(--faint); margin:0 .4rem}
 .match-cell img.lmark.flag{width:1.1rem; height:1.1rem; vertical-align:-.15rem}
 
-@media (max-width:640px){
-  .mlog-head{padding-top:2.4rem}
-  .mlog-stats{gap:1.1rem}
-  .mlog-stats dd{font-size:1.2rem}
-}
+

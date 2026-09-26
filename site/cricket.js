@@ -151,6 +151,7 @@ function renderSugg(term){
    role: a batter's bowling columns do not appear if he never bowled, and vice
    versa. Anything a player did not do in a match reads "—", never "0". */
 let matchLogCache = {};
+let mlogScrollY = 0;
 
 async function openMatchLog(pid){
   const p = (byPlayer[pid] || [])[0];
@@ -162,6 +163,10 @@ async function openMatchLog(pid){
     d.addEventListener("click", e => { if (e.target === d) closeMatchLog(); });
     return d;
   })();
+  // iOS Safari ignores overflow:hidden on body, so the page scrolls behind the
+  // modal. Freezing the body at its current offset is the only thing that holds.
+  mlogScrollY = window.scrollY || window.pageYOffset || 0;
+  document.body.style.top = `-${mlogScrollY}px`;
   document.body.classList.add("mlog-open");
   back.innerHTML = `<div class="mlog" role="dialog" aria-modal="true" aria-label="Match log">
     <div class="mlog-body"><p class="mlog-loading">Loading ${esc(p.f||p.n)}'s matches…</p></div>
@@ -179,6 +184,8 @@ async function openMatchLog(pid){
 }
 function closeMatchLog(){
   document.body.classList.remove("mlog-open");
+  document.body.style.top = "";
+  if (typeof window.scrollTo === "function") window.scrollTo(0, mlogScrollY || 0);
   const d = document.getElementById("mlog");
   if (d) d.remove();
 }
