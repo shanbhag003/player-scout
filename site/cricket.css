@@ -417,3 +417,69 @@ button.qmark:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   button.qmark{width:1.6rem;height:1.6rem;font-size:.75rem;margin-left:.4rem}
   .hintpop{font-size:.85rem}
 }
+
+/* ── match log modal ────────────────────────────────────
+   Uses the site's own surfaces, hairlines and type. The header stays put while
+   the table scrolls, and the table scrolls sideways on a phone rather than
+   forcing the whole modal to. */
+.mlog-back{position:fixed; inset:0; z-index:120; background:rgba(4,7,12,.72);
+  backdrop-filter:blur(3px); display:flex; align-items:flex-start;
+  justify-content:center; padding:5vh 3vw; overflow:auto}
+body.mlog-open{overflow:hidden}
+.mlog{position:relative; width:min(1040px,96vw); background:var(--surface);
+  border:1px solid var(--hairline); border-radius:var(--radius);
+  box-shadow:0 24px 70px rgba(0,0,0,.6); max-height:90vh; display:flex; flex-direction:column}
+.mlog-x{position:absolute; top:.6rem; right:.7rem; z-index:3; border:0; background:none;
+  color:var(--faint); font-size:1.7rem; line-height:1; cursor:pointer; padding:.2rem .45rem}
+@media (hover:hover){.mlog-x:hover{color:var(--ink)}}
+.mlog-body{display:flex; flex-direction:column; min-height:0; overflow:hidden}
+.mlog-loading{padding:2.4rem; text-align:center; color:var(--faint)}
+
+/* header — sticky, so it stays while the innings scroll */
+.mlog-head{position:sticky; top:0; z-index:2; display:flex; align-items:center;
+  justify-content:space-between; gap:1rem; flex-wrap:wrap;
+  padding:1.1rem 1.3rem; border-bottom:1px solid var(--hairline);
+  background:var(--surface); border-radius:var(--radius) var(--radius) 0 0}
+.mlog-id{display:flex; align-items:center; gap:.7rem}
+.mlog-id h2{font-family:var(--cond); font-weight:600; font-size:1.5rem; line-height:1}
+.mlog-id p{color:var(--muted); font-size:.9rem; margin-top:.15rem}
+.mlog-id img.lmark.flag{width:1.9rem; height:1.9rem}
+
+.mlog-scroll{overflow:auto; -webkit-overflow-scrolling:touch}
+.mlog-table{border-collapse:collapse; width:100%; font-size:.86rem; white-space:nowrap}
+.mlog-table th,.mlog-table td{padding:.5rem .7rem; text-align:right;
+  border-bottom:1px solid var(--hairline-soft)}
+.mlog-table th.l,.mlog-table td.l{text-align:left}
+.mlog-table thead th{position:sticky; top:0; background:var(--raised); color:var(--muted);
+  font-family:var(--cond); font-weight:600; text-transform:uppercase; letter-spacing:.04em;
+  font-size:.72rem; border-bottom:1px solid var(--hairline)}
+.mlog-table tbody tr:hover{background:rgba(255,255,255,.02)}
+.mlog-table td .vs{color:var(--faint); margin:0 .15rem}
+.mlog-table img.lmark.flag{width:1.15rem; height:1.15rem; vertical-align:-.2rem; margin-right:.25rem}
+.mdash{color:var(--faint)}
+.nowrap{white-space:nowrap}
+
+.fmt-pill{font-family:var(--cond); font-weight:600; font-size:.72rem; padding:.08rem .45rem;
+  border-radius:99px; border:1px solid var(--hairline); color:var(--muted)}
+.res{font-family:var(--cond); font-weight:600; font-size:.76rem; padding:.05rem .45rem;
+  border-radius:99px}
+.res-w{color:var(--green); background:rgba(79,194,162,.12)}
+.res-l{color:#E8836F; background:rgba(232,131,111,.12)}
+.res-d{color:var(--muted); background:rgba(142,161,182,.12)}
+.mile-50{color:var(--gold)} .mile-100{color:var(--gold)}
+.mile-100::after{content:" ★"; font-size:.7em}
+.mile-5w{color:var(--gold)}
+.mile-5w::after{content:" ★"; font-size:.7em}
+
+.logbtn{border:1px solid var(--hairline); background:var(--raised); border-radius:7px;
+  cursor:pointer; color:var(--faint); width:2rem; height:2rem; display:grid; place-items:center}
+.logbtn svg{width:1rem; height:1rem}
+@media (hover:hover){.logbtn:hover{border-color:var(--gold); color:var(--gold)}}
+
+@media (max-width:640px){
+  .mlog-back{padding:2vh 0 0}
+  .mlog{width:100vw; max-height:98vh; border-radius:var(--radius) var(--radius) 0 0}
+  .mlog-head{padding:.9rem 1rem}
+  .mlog-id h2{font-size:1.3rem}
+  .mlog-table{font-size:.82rem}
+}

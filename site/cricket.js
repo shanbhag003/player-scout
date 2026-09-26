@@ -144,6 +144,135 @@ function renderSugg(term){
   box.querySelectorAll("li").forEach(li => li.onclick = () => select(li.dataset.pid));
 }
 
+
+/* ── match log modal ─────────────────────────────────────
+   Fetches one player's innings on demand from matches/<id>.json — a small file
+   per player, so nothing pool-sized is ever loaded. Columns follow the player's
+   role: a batter's bowling columns do not appear if he never bowled, and vice
+   versa. Anything a player did not do in a match reads "—", never "0". */
+let matchLogCache = {};
+
+async function openMatchLog(pid){
+  const p = (byPlayer[pid] || [])[0];
+  if (!p) return;
+  const back = document.getElementById("mlog") || (() => {
+    const d = document.createElement("div");
+    d.id = "mlog"; d.className = "mlog-back";
+    document.body.appendChild(d);
+    d.addEventListener("click", e => { if (e.target === d) closeMatchLog(); });
+    return d;
+  })();
+  document.body.classList.add("mlog-open");
+  back.innerHTML = `<div class="mlog" role="dialog" aria-modal="true" aria-label="Match log">
+    <button class="mlog-x" aria-label="Close">&times;</button>
+    <div class="mlog-body"><p class="mlog-loading">Loading ${esc(p.f||p.n)}'s matches…</p></div>
+  </div>`;
+  back.querySelector(".mlog-x").onclick = closeMatchLog;
+
+  let data = matchLogCache[pid];
+  if (!data){
+    try {
+      const r = await fetch(`${BASE}/matches/${pid}.json`);
+      data = r.ok ? await r.json() : {matches: []};
+    } catch { data = {matches: []}; }
+    matchLogCache[pid] = data;
+  }
+  if (document.getElementById("mlog")) drawMatchLog(p, data.matches || []);
+}
+function closeMatchLog(){
+  document.body.classList.remove("mlog-open");
+  const d = document.getElementById("mlog");
+  if (d) d.remove();
+}
+
+function drawMatchLog(p, rows){
+  // Which stat columns to show is the player's role, narrowed to what the rows
+  // actually contain — a "batter" who never bowled shows no bowling columns.
+  const anyBat = rows.some(r => r.bat), anyBowl = rows.some(r => r.bowl);
+  const role = String(p.r || "").toLowerCase();
+  const showBat = anyBat && !role.includes("bowler") || anyBat;   // batters + allrounders + anyone who batted
+  const showBowl = anyBowl;                                       // only if they bowled at all
+  const dash = '<span class="mdash">—</span>';
+
+  const head = `<tr>
+    <th>Date</th><th>Format</th><th class="l">Match</th><th>Result</th>
+    ${showBat ? '<th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th><th class="l">Out</th>' : ''}
+    ${showBowl ? '<th>O</th><th>R</th><th>W</th><th>Econ</th>' : ''}
+  </tr>`;
+
+  const body = rows.map(m => {
+    const b = m.bat, w = m.bowl;
+    const won = m.result && m.team && m.result === m.team;
+    const resCls = !m.result ? "" : won ? "res-w" : (m.result === "tie" || m.result === "draw"
+                     || m.result === "no result") ? "res-d" : "res-l";
+    const resText = !m.result ? dash
+      : m.result === m.team ? "Won"
+      : (m.result === "tie") ? "Tie"
+      : (m.result === "draw") ? "Draw"
+      : (m.result === "no result") ? "No result" : "Lost";
+    const fifty = b && b.r >= 50, hundred = b && b.r >= 100;
+    const fifer = w && w.w >= 5;
+    const runCell = !b ? dash
+      : `<b class="${hundred ? "mile-100" : fifty ? "mile-50" : ""}">${b.r}${b.no ? "*" : ""}</b>`;
+    // The asterisk on the runs already marks a not-out, so the dismissal column
+    // just shows how they got out — a dash when they didn't.
+    const outCell = !b ? dash : b.no ? dash : esc(dismissalText(b));
+    return `<tr>
+      <td class="nowrap">${fmtDate(m.date)}</td>
+      <td><span class="fmt-pill">${esc(m.fmt || "")}</span></td>
+      <td class="l nowrap">${flag(natFor(m.team))}<span>${esc(short(m.team))}</span>
+        <span class="vs">v</span> ${flag(natFor(m.opp))}<span>${esc(short(m.opp))}</span></td>
+      <td><span class="res ${resCls}">${resText}</span></td>
+      ${showBat ? (b
+        ? `<td>${runCell}</td><td>${b.b}</td><td>${b["4"]}</td><td>${b["6"]}</td>
+           <td>${b.sr ?? dash}</td><td class="l">${outCell}</td>`
+        : `<td>${dash}</td><td>${dash}</td><td>${dash}</td><td>${dash}</td><td>${dash}</td><td class="l">${dash}</td>`) : ''}
+      ${showBowl ? (w
+        ? `<td>${w.o}</td><td>${w.r}</td><td><b class="${fifer ? "mile-5w" : ""}">${w.w}</b></td><td>${w.econ ?? dash}</td>`
+        : `<td>${dash}</td><td>${dash}</td><td>${dash}</td><td>${dash}</td>`) : ''}
+    </tr>`;
+  }).join("");
+
+  const header = `<div class="mlog-head">
+    <div class="mlog-id">${flag(p.nat)}
+      <div><h2>${esc(p.f||p.n)}</h2>
+        <p>${esc(titled(p.r||p.c))}${p.nat ? ` · ${esc(p.nat)}` : ""}</p></div>
+    </div>
+    <button class="ghost accent mlog-profile">Open full profile</button>
+  </div>`;
+
+  const el = document.querySelector("#mlog .mlog-body");
+  el.innerHTML = rows.length
+    ? header + `<div class="mlog-scroll"><table class="mlog-table">
+        <thead>${head}</thead><tbody>${body}</tbody></table></div>`
+    : header + `<p class="mlog-loading">No match-by-match record yet. This needs a
+        full re-parse of the archive — run Cricket rebuild.</p>`;
+  const pb = document.querySelector("#mlog .mlog-profile");
+  if (pb) pb.onclick = () => { closeMatchLog(); select(p.p); };
+}
+
+// helpers the modal leans on
+function fmtDate(iso){
+  if (!iso) return "—";
+  const [y,m,d] = String(iso).split("-");
+  return d ? `${+d} ${MON[+m-1]} ${y}` : (y || "—");
+}
+function short(team){
+  if (!team) return "—";
+  const AB = {"India":"IND","Australia":"AUS","England":"ENG","Pakistan":"PAK",
+    "South Africa":"RSA","New Zealand":"NZ","Sri Lanka":"SL","Bangladesh":"BAN",
+    "West Indies":"WI","Afghanistan":"AFG","Zimbabwe":"ZIM","Ireland":"IRE",
+    "Netherlands":"NED","Scotland":"SCO","United Arab Emirates":"UAE"};
+  return AB[team] || team;
+}
+function natFor(team){ return FLAGS[team] ? team : (team || null); }
+function dismissalText(b){
+  const map = {bowled:"b", lbw:"lbw", caught:"c", "caught and bowled":"c&b",
+    stumped:"st", "run out":"run out", "hit wicket":"hit wkt"};
+  return map[b.out] || (b.out ? b.out : "out");
+}
+
+
 function select(pid){
   state.sel=pid; state.compare=[];
   const e=byPlayer[pid];
@@ -366,6 +495,7 @@ function playerbar(){
         <svg viewBox="0 0 24 24" class="btn-icon" aria-hidden="true">
           <path d="M7 4h10v16l-5-4-5 4z" fill="none" stroke="currentColor" stroke-width="1.8"
                 stroke-linejoin="round"/></svg><span> ${saved?"Saved":"Save to shortlist"}</span></button>
+      <button class="ghost" id="go-matches">Recent matches</button>
       <button class="ghost cta" id="go-compare" ${state.compare.length ? "" : "hidden"}
         >Compare ${state.compare.length + 1} players</button>
       <button class="ghost accent" id="clear-player">
@@ -376,6 +506,7 @@ function playerbar(){
     </div>`;
   $("save-player").onclick = () => slToggle(p.u);
   const go = $("go-compare"); if (go) go.onclick = () => setTab("compare");
+  const gm = $("go-matches"); if (gm) gm.onclick = () => openMatchLog(p.p);
   $("clear-player").onclick = toLanding;
 }
 
@@ -888,10 +1019,16 @@ function renderResults(){
         <button class="addbtn${inCmp?" on":""}" data-add="${c.u}" aria-pressed="${inCmp}"
           ${!inCmp && full ? "disabled" : ""}
           title="${inCmp?"Remove from comparison":full?"Comparison is full — remove someone first":"Add to comparison"}"
-          >${inCmp ? "&minus;" : "+"}</button></span>
+          >${inCmp ? "&minus;" : "+"}</button>
+        <button class="logbtn" data-log="${c.p}" aria-label="Recent matches" title="Recent matches">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h10"
+            fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button></span>
     </li>`;
   }).join("");
 
+  $("matches").querySelectorAll("[data-log]").forEach(b =>
+    b.onclick = e => { e.stopPropagation(); openMatchLog(b.dataset.log); });
   $("matches").querySelectorAll(".match-btn").forEach(b => b.onclick = () => {
     if (!state.compare.includes(b.dataset.uid) && !full) state.compare.push(b.dataset.uid);
     setTab("compare");
@@ -1593,7 +1730,7 @@ document.addEventListener("click", e => {
   }
   hintPop.close();
 });
-document.addEventListener("keydown", e => { if (e.key === "Escape") hintPop.close(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape"){ hintPop.close(); closeMatchLog(); } });
 
 /* ── method strip ───────────────────────────────────────
    Below 980px the four columns become a swipeable strip with a pill nav, as

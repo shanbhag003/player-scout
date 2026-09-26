@@ -120,6 +120,11 @@ def parse_match(raw: dict, mid: str, comp: dict, cfg: dict):
     order = {}          # batting position, by first appearance at the crease
     bowled = set()
     fielding = defaultdict(lambda: defaultdict(float))
+    # Per-match, per-player line for the match-log view: the whole innings, not
+    # split by phase, plus how the batter got out. Everything here is already
+    # seen in the loops below; it is only that nothing kept it at this grain.
+    line = defaultdict(lambda: defaultdict(float))
+    dismissal = {}      # (innings, batter) -> {"kind":..., "bowler":..., "fielder":...}
 
     for ino, inn in enumerate(raw.get("innings") or [], start=1):
         if inn.get("super_over"):
@@ -165,6 +170,17 @@ def parse_match(raw: dict, mid: str, comp: dict, cfg: dict):
                     facts[k]["fours"] += 1 if runs_bat == 4 else 0
                     facts[k]["sixes"] += 1 if runs_bat == 6 else 0
 
+                lb = line[(ino, pid(batter))]
+                lb["bat_balls"] += faced; lb["bat_runs"] += runs_bat
+                lb["fours"] += 1 if runs_bat == 4 else 0
+                lb["sixes"] += 1 if runs_bat == 6 else 0
+                lb["_bat_team"] = bat_team
+
+                lo = line[(ino, pid(bowler))]
+                lo["bowl_balls"] += legal
+                lo["conceded"] += d["runs"]["total"] - byes
+                lo["bowl_wkts"] += 0            # ensures the row exists even wicketless
+
                 okey = ("bowl_phase", ino, pid(bowler), ph)
                 facts[okey]["balls"] += legal
                 # Economy is charged with everything except byes, which are the
@@ -180,6 +196,13 @@ def parse_match(raw: dict, mid: str, comp: dict, cfg: dict):
                     kind, out = w.get("kind"), w.get("player_out")
                     if kind in NOT_OUT_KINDS or not out:
                         continue
+                    fielders = [f.get("name") for f in (w.get("fielders") or []) if f.get("name")]
+                    dismissal[(ino, pid(out))] = {
+                        "kind": kind,
+                        "bowler": bowler if kind in BOWLER_WICKETS or kind == "caught and bowled" else None,
+                        "fielder": fielders[0] if fielders else None}
+                    if kind in BOWLER_WICKETS:
+                        line[(ino, pid(bowler))]["bowl_wkts"] += 1
                     facts[("bat_phase", ino, pid(out), ph)]["outs"] += 1
                     facts[("bat_vs_bowler", ino, pid(out), pid(bowler))]["outs"] += 1
                     if out == batter:
@@ -205,8 +228,17 @@ def parse_match(raw: dict, mid: str, comp: dict, cfg: dict):
     if not facts:
         return None
 
+    outcome = info.get("outcome") or {}
+    if outcome.get("winner"):
+        result = outcome["winner"]
+    elif "result" in outcome:
+        result = outcome["result"]           # draw / tie / no result
+    else:
+        result = None
     base = dict(match_id=mid, competition=comp["key"], competition_name=comp["name"],
                 format=fmt, tier=tier, gender=gender, season=season, date=date,
+                venue=(info.get("venue") or None),
+                result=result,
                 revision=(raw.get("meta") or {}).get("revision", 0))
 
     fact_rows = []
@@ -216,6 +248,23 @@ def parse_match(raw: dict, mid: str, comp: dict, cfg: dict):
     for player, m in fielding.items():
         fact_rows.append({**base, "kind": "field", "innings": 0, "player_id": player,
                           "bucket": "all", **{k: int(v) for k, v in m.items()}})
+
+    # One match-log row per player per innings, carrying the innings totals and
+    # the dismissal. The private _bat_team is dropped before writing.
+    for (ino, player), m in line.items():
+        d = dismissal.get((ino, player), {})
+        fact_rows.append({**base, "kind": "line", "innings": ino, "player_id": player,
+                          "bucket": m.get("_bat_team") or "",
+                          "bat_balls": int(m.get("bat_balls", 0)),
+                          "bat_runs": int(m.get("bat_runs", 0)),
+                          "fours": int(m.get("fours", 0)),
+                          "sixes": int(m.get("sixes", 0)),
+                          "bowl_balls": int(m.get("bowl_balls", 0)),
+                          "conceded": int(m.get("conceded", 0)),
+                          "bowl_wkts": int(m.get("bowl_wkts", 0)),
+                          "out_kind": d.get("kind"),
+                          "out_bowler": d.get("bowler"),
+                          "out_fielder": d.get("fielder")})
 
     app_rows = []
     squads = info.get("players") or {}

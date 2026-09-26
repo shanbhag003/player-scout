@@ -660,6 +660,81 @@ def emit(bat, bowl, players, roles, facts, out_dir, half_life=HALF_LIFE, facts_r
             json.dump(obj, fh, separators=(",", ":"))
         print(f"  {name+'.json':12} {os.path.getsize(path)/1e6:6.2f} MB")
 
+    write_match_logs(facts_raw if facts_raw is not None else facts,
+                     apps, players, out_dir)
+
+
+def write_match_logs(facts, apps, players, out_dir):
+    """One small file per player: their innings, newest first.
+
+    A single pooled file would be tens of megabytes and the modal only ever needs
+    one player, so each is written to matches/<player_id>.json and fetched on
+    click. Only players in the scored pool get a file."""
+    import math
+    line = facts[facts["kind"] == "line"].copy()
+    if line.empty:
+        print("  match logs   none (no line rows — re-parse needed)")
+        return
+    scored = set(players.index)
+
+    # Result and opposition live on the appearances, one row per player-match.
+    # line rows already carry result and date from the shared base; take only the
+    # team and opposition from appearances, or the merge makes result_x/result_y.
+    app = apps[["match_id", "player_id", "team", "opposition"]].drop_duplicates(
+        ["match_id", "player_id"])
+    key = ["match_id", "player_id"]
+    m = line.merge(app, on=key, how="left")
+
+    fmt_label = {"T20": "T20", "ODI": "ODI", "FIRST_CLASS": "FC", "TEST": "Test"}
+    mdir = os.path.join(out_dir, "matches")
+    os.makedirs(mdir, exist_ok=True)
+
+    written = 0
+    for pid, g in m.groupby("player_id"):
+        if pid not in scored:
+            continue
+        rows = []
+        # One innings is one row; a player rarely has two in a T20, but sum guards it.
+        for (mid, ino), r in g.groupby(["match_id", "innings"]):
+            r0 = r.iloc[0]
+            bat_balls = int(r["bat_balls"].sum())
+            bat_runs = int(r["bat_runs"].sum())
+            bowl_balls = int(r["bowl_balls"].sum())
+            conceded = int(r["conceded"].sum())
+            wkts = int(r["bowl_wkts"].sum())
+            did_bat = bat_balls > 0 or (r0.get("out_kind") is not None
+                                        and not (isinstance(r0.get("out_kind"), float)
+                                                 and math.isnan(r0.get("out_kind"))))
+            did_bowl = bowl_balls > 0
+            ok = r0.get("out_kind")
+            ok = None if (ok is None or (isinstance(ok, float) and math.isnan(ok))) else str(ok)
+            row = {
+                "date": r0.get("date"),
+                "comp": r0.get("competition"),
+                "fmt": fmt_label.get(r0.get("format"), r0.get("format")),
+                "team": r0.get("team") or r0.get("bucket"),
+                "opp": r0.get("opposition"),
+                "result": (None if r0.get("result") is None
+                           or (isinstance(r0.get("result"), float) and math.isnan(r0.get("result")))
+                           else str(r0.get("result"))),
+            }
+            if did_bat:
+                row["bat"] = {"r": bat_runs, "b": bat_balls,
+                              "4": int(r["fours"].sum()), "6": int(r["sixes"].sum()),
+                              "sr": round(bat_runs / bat_balls * 100, 1) if bat_balls else None,
+                              "out": ok,
+                              "no": ok is None}
+            if did_bowl:
+                ov = bowl_balls // 6 + (bowl_balls % 6) / 10
+                row["bowl"] = {"o": round(ov, 1), "r": conceded, "w": wkts,
+                               "econ": round(conceded / bowl_balls * 6, 2) if bowl_balls else None}
+            rows.append(row)
+        rows.sort(key=lambda x: x["date"] or "", reverse=True)
+        with open(os.path.join(mdir, f"{pid}.json"), "w") as fh:
+            json.dump({"matches": rows}, fh, separators=(",", ":"))
+        written += 1
+    print(f"  match logs   {written:,} players -> matches/")
+
 
 def main():
     ap = argparse.ArgumentParser()
