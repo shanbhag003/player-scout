@@ -225,10 +225,9 @@ function drawMatchLog(p, rows){
     return `<tr>
       <td class="nowrap">${fmtDate(m.date)}</td>
       <td><span class="fmt-pill">${esc(m.fmt || "")}</span></td>
-      <td class="l match-cell" title="${esc(m.team || "")} v ${esc(m.opp || "")}">
-        <span class="side">${flag(natFor(m.team))}<b>${esc(short(m.team))}</b></span>
-        <span class="vs">v</span>
-        <span class="side">${flag(natFor(m.opp))}<b>${esc(short(m.opp))}</b></span></td>
+      <td class="l match-cell">
+        <span class="fx-for">${flag(natFor(m.team))}<b>${esc(m.team || "—")}</b></span>
+        <span class="fx-opp">${flag(natFor(m.opp))}<span>${esc(m.opp || "—")}</span></span></td>
       <td><span class="res ${resCls}">${resText}</span></td>
       ${showBat ? (b
         ? `<td>${runCell}</td><td>${b.b}</td><td>${b["4"]}</td><td>${b["6"]}</td>
@@ -281,7 +280,9 @@ function drawMatchLog(p, rows){
 
   const el = document.querySelector("#mlog .mlog-body");
   el.innerHTML = rows.length
-    ? header + `<div class="mlog-scroll"><table class="mlog-table">
+    ? header + `<p class="mlog-hint">In each match, the team on top is who
+        <b>${esc(p.f||p.n)}</b> played for; the opponent is below.</p>
+        <div class="mlog-scroll"><table class="mlog-table">
         <thead>${head}</thead><tbody>${body}</tbody></table></div>`
     : header + `<p class="mlog-loading">No match-by-match record yet. This needs a
         full re-parse of the archive — run Cricket rebuild.</p>`;
@@ -296,33 +297,6 @@ function fmtDate(iso){
   if (!iso) return "—";
   const [y,m,d] = String(iso).split("-");
   return d ? `${+d} ${MON[+m-1]} ${y}` : (y || "—");
-}
-const TEAM_ABBR = {"India":"IND","Australia":"AUS","England":"ENG","Pakistan":"PAK",
-  "South Africa":"RSA","New Zealand":"NZ","Sri Lanka":"SL","Bangladesh":"BAN",
-  "West Indies":"WI","Afghanistan":"AFG","Zimbabwe":"ZIM","Ireland":"IRE",
-  "Netherlands":"NED","Scotland":"SCO","United Arab Emirates":"UAE","Nepal":"NEP",
-  "Papua New Guinea":"PNG","Cook Islands":"COK","Hong Kong":"HK","Kenya":"KEN",
-  "Namibia":"NAM","Oman":"OMA","United States of America":"USA","Canada":"CAN",
-  "Uganda":"UGA","Jersey":"JEY","Guernsey":"GGY","Italy":"ITA","Germany":"GER",
-  "Denmark":"DEN","Malaysia":"MAS","Singapore":"SGP","Bahrain":"BHR","Qatar":"QAT",
-  "Kuwait":"KUW","Saudi Arabia":"KSA","Nigeria":"NGA","Ghana":"GHA","Rwanda":"RWA",
-  "Tanzania":"TAN","Botswana":"BOT","Malawi":"MWI","Mozambique":"MOZ","Japan":"JPN",
-  "Indonesia":"INA","Thailand":"THA","Philippines":"PHI","Vanuatu":"VAN","Samoa":"SAM",
-  "Fiji":"FIJ","Bhutan":"BHU","Maldives":"MDV","Bermuda":"BER","Cayman Islands":"CAY",
-  "Argentina":"ARG","Portugal":"POR","Spain":"ESP","France":"FRA","Belgium":"BEL",
-  "Austria":"AUT","Czech Republic":"CZE","Romania":"ROU","Bulgaria":"BUL","Serbia":"SRB",
-  "Isle of Man":"IOM","Gibraltar":"GIB","Sweden":"SWE","Norway":"NOR","Finland":"FIN",
-  "Estonia":"EST","Hungary":"HUN","Mexico":"MEX","Panama":"PAN","Bahamas":"BAH",
-  "Turkey":"TUR","Greece":"GRE","Cyprus":"CYP","Malta":"MLT","Luxembourg":"LUX",
-  "Switzerland":"SUI","Croatia":"CRO","Slovenia":"SVN","Seychelles":"SEY"};
-function short(team){
-  if (!team) return "—";
-  if (TEAM_ABBR[team]) return TEAM_ABBR[team];
-  // Fall back to a code rather than the full name, or the row wraps. Drop the
-  // small words, take the initials of what's left, cap at four.
-  const words = team.split(/\s+/).filter(w => !/^(and|of|the)$/i.test(w));
-  if (words.length > 1) return words.map(w => w[0]).join("").slice(0,4).toUpperCase();
-  return team.slice(0,3).toUpperCase();
 }
 function natFor(team){ return FLAGS[team] ? team : (team || null); }
 function dismissalText(b){
