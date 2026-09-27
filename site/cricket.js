@@ -240,22 +240,31 @@ function drawMatchLog(p, rows){
     </tr>`;
   }).join("");
 
-  // Career totals for the strip, straight from the same object the profile card
-  // reads, so the numbers cannot disagree. Batting or bowling to match the role,
-  // both for an all-rounder.
-  const t = (p.car || {}).total || {};
-  const isBat = anyBat || String(p.r||"").toLowerCase().indexOf("bowler") < 0;
+  // Career totals for the strip. The modal can be opened from either discipline,
+  // but a player's batting and bowling totals live under separate keys in
+  // detail.json, so reading only the discipline that opened it left an
+  // all-rounder's wickets (or runs) at zero. Read both blocks straight from
+  // DETAIL and show batting figures if he batted, bowling if he bowled, both for
+  // an all-rounder — the same split careerCard makes.
+  // FOLLOW-UP: a part-timer under MIN_BALLS_BOWL (150) is not in the bowling
+  // pool, so the pipeline emits no career.bowling for him at all — his match rows
+  // show wickets but this strip cannot sum them (there is nothing to read here).
+  // Fixing that means the pipeline emitting whole-player career wickets
+  // independent of pool membership, and a rebuild. Out of scope for now.
+  const carAll = ((DETAIL || {})[p.p] || {}).career || {};
+  const bt = (carAll.batting || {}).total || {};
+  const bw = (carAll.bowling || {}).total || {};
   const statFig = [];
-  if (anyBat || t.runs){
+  if (anyBat || bt.runs){
     statFig.push(["Matches", rows.length]);
-    statFig.push(["Runs", (t.runs||0).toLocaleString()]);
-    statFig.push(["SR", t.balls_raw ? (t.runs/t.balls_raw*100).toFixed(1) : "—"]);
-    statFig.push(["Avg", t.outs ? (t.runs/t.outs).toFixed(1) : "—"]);
+    statFig.push(["Runs", (bt.runs||0).toLocaleString()]);
+    statFig.push(["SR", bt.balls_raw ? (bt.runs/bt.balls_raw*100).toFixed(1) : "—"]);
+    statFig.push(["Avg", bt.outs ? (bt.runs/bt.outs).toFixed(1) : "—"]);
   }
-  if (anyBowl || t.wkts){
-    if (!anyBat && !t.runs) statFig.push(["Matches", rows.length]);
-    statFig.push(["Wickets", t.wkts ?? "—"]);
-    statFig.push(["Econ", t.balls_raw ? (t.runs/t.balls_raw*6).toFixed(2) : "—"]);
+  if (anyBowl || bw.wkts){
+    if (!(anyBat || bt.runs)) statFig.push(["Matches", rows.length]);
+    statFig.push(["Wickets", bw.wkts ?? "—"]);
+    statFig.push(["Econ", bw.balls_raw ? (bw.runs/bw.balls_raw*6).toFixed(2) : "—"]);
   }
   const header = `<div class="mlog-head">
     <button class="mlog-x" aria-label="Close">&times;</button>
