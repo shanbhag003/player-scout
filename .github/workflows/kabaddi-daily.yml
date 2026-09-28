@@ -1,0 +1,138 @@
+name: Kabaddi daily
+
+# Every morning at 06:00 IST, check — cheaply — whether any new Pro Kabaddi
+# League matches have been played, and rebuild only if so. daily_sync walks a
+# chain of guards and backs out at the first that shows nothing new:
+#
+#   series present? -> fixtures present? -> completed matches we do not have? -> pull
+#
+# On a day with no new kabaddi the job fetches a couple of small feeds and stops.
+# On a day with new matches it pulls just those, rebuilds the model, republishes
+# the raw cache and the built data, and deploys.
+#
+# The cache lives in the kabaddi-raw release and is the state: a scorecard on
+# disk means that match is already ingested. Nothing is kept in git.
+
+on:
+  schedule:
+    - cron: "30 0 * * *"        # 00:30 UTC = 06:00 IST
+  workflow_dispatch:
+
+permissions:
+  contents: write               # release assets, and committing a new season
+  pages: write
+  id-token: write
+
+concurrency:
+  group: kabaddi-data
+  cancel-in-progress: false     # never interrupt a half-finished publish
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      # The cache is state. Without it every completed match reads as new and the
+      # guard can never back out, so this must succeed before the check.
+      - name: Bring down the cached feeds
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p data/kabaddi/raw
+          python pipeline/cricket/store.py pull --tree \
+            --repo ${{ github.repository }} --tag kabaddi-raw \
+            --local data/kabaddi/raw || echo "::warning::no kabaddi-raw yet; first run will look fully new"
+
+      - name: Check for new matches
+        id: sync
+        run: python pipeline/kabaddi/daily_sync.py
+
+      - name: Nothing new
+        if: steps.sync.outputs.changed != 'true'
+        run: echo "No new PKL matches this morning. Backed out without rebuilding."
+
+      # ── everything below runs only when there is something new ──────────
+      - name: Rebuild roles, bio and model
+        if: steps.sync.outputs.changed == 'true'
+        run: |
+          python pipeline/kabaddi/parse_matches.py --seasons all
+          python pipeline/kabaddi/build_master.py --seasons all
+          python pipeline/kabaddi/build_bio.py
+          python pipeline/kabaddi/build_kabaddi_scores.py --seasons all
+
+      # A brand-new season appears once a year; daily_sync appended it to
+      # seasons.yml so the year map is right. Commit that back — it is config,
+      # not data, and it does not trigger any deploy (deploy-site ignores config).
+      - name: Commit a newly-added season
+        if: steps.sync.outputs.changed == 'true' && steps.sync.outputs.new_seasons != '0'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add config/kabaddi/seasons.yml
+          git commit -m "Kabaddi: add newly-started PKL season" || echo "nothing to commit"
+          git push || echo "::warning::could not push the season update"
+
+      - name: Store the updated raw cache
+        if: steps.sync.outputs.changed == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python pipeline/cricket/store.py push --tree \
+            --repo ${{ github.repository }} --tag kabaddi-raw \
+            --local data/kabaddi/raw
+
+      - name: Publish the built site data
+        if: steps.sync.outputs.changed == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python pipeline/cricket/store.py push --tree \
+            --repo ${{ github.repository }} --tag kabaddi-site \
+            --local site/data/kabaddi
+
+      # The deploy builds BOTH channels, so it must carry cricket's live data or
+      # it takes production cricket down. Required.
+      - name: Fetch the built cricket data
+        if: steps.sync.outputs.changed == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p site/data/cricket
+          if ! python pipeline/cricket/store.py pull --tree \
+              --repo ${{ github.repository }} --tag cricket-site \
+              --local site/data/cricket; then
+            echo "::error::Could not fetch cricket-site; refusing to deploy."
+            exit 1
+          fi
+
+      - name: Build both channels
+        if: steps.sync.outputs.changed == 'true'
+        run: python pipeline/build_channels.py
+
+      - uses: actions/configure-pages@v5
+        if: steps.sync.outputs.changed == 'true'
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.sync.outputs.changed == 'true'
+        with:
+          path: _site
+      - id: deployment
+        if: steps.sync.outputs.changed == 'true'
+        uses: actions/deploy-pages@v4
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Kabaddi daily" >> $GITHUB_STEP_SUMMARY
+          echo "- changed: ${{ steps.sync.outputs.changed }}" >> $GITHUB_STEP_SUMMARY
+          echo "- new matches: ${{ steps.sync.outputs.new_matches }}" >> $GITHUB_STEP_SUMMARY
+          echo "- new seasons: ${{ steps.sync.outputs.new_seasons }}" >> $GITHUB_STEP_SUMMARY
