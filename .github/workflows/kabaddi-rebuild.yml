@@ -1,0 +1,88 @@
+name: Kabaddi rebuild
+
+# Full re-parse of every Pro Kabaddi League season from scratch. Run it when the
+# model or the parser changes, or monthly to pick up any revised scorecards the
+# daily delta would miss. Pulls every feed, rebuilds, republishes both the raw
+# cache and the built site data, and deploys.
+#
+# Nothing here commits. The raw cache and the built data live in release assets;
+# the site deploys as a Pages artifact. The repository stays the size it was.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: kabaddi-data          # shared with the daily sync; never overlap
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      - name: Pull every kabaddi feed
+        run: python pipeline/kabaddi/pull_feeds.py --seasons all
+
+      - name: Parse, roles, bio and model
+        run: |
+          python pipeline/kabaddi/parse_matches.py --seasons all
+          python pipeline/kabaddi/build_master.py --seasons all
+          python pipeline/kabaddi/build_bio.py
+          python pipeline/kabaddi/build_kabaddi_scores.py --seasons all
+
+      - name: Store the raw cache
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python pipeline/cricket/store.py push --tree \
+            --repo ${{ github.repository }} --tag kabaddi-raw \
+            --local data/kabaddi/raw
+
+      - name: Publish the built site data
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python pipeline/cricket/store.py push --tree \
+            --repo ${{ github.repository }} --tag kabaddi-site \
+            --local site/data/kabaddi
+
+      # Production is live on cricket, and build_channels builds BOTH channels,
+      # so the deploy must carry cricket's data or it would ship production with
+      # cricket switched off. Required, exactly as deploy-site treats it.
+      - name: Fetch the built cricket data
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p site/data/cricket
+          if ! python pipeline/cricket/store.py pull --tree \
+              --repo ${{ github.repository }} --tag cricket-site \
+              --local site/data/cricket; then
+            echo "::error::Could not fetch cricket-site; refusing to deploy with"
+            echo "::error::cricket silently switched off in production."
+            exit 1
+          fi
+
+      - name: Build both channels
+        run: python pipeline/build_channels.py
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
