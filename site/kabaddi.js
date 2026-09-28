@@ -34,7 +34,11 @@ try {
     fetch(`${BASE}/meta.json`).then(r => { if (!r.ok) throw new Error(`meta.json ${r.status}`); return r.json(); }),
     fetch("assets/cricket-countries.json").then(r => r.ok ? r.json() : {}).catch(() => ({})),
   ]);
-  FLAGS = flags || {};
+  // The shared country map is cricket's, which does not cover every kabaddi
+  // nation. Fill the gaps so Iranian, Korean, Taipei and Polish players get a
+  // flag rather than a lettered badge.
+  FLAGS = {...(flags || {}), "Iran":"ir", "Korea":"kr", "Chinese Taipei":"tw",
+           "Poland":"pl"};
   D = {
     players: index.map(shapePlayer),
     // One pseudo-discipline "k" so the cricket-derived helpers, which index
@@ -918,7 +922,7 @@ function renderFreshness(){
     <span class="fl-title">${esc(k)}</span><span class="fl-when">${esc(when || "—")}</span>
     ${ago ? `<span class="fl-since">${esc(ago)}</span>` : "<span></span>"}
     <span class="fl-note">${esc(note)}</span></li>`).join("");
-  $("fresh-foot").textContent = "Rebuilt from the Pro Kabaddi League feeds.";
+  $("fresh-foot").textContent = "Rebuilt from Pro Kabaddi League Official Data.";
   document.querySelectorAll("[data-tz]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tz === tz)));
 }
 renderFreshness();
@@ -936,8 +940,42 @@ document.addEventListener("click", e => {
   if (!e.target.closest(".shortlist-wrap")) $("short-panel").hidden = true;
 });
 
-$("attrib").innerHTML = `Data from the <b>Pro Kabaddi League</b> feeds.
+$("attrib").innerHTML = `Data from <b>Pro Kabaddi League Official Data</b>.
   ${D.matches.toLocaleString()} matches across ${D.seasons.length} seasons.`;
+
+/* ── method strip ───────────────────────────────────────
+   Below 980px the four columns become a swipeable strip with a pill nav, as
+   football and cricket do. */
+(function methodNav(){
+  const nav = $("method-nav");
+  const cols = [...document.querySelectorAll(".method .mcol")];
+  const strip = document.querySelector(".method");
+  if (!nav || !cols.length || !strip) return;
+  const SHORT = ["Sources", "Measured on", "By role", "Does it work"];
+  nav.innerHTML = cols.map((c, i) =>
+    `<button role="tab" data-step="${i}" aria-selected="${i === 0}">
+      <i>${i + 1}</i>${esc(SHORT[i] || ((c.querySelector("h3") || {}).textContent || ""))}</button>`
+    ).join("");
+  const mark = i => nav.querySelectorAll("button").forEach((b, k) =>
+    b.setAttribute("aria-selected", String(k === i)));
+  nav.querySelectorAll("button").forEach(b => b.onclick = () => {
+    const i = +b.dataset.step;
+    const left = cols[i].offsetLeft - strip.offsetLeft;
+    if (typeof strip.scrollTo === "function"){
+      try { strip.scrollTo({left, behavior: "smooth"}); } catch { strip.scrollLeft = left; }
+    } else strip.scrollLeft = left;
+    mark(i);
+  });
+  let tick;
+  strip.addEventListener("scroll", () => {
+    clearTimeout(tick);
+    tick = setTimeout(() => {
+      const i = Math.round(strip.scrollLeft / Math.max(1, strip.clientWidth));
+      mark(Math.min(Math.max(i, 0), cols.length - 1));
+    }, 90);
+  }, {passive: true});
+  mark(0);
+})();
 
 renderShortlist();
 })();
