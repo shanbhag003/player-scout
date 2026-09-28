@@ -1,0 +1,30 @@
+# Feed URL templates for Pro Kabaddi League.
+#
+# Every feed is a plain GET with an id substituted in. Placeholders:
+#   {id}     season id (from seasons.yml)
+#   {game}   match game_id (from the matches feed)
+#   {team}   team id (from a scorecard squad or the matches participants)
+#   {player} player id (from a scorecard squad)
+#   {ct}     comp_type (1 for men's PKL)
+#
+# The matches feed carries a cache token in its path
+# (multisport_cache_25_3_0_0530). It is constant across every season — confirmed
+# against seasons 1, 8 and 185 — so it is hard-coded here rather than discovered.
+# If PKL ever rotates it, this one line is the only thing to change.
+
+base_prokabaddi: https://www.prokabaddi.com/datafeeds
+base_sportz: http://feeds.sportz.io/kabaddi
+
+# One registry of every series across the platform; we filter it to PKL.
+series: "{base_sportz}/static/json/Kabaddistats.json"
+
+# Per season.
+matches:     "{base_prokabaddi}/live/json/multisport/multisport_cache_25_3_0_0530_en_tournament_{id}.json"
+standing:    "{base_prokabaddi}/live/json/{id}_standing.json"
+leaderboard: "{base_prokabaddi}/static/json/{ct}_{id}_allstats.json"
+tracker:     "{base_prokabaddi}/live/json/{ct}_{id}_tracker.json"
+
+# Per match / team / player.
+scorecard: "{base_prokabaddi}/live/json/{game}_match.json"
+team:      "{base_prokabaddi}/static/json/{team}_team.json"
+player:    "{base_prokabaddi}/static/json/V2/{player}_player.json"

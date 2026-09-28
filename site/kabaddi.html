@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Player Scout — Kabaddi</title>
+<meta name="description" content="Find Pro Kabaddi League players whose profile matches the one you are looking at.">
+<meta name="theme-color" content="#101720">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Football's stylesheet first, then cricket's shared additions, then only the
+     few things kabaddi genuinely needs. The three sports read as one tool. -->
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="cricket.css">
+<link rel="stylesheet" href="kabaddi.css">
+<link rel="prefetch" href="index.html" as="document">
+</head>
+<body>
+
+<header class="top">
+  <div class="shell top-inner">
+    <a class="brand" href="kabaddi.html" id="brand" aria-label="Player Scout — kabaddi home">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">Player Scout</span>
+    </a>
+    <nav class="sports" id="sports" aria-label="Sport"></nav>
+    <div class="statuswrap">
+      <div class="freshness">
+        <button class="fresh-btn" id="fresh-btn" aria-expanded="false" aria-controls="fresh-panel">
+          <span class="fresh-dot" aria-hidden="true"></span>
+          <span id="fresh-label">Updated</span>
+        </button>
+        <div class="fresh-panel" id="fresh-panel" hidden>
+          <div class="fresh-head">
+            <h2>When this was last updated</h2>
+            <div class="tzswitch" role="group" aria-label="Time zone">
+              <button data-tz="IST" aria-pressed="true">IST</button>
+              <button data-tz="UTC" aria-pressed="false">UTC</button>
+            </div>
+          </div>
+          <ul class="fresh-list" id="fresh-list"></ul>
+          <p class="fresh-foot" id="fresh-foot"></p>
+        </div>
+      </div>
+      <div class="shortlist-wrap">
+        <button class="fresh-btn" id="short-btn" aria-expanded="false" aria-controls="short-panel">
+          <svg viewBox="0 0 24 24" class="btn-icon" aria-hidden="true">
+            <path d="M7 4h10v16l-5-4-5 4z" fill="none" stroke="currentColor" stroke-width="1.8"
+                  stroke-linejoin="round"/></svg>
+          <span>Shortlist</span>
+        </button>
+        <div class="fresh-panel short-panel" id="short-panel" hidden>
+          <div class="fresh-head">
+            <h2>Your shortlist</h2>
+            <div class="short-actions">
+              <button class="ghost" id="sl-export">Export CSV</button>
+              <button class="ghost" id="sl-clear">Clear</button>
+            </div>
+          </div>
+          <ul class="short-list" id="short-list"></ul>
+          <p class="fresh-foot">Saved in this browser only. Nothing leaves your device.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="shell">
+
+  <section class="hero" id="hero">
+    <div class="hero-left">
+      <h1>Find the players who play the same way.</h1>
+
+      <div class="finder">
+        <div class="finder-field">
+          <label for="search">Search a player</label>
+          <div class="input-wrap">
+            <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="10.5" cy="10.5" r="6.6" fill="none" stroke="currentColor" stroke-width="1.7"/>
+              <path d="M15.4 15.4L20 20" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+            </svg>
+            <input id="search" type="text" autocomplete="off" spellcheck="false"
+                   role="combobox" aria-expanded="false" aria-controls="suggestions" aria-autocomplete="list"
+                   placeholder="Pardeep Narwal, Fazel Atrachali, Pawan Sehrawat...">
+            <button class="clear" id="clear" hidden aria-label="Clear search">&times;</button>
+          </div>
+          <ul class="suggestions" id="suggestions" role="listbox" aria-label="Matching players" hidden></ul>
+        </div>
+      </div>
+
+      <div class="intro-picks">
+        <span class="intro-picks-label">Or try one</span>
+        <div id="examples"></div>
+      </div>
+
+      <div class="routes single">
+        <div class="route" data-route="explore" aria-pressed="true">
+          <span class="route-tag">How it works</span>
+          <ol class="howto">
+            <li><b>1</b><span><strong>Search a player</strong> you have a view on.</span></li>
+            <li><b>2</b><span><strong>Read their profile</strong> — percentile against
+              their own role.</span></li>
+            <li><b>3</b><span><strong>See who is closest</strong>, filtered by age and
+              country.</span></li>
+            <li><b>4</b><span><strong>Line them up</strong> in the comparison with
+              the <b class="inline-plus">+</b> button.</span></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <aside class="hero-right">
+      <div class="cover-card">
+        <h2>What is in here</h2>
+        <div class="bigstats" id="bigstats"></div>
+        <div class="posbars" id="rolebars"></div>
+      </div>
+      <div class="notes">
+        <p class="note-row"><span class="dot gold"></span>
+          Every raid and tackle of every Pro Kabaddi League match, all twelve
+          seasons, scored on what a player does — points, success rate, do-or-die.</p>
+        <p class="note-row"><span class="dot blue"></span>
+          Recent seasons count for more. A raider with a short record is treated
+          cautiously rather than taken at face value.</p>
+      </div>
+    </aside>
+  </section>
+
+  <section class="workspace" id="workspace" hidden>
+    <div class="playerbar" id="playerbar"></div>
+    <div class="tabrow">
+      <nav class="tabs" role="tablist" id="tabs" aria-label="Player views">
+        <button role="tab" data-tab="profile" aria-selected="true">Profile</button>
+        <button role="tab" data-tab="similar" aria-selected="false">Similar players</button>
+        <button role="tab" data-tab="compare" aria-selected="false">Compare<span class="count" id="ccount"></span></button>
+      </nav>
+    </div>
+    <div class="tabpanel" id="panel-profile" role="tabpanel">
+      <div id="pane"></div>
+    </div>
+
+    <div class="tabpanel" id="panel-similar" role="tabpanel" hidden>
+      <header class="results-head">
+        <div>
+          <h2 id="results-title"></h2>
+          <p class="results-note" id="results-note"></p>
+        </div>
+        <div class="results-right">
+          <p class="results-count" id="results-count"></p>
+        </div>
+      </header>
+      <div class="filters" id="filters"></div>
+      <p class="tagkey" id="tagkey"></p>
+      <ol class="matches" id="matches"></ol>
+      <p class="thin" id="thin" hidden></p>
+    </div>
+
+    <div class="tabpanel" id="panel-compare" role="tabpanel" hidden>
+      <div class="cmp-add">
+        <label for="cmp-search">Add any player to this comparison</label>
+        <div class="input-wrap">
+          <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="10.5" cy="10.5" r="6.6" fill="none" stroke="currentColor" stroke-width="1.7"/>
+            <path d="M15.4 15.4L20 20" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+          </svg>
+          <input id="cmp-search" type="text" autocomplete="off" spellcheck="false"
+                 placeholder="Search anyone — they need not be in the similar list">
+        </div>
+        <ul class="suggestions" id="cmp-suggestions" role="listbox" hidden></ul>
+        <p class="cmp-add-note" id="cmp-add-note"></p>
+      </div>
+      <div class="tray" id="tray"></div>
+      <p class="thin" id="compare-empty" hidden></p>
+      <div class="compare-grid" id="compare-body" hidden>
+        <article class="panel">
+          <header class="panel-head">
+            <h2>Shape against role</h2>
+            <p class="panel-sub" id="cmp-radar-sub"></p>
+          </header>
+          <div class="radar-wrap" id="cmp-radar"></div>
+        </article>
+        <article class="panel trend-panel">
+          <header class="panel-head">
+            <h2>Form by season</h2>
+            <p class="panel-sub" id="cmp-trend-sub"></p>
+          </header>
+          <div id="cmp-trend"></div>
+        </article>
+        <article class="panel cmp-metrics-panel">
+          <header class="panel-head">
+            <h2>Every metric</h2>
+            <p class="panel-sub">The dot marks where each player sits as a
+              percentile among their own role.</p>
+          </header>
+          <div class="cmp-metrics" id="cmp-metrics"></div>
+        </article>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot shell">
+  <p class="repo-line">
+    <a href="https://github.com/shanbhag003/player-scout" target="_blank" rel="noopener noreferrer">
+      <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path fill="currentColor"
+        d="M8 0C3.58 0 0 3.58 0 8a8 8 0 0 0 5.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.4 7.4 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      Source and method on GitHub
+    </a>
+  </p>
+  <div class="foot-source">
+    <div id="attrib"></div>
+  </div>
+</footer>
+
+<script src="channel.js"></script>
+<script src="kabaddi.js"></script>
+</body>
+</html>

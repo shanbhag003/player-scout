@@ -1,0 +1,35 @@
+# Pro Kabaddi League seasons.
+#
+# `id` is the Sportz Interactive series id, and it is the single id that keys
+# every feed for that season: the fixture list (tournament_{id}), the standings
+# ({id}_standing), the leaderboard ({comp_type}_{id}_allstats) and the tracker.
+# There is no separate tournament/series id space — the one id does it all.
+#
+# The season ids are not contiguous because other competitions on the same
+# platform take the numbers in between; these twelve are every men's PKL season,
+# read from the series registry (Kabaddistats.json, comp_type 1, alias "pkl").
+#
+# All seasons are in the model. The scoring evolved over the years (bonus,
+# technical and do-or-die points arrived at different times), so recent seasons
+# carry more weight than old ones — handled by recency weighting in the scorer,
+# not by dropping seasons here.
+
+competition:
+  alias: pkl
+  comp_type: 1
+  comp_type_name: PKL-M
+  name: Pro Kabaddi League
+
+seasons:
+  - {id: 1,   season: 1,  year: 2014}
+  - {id: 2,   season: 2,  year: 2015}
+  - {id: 3,   season: 3,  year: 2016}
+  - {id: 4,   season: 4,  year: 2016}   # two seasons were held in 2016
+  - {id: 8,   season: 5,  year: 2017}
+  - {id: 26,  season: 6,  year: 2018}
+  - {id: 49,  season: 7,  year: 2019}
+  - {id: 89,  season: 8,  year: 2021}   # no season in 2020 (pandemic)
+  - {id: 96,  season: 9,  year: 2022}
+  - {id: 132, season: 10, year: 2023}
+  - {id: 147, season: 11, year: 2024}
+  - {id: 185, season: 12, year: 2025}
