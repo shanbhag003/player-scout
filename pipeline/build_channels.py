@@ -39,7 +39,7 @@ CHANNELS = {
     "staging": {
         "sports": [{"id": "football", "name": "Football", "status": "live"},
                    {"id": "cricket", "name": "Cricket", "status": "live"},
-                   {"id": "kabaddi", "name": "Kabaddi", "status": "soon"}],
+                   {"id": "kabaddi", "name": "Kabaddi", "status": "live"}],
         "analytics": False, "noindex": True,
         "banner": "Staging — data and features here are unfinished.",
         "subdir": "staging",
@@ -70,13 +70,14 @@ def stamp(root: str, channel: str) -> str:
     """
     # The banner needs a rule in both stylesheets, because the two sports do not
     # share one.
-    for sheet in ("style.css", "cricket.css"):
+    for sheet in ("style.css", "cricket.css", "kabaddi.css"):
         sp = os.path.join(root, sheet)
         if os.path.exists(sp) and "staging-banner" not in open(sp).read():
             with open(sp, "a") as f:
                 f.write(BANNER_CSS)
 
-    assets = ["app.js", "style.css", "cricket.js", "cricket.css", "channel.js"]
+    assets = ["app.js", "style.css", "cricket.js", "cricket.css",
+              "kabaddi.js", "kabaddi.css", "channel.js"]
     digest = hashlib.sha1(channel.encode())
     for name in assets:
         p = os.path.join(root, name)

@@ -1,0 +1,13 @@
+/* Kabaddi adds almost nothing of its own: it loads football's style.css and
+   cricket's cricket.css, which already dress every component this page uses
+   (radar, panels, the match-log modal, the compare tray, the shortlist). Only
+   the few things genuinely specific to kabaddi live here. */
+
+/* The landing shows one "how it works" card rather than cricket's two routes, so
+   it should not stretch to a two-column grid. */
+.routes.single{grid-template-columns:1fr}
+.routes.single .route{cursor:default}
+
+/* Career totals use cricket's .cstats grid; give kabaddi's shorter list room to
+   breathe on wide screens without leaving one lonely column. */
+.cstats{grid-template-columns:repeat(auto-fit,minmax(7rem,1fr))}
