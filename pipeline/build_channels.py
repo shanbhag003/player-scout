@@ -33,7 +33,7 @@ CHANNELS = {
     "production": {
         "sports": [{"id": "football", "name": "Football", "status": "live"},
                    {"id": "cricket", "name": "Cricket", "status": "live"},
-                   {"id": "kabaddi", "name": "Kabaddi", "status": "soon"}],
+                   {"id": "kabaddi", "name": "Kabaddi", "status": "live"}],
         "analytics": True, "noindex": False, "banner": None, "subdir": "",
     },
     "staging": {

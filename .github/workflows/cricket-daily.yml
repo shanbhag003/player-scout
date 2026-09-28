@@ -102,19 +102,21 @@ jobs:
             --repo ${{ github.repository }} --tag cricket-site \
             --local site/data/cricket
 
-      # This job also deploys the staging channel, so pull kabaddi's built data
-      # too — otherwise build_channels would find none and drop kabaddi from
-      # staging until the next kabaddi run. Non-fatal: kabaddi is staging-only.
-      - name: Fetch the built kabaddi data (staging)
-        continue-on-error: true
+      # This job deploys the whole site, and kabaddi is live in production now,
+      # so its data must be present or the deploy would ship kabaddi switched
+      # off. Required, like the cricket fetch in deploy-site.
+      - name: Fetch the built kabaddi data
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p site/data/kabaddi
-          python pipeline/cricket/store.py pull --tree \
-            --repo ${{ github.repository }} --tag kabaddi-site \
-            --local site/data/kabaddi \
-            || echo "::warning::kabaddi-site not fetched; staging kabaddi may show 'soon'"
+          if ! python pipeline/cricket/store.py pull --tree \
+              --repo ${{ github.repository }} --tag kabaddi-site \
+              --local site/data/kabaddi; then
+            echo "::error::Could not fetch kabaddi-site; refusing to deploy with"
+            echo "::error::kabaddi switched off."
+            exit 1
+          fi
 
       - name: Build the staging channel
         run: python pipeline/build_channels.py --staging-only
