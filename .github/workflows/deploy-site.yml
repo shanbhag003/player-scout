@@ -58,22 +58,23 @@ jobs:
           fi
           ls -la site/data/cricket
 
-      # Kabaddi is live on staging only, so unlike cricket this is not allowed to
-      # fail the deploy: if the kabaddi-site release is missing or the fetch dies,
-      # build_channels simply ships kabaddi as "soon" and production — which never
-      # had kabaddi live — is untouched. store.py is sport-agnostic; it is reused
-      # here with the kabaddi tag rather than duplicated.
-      - name: Fetch the built kabaddi data (staging)
-        continue-on-error: true
+      # Kabaddi is live in production now, so like cricket this must NOT fail
+      # quietly: a missing fetch would ship the site with kabaddi switched off.
+      # store.py is sport-agnostic; it is reused here with the kabaddi tag.
+      - name: Fetch the built kabaddi data
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p site/data/kabaddi
-          python pipeline/cricket/store.py pull --tree \
-            --repo ${{ github.repository }} --tag kabaddi-site \
-            --local site/data/kabaddi \
-            || echo "::warning::kabaddi-site not fetched; staging will show kabaddi as 'soon'"
-          ls -la site/data/kabaddi || true
+          if ! python pipeline/cricket/store.py pull --tree \
+              --repo ${{ github.repository }} --tag kabaddi-site \
+              --local site/data/kabaddi; then
+            echo "::error::Could not fetch the kabaddi-site release. If this repo"
+            echo "::error::has never run Kabaddi rebuild, run it once — it creates"
+            echo "::error::that release. Refusing to deploy with kabaddi switched off."
+            exit 1
+          fi
+          ls -la site/data/kabaddi
 
       - name: Build both channels
         run: python pipeline/build_channels.py
