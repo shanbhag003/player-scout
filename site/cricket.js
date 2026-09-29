@@ -1187,7 +1187,11 @@ function renderShapeResults(){
         <button class="addbtn${inCmp?" on":""}" data-add="${c.u}" aria-pressed="${inCmp}"
           ${!inCmp && full ? "disabled" : ""}
           title="${inCmp?"Remove from comparison":full?"Comparison is full":"Add to comparison"}"
-          >${inCmp ? "&minus;" : "+"}</button></span>
+          >${inCmp ? "&minus;" : "+"}</button>
+        <button class="logbtn" data-log="${c.p}" aria-label="Recent matches" title="Recent matches">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h10"
+            fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button></span>
     </li>`;
   }).join("");
 
@@ -1201,6 +1205,8 @@ function renderShapeResults(){
     if (btn) btn.onclick = () => { state.limit = (state.limit || 25) + 25; draw(); };
   }
 
+  $("matches").querySelectorAll("[data-log]").forEach(b =>
+    b.onclick = e => { e.stopPropagation(); openMatchLog(b.dataset.log); });
   $("matches").querySelectorAll("[data-open]").forEach(b =>
     b.onclick = () => select(b.dataset.open));
   $("matches").querySelectorAll(".addbtn").forEach(b => b.onclick = () => {

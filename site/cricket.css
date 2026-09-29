@@ -544,3 +544,20 @@ body.mlog-open{position:fixed; left:0; right:0; width:100%; overflow:hidden}
 .mlog-hint b{color:var(--ink); font-weight:600}
 
 
+
+/* ── men / women toggle ──────────────────────────────────
+   A distinct pill, set apart from the sport nav so it reads as a mode switch
+   for cricket rather than another sport tab. The active side is filled. */
+.gender-seg{display:inline-flex; align-items:center; gap:2px; flex:none;
+  margin-left:.7rem; padding:3px; background:var(--surface);
+  border:1px solid var(--hairline); border-radius:999px}
+.gender-seg button{border:0; background:none; color:var(--muted); cursor:pointer;
+  font-family:var(--cond); font-weight:600; font-size:.78rem; letter-spacing:.03em;
+  padding:.3rem .72rem; border-radius:999px; line-height:1;
+  transition:background .12s ease, color .12s ease}
+.gender-seg button[aria-pressed="true"]{background:var(--gold); color:#101720}
+@media (hover:hover){
+  .gender-seg button:not([aria-pressed="true"]):hover{color:var(--ink)}}
+@media (max-width:640px){
+  .gender-seg{margin-left:.4rem; padding:2px}
+  .gender-seg button{font-size:.72rem; padding:.28rem .55rem}}
