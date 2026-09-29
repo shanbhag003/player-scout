@@ -74,6 +74,8 @@ jobs:
           python pipeline/cricket/build_master.py
           python pipeline/cricket/build_cricket_scores.py \
             --half-life ${{ inputs.half_life }} --out site/data/cricket
+          python pipeline/cricket/build_cricket_scores.py --gender female \
+            --half-life ${{ inputs.half_life }} --out site/data/cricket-women
 
       # Publish the whole built tree — index/detail/meta AND the per-player
       # matches/ folder — as one release asset the deploy unpacks. The old
@@ -86,3 +88,6 @@ jobs:
           python pipeline/cricket/store.py push --tree \
             --repo ${{ github.repository }} --tag cricket-site \
             --local site/data/cricket
+          python pipeline/cricket/store.py push --tree \
+            --repo ${{ github.repository }} --tag cricket-women-site \
+            --local site/data/cricket-women

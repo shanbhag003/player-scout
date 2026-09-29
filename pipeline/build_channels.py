@@ -156,6 +156,15 @@ def build(channel: str, out_root: str, base_url: str) -> str | None:
             shutil.copytree(os.path.join(SITE, "data", sport),
                             os.path.join(dest, "data", sport), dirs_exist_ok=True)
 
+    # Women's cricket rides along with cricket — it is a separate dataset the
+    # page's Men/Women toggle loads, not a separate sport. Ships whenever cricket
+    # is live and the data is present; the toggle degrades to men-only if not.
+    if "cricket" in live:
+        wsrc = os.path.join(SITE, "data", "cricket-women")
+        if os.path.isdir(wsrc):
+            shutil.copytree(wsrc, os.path.join(dest, "data", "cricket-women"),
+                            dirs_exist_ok=True)
+
     info = {"channel": channel, "sports": sports, "analytics": cfg["analytics"],
             "banner": cfg["banner"], "base": base_url}
     with open(os.path.join(dest, "channel.json"), "w") as f:

@@ -115,6 +115,19 @@ jobs:
             exit 1
           fi
 
+      - name: Fetch the built women's cricket data
+        if: steps.sync.outputs.changed == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p site/data/cricket-women
+          if ! python pipeline/cricket/store.py pull --tree \
+              --repo ${{ github.repository }} --tag cricket-women-site \
+              --local site/data/cricket-women; then
+            echo "::error::Could not fetch cricket-women-site; refusing to deploy."
+            exit 1
+          fi
+
       - name: Build both channels
         if: steps.sync.outputs.changed == 'true'
         run: python pipeline/build_channels.py

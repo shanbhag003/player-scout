@@ -744,13 +744,18 @@ def write_match_logs(facts, apps, players, out_dir):
 
 
 def main():
+    global GENDER, FACTS
     ap = argparse.ArgumentParser()
     ap.add_argument("--facts", default=FACTS)
     ap.add_argument("--data", default=DATA)
     ap.add_argument("--out", default=OUT)
     ap.add_argument("--half-life", type=float, default=HALF_LIFE,
                     help="years after which a ball counts half; 0 for raw career shape")
+    ap.add_argument("--gender", default=GENDER, choices=["male", "female"],
+                    help="which population to score; men and women are separate spaces")
     args = ap.parse_args()
+    GENDER = args.gender
+    FACTS = args.facts          # so emit's appearances load from the same store
     facts = load("facts", args.facts)
     facts = facts[(facts["format"] == FORMAT) & (facts["gender"] == GENDER)].copy()
     facts["comp_key"] = np.where(facts["tier"].str.startswith("international"),
@@ -778,7 +783,7 @@ def main():
     bowl_cell = pd.Series(bowl_cell, index=roles.index)
 
     print(f"pool: {facts['player_id'].nunique():,} players, "
-          f"{facts['match_id'].nunique():,} men's T20 matches, "
+          f"{facts['match_id'].nunique():,} {GENDER} {FORMAT} matches, "
           f"{facts['comp_key'].nunique()} competitions")
 
     bat = build_discipline(facts, roles, players, "batting", BAT_METRICS,

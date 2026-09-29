@@ -8,7 +8,15 @@
    apart by accident. */
 (async function(){
 const $ = id => document.getElementById(id);
-const BASE = "data/cricket";
+// Men's and women's cricket are separate models in separate files. The toggle
+// picks which one this page loads; the choice is remembered per channel and can
+// also be shared in a link with ?g=women.
+const G_KEY = `ps.${(window.PS_CHANNEL||{}).channel || "prod"}.cricket.gender`;
+let GENDER = "men";
+try { const g = localStorage.getItem(G_KEY); if (g === "women" || g === "men") GENDER = g; } catch {}
+try { const u = new URLSearchParams(location.search).get("g");
+      if (u === "women" || u === "men") GENDER = u; } catch {}
+const BASE = GENDER === "women" ? "data/cricket-women" : "data/cricket";
 const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g,
   c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
@@ -1426,6 +1434,23 @@ $("sports").innerHTML = SPORTS.map(s => {
      aria-current="false">${esc(s.name)}</a>`;
 }).join("");
 
+/* ── men / women toggle ──────────────────────────────────
+   The two are separate models in separate files, so switching reloads the page
+   onto the other dataset. A men's player id means nothing in the women's pool,
+   so any selection is dropped on the way. */
+const searchEl = $("search");
+if (searchEl) searchEl.placeholder = GENDER === "women"
+  ? "Smriti Mandhana, Ellyse Perry, Sophie Ecclestone..."
+  : "Virat Kohli, Jasprit Bumrah, Rashid Khan...";
+document.querySelectorAll("[data-gender]").forEach(b => {
+  b.setAttribute("aria-pressed", String(b.dataset.gender === GENDER));
+  b.onclick = () => {
+    if (b.dataset.gender === GENDER) return;
+    try { localStorage.setItem(G_KEY, b.dataset.gender); } catch {}
+    location.href = location.pathname;      // back to the landing, new dataset
+  };
+});
+
 /* ── radar, lifted from football's app.js ────────────────
    Same drawing, same classes, so it inherits style.css and the two sports read
    as one tool. */
@@ -1484,7 +1509,7 @@ function radarSvg(series, metrics, labels, opts = {}){
 /* ── shortlist ───────────────────────────────────────────
    Scoped per channel and per sport: this origin is shared with every other
    project on the account, and football's list must not be touched. */
-const SL_KEY = `ps.${(window.PS_CHANNEL||{}).channel || "prod"}.cricket.shortlist`;
+const SL_KEY = `ps.${(window.PS_CHANNEL||{}).channel || "prod"}.cricket.${GENDER}.shortlist`;
 function slRead(){
   try { return JSON.parse(localStorage.getItem(SL_KEY) || "[]"); } catch { return []; }
 }
@@ -1643,7 +1668,9 @@ $("wiz-reset").onclick = () => {
 setMode("explore", true);
 
 /* ── landing, in football's markup ──────────────────────── */
-const PICKS = ["V Kohli","JJ Bumrah","SA Yadav","Rashid Khan","RA Jadeja"];
+const PICKS = GENDER === "women"
+  ? ["S Mandhana","EA Perry","H Kaur","S Ecclestone","AJ Healy"]
+  : ["V Kohli","JJ Bumrah","SA Yadav","Rashid Khan","RA Jadeja"];
 $("examples").innerHTML = PICKS.map(n => {
   const p = D.players.find(x => x.n === n);
   return p ? `<button class="pick" data-pid="${p.p}">${flag(p.nat)}${esc(p.f||p.n)}</button>` : "";
