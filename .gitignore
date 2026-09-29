@@ -15,3 +15,12 @@ site/data/kabaddi/
 
 # Pages build output (assembled by build_channels at deploy time)
 _site/
+
+# Built cricket site data (men's + women's), fetched from releases at deploy
+site/data/cricket/
+site/data/cricket-women/
+# Local women's-cricket build scratch (release-hosted, never committed)
+data/cricket/raw-women/
+data/cricket/incoming-women/
+data/cricket/facts-women/
+data/cricket/women/

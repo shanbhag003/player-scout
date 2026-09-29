@@ -58,6 +58,22 @@ jobs:
           fi
           ls -la site/data/cricket
 
+      # Women's cricket is the other half of the cricket page's Men/Women toggle,
+      # live in production, so its data must be present too — required, like men's.
+      - name: Fetch the built women's cricket data
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p site/data/cricket-women
+          if ! python pipeline/cricket/store.py pull --tree \
+              --repo ${{ github.repository }} --tag cricket-women-site \
+              --local site/data/cricket-women; then
+            echo "::error::Could not fetch cricket-women-site. If this repo has"
+            echo "::error::never built women's cricket, run Cricket rebuild once."
+            echo "::error::Refusing to deploy with the women's toggle switched off."
+            exit 1
+          fi
+
       # Kabaddi is live in production now, so like cricket this must NOT fail
       # quietly: a missing fetch would ship the site with kabaddi switched off.
       # store.py is sport-agnostic; it is reused here with the kabaddi tag.

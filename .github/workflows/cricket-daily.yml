@@ -86,10 +86,14 @@ jobs:
           curl -sSL -o data/cricket/raw/names.csv  https://cricsheet.org/register/names.csv
           python pipeline/cricket/build_bio.py --register data/cricket/raw/people.csv --fallback-csv data/cricket/wikidata-fallback.csv
 
-      - name: Rebuild master and model
+      # The rolling window carries women's matches too (the parser routes each by
+      # its own gender), so the same store builds both models — men's to
+      # site/data/cricket, women's to site/data/cricket-women.
+      - name: Rebuild master and both models
         run: |
           python pipeline/cricket/build_master.py
           python pipeline/cricket/build_cricket_scores.py --out site/data/cricket
+          python pipeline/cricket/build_cricket_scores.py --gender female --out site/data/cricket-women
 
       # Publish the built site data too, so changing a filter or a stylesheet
       # does not mean pulling ninety megabytes of parquet and rerunning the
@@ -101,6 +105,9 @@ jobs:
           python pipeline/cricket/store.py push --tree \
             --repo ${{ github.repository }} --tag cricket-site \
             --local site/data/cricket
+          python pipeline/cricket/store.py push --tree \
+            --repo ${{ github.repository }} --tag cricket-women-site \
+            --local site/data/cricket-women
 
       # This job deploys the whole site, and kabaddi is live in production now,
       # so its data must be present or the deploy would ship kabaddi switched
