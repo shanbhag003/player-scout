@@ -744,7 +744,7 @@ def write_match_logs(facts, apps, players, out_dir):
 
 
 def main():
-    global GENDER, FACTS
+    global GENDER, FACTS, DATA
     ap = argparse.ArgumentParser()
     ap.add_argument("--facts", default=FACTS)
     ap.add_argument("--data", default=DATA)
@@ -756,6 +756,7 @@ def main():
     args = ap.parse_args()
     GENDER = args.gender
     FACTS = args.facts          # so emit's appearances load from the same store
+    DATA = args.data            # so emit's bio.parquet loads from the same store
     facts = load("facts", args.facts)
     facts = facts[(facts["format"] == FORMAT) & (facts["gender"] == GENDER)].copy()
     facts["comp_key"] = np.where(facts["tier"].str.startswith("international"),
