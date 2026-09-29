@@ -558,6 +558,13 @@ body.mlog-open{position:fixed; left:0; right:0; width:100%; overflow:hidden}
 .gender-seg button[aria-pressed="true"]{background:var(--gold); color:#101720}
 @media (hover:hover){
   .gender-seg button:not([aria-pressed="true"]):hover{color:var(--ink)}}
+/* On a phone the sport nav, the toggle and the status pills do not fit on one
+   line, so let the header wrap and drop the toggle to its own row rather than
+   force a horizontal scroll. */
 @media (max-width:640px){
-  .gender-seg{margin-left:.4rem; padding:2px}
-  .gender-seg button{font-size:.72rem; padding:.28rem .55rem}}
+  .top-inner{flex-wrap:wrap; row-gap:.45rem}
+  /* Row 1 stays exactly as it fit before the toggle existed (brand, sports,
+     status); the toggle takes a full row of its own beneath. */
+  .gender-seg{order:6; flex-basis:100%; margin-left:0; padding:2px;
+    justify-content:flex-start}
+  .gender-seg button{font-size:.74rem; padding:.3rem .7rem}}
