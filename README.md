@@ -9,10 +9,44 @@ others whose profile most resembles theirs — not the same standard, the same
 *shape*. Or start from a need instead of a name: describe the player you want and
 it goes looking.
 
-It covers two sports, football and men's T20 cricket, and runs entirely on
-free-tier infrastructure — a static front end on GitHub Pages, a Python data
-pipeline on GitHub Actions, and parquet data files stored as release assets. No
-server, no database, no cost.
+It covers three sports — football, T20 cricket (men's and women's), and the Pro
+Kabaddi League — and runs entirely on free-tier infrastructure: a static front
+end on GitHub Pages, a Python data pipeline on GitHub Actions, and parquet data
+files stored as release assets. No server, no database, no cost.
+
+---
+
+## A look at it
+
+The football landing page — search a player, or start from a shape. Cricket and
+kabaddi carry the same shell.
+
+![Football landing page](docs/screenshots/01-landing.png)
+
+A player profile: percentile against everyone in the same position, the radar of
+their shape, and career totals across the window.
+
+![Player profile with radar and percentile table](docs/screenshots/02-profile.png)
+
+The similar list — the same pool approached from the other end, with filters for
+age, contract and exposure.
+
+![Ranked similar players with filters](docs/screenshots/03-similar.png)
+
+Up to six players side by side: shapes overlaid on one radar, output traced season
+by season.
+
+![Comparison of several players](docs/screenshots/04-compare.png)
+
+Cricket keeps men's and women's T20 as separate pools, switched with the toggle in
+the header.
+
+![Cricket landing with the Men's and Women's toggle](docs/screenshots/05-cricket.png)
+
+And the Pro Kabaddi League — every raid and tackle of all twelve seasons, split by
+role.
+
+![Pro Kabaddi League landing](docs/screenshots/06-kabaddi.png)
 
 ---
 
@@ -31,15 +65,18 @@ returns everyone who fits — because a scout usually has a need, not a name.
 season-by-season form line, and every metric with each player marked against
 their role.
 
-Both sports share one shell, one stylesheet and one design. Only the model
-underneath differs.
+All three sports share one shell, one stylesheet and one design. Only the model
+underneath differs. Kabaddi is similar-search only for now — no scouting flow.
 
 ---
 
 ## Cricket — how the numbers are built
 
-Men's T20 only, for now. Test and one-day cricket are different games and belong
-in separate models rather than a shared one.
+T20 only, for now. Test and one-day cricket are different games and belong in
+separate models rather than a shared one. Men's and women's T20 are separate pools
+too — switched with the Men's/Women's toggle in the header — since comparing across
+them would mean comparing different games; each is built by the same code from its
+own data.
 
 **Source.** Every ball of every match Cricsheet publishes. Player identity comes
 from Cricsheet's own register, so nothing depends on matching people by name.
@@ -79,7 +116,8 @@ formally tested.
 ```
 site/                     the front end — static HTML, CSS, JS, no framework
   index.html · app.js       football
-  cricket.html · cricket.js cricket
+  cricket.html · cricket.js cricket (men's and women's)
+  kabaddi.html · kabaddi.js kabaddi
   style.css                 shared stylesheet
   assets/flags/             flag SVGs
 
@@ -92,17 +130,30 @@ pipeline/
     build_master.py         facts → roles and bowler types
     build_bio.py            register + Wikidata → names, ages, nationality
     build_cricket_scores.py the model: metrics, shrinkage, PCA, JSON output
-    store.py                read/write the parquet release assets
+                            (--gender male|female builds each pool)
+    store.py                read/write the parquet release assets (sport-agnostic)
+  kabaddi/
+    pull_feeds.py           crawl the Pro Kabaddi League feeds
+    parse_matches.py        scorecards → per-player-match facts
+    build_master.py         facts → roles (raider, corner, cover, all-rounder)
+    build_bio.py            names, ages, nationality
+    build_kabaddi_scores.py the model: metrics, shrinkage, PCA, JSON output
+    daily_sync.py           guard chain — new series? fixtures? completed matches?
 
 config/cricket/
   competitions.yml          every competition, its format, gender and tier
   event_aliases.csv         Cricsheet event names → competition keys
   bowler_seeds.csv          hand labels seeding the pace/spin classifier
   name_aliases.csv          full names Wikidata does not supply
+config/kabaddi/
+  seasons.yml               the twelve season ids
+  feeds.yml                 the feed URL templates
 
 .github/workflows/
   cricket-daily.yml         nightly: pull the rolling window, rebuild, publish
   cricket-rebuild.yml       manual: full re-parse of the whole archive
+  kabaddi-daily.yml         daily 6 AM IST: sync new matches if any, else back out
+  kabaddi-rebuild.yml       manual: full re-pull and rebuild
   deploy-site.yml           deploy the site on any push to site/
 ```
 
@@ -114,17 +165,21 @@ same size it was the day before.
 
 ## How it runs
 
-Three workflows, no local setup:
+A handful of workflows, no local setup:
 
 - **Cricket daily** pulls Cricsheet's rolling seven-day window, folds it into the
-  stored facts, rebuilds the model, and publishes the built data. Seven days
-  rather than one, so a missed night heals itself.
+  stored facts, rebuilds both the men's and women's models, and publishes the built
+  data. Seven days rather than one, so a missed night heals itself.
 - **Cricket rebuild** re-parses the entire archive from scratch. Run it when the
   model changes, when a competition is added, and monthly, since Cricsheet
   revises older scorecards.
+- **Kabaddi daily** runs at 6 AM IST behind a guard chain — is there a new series?
+  new fixtures? completed matches? — and backs out early when there is nothing new,
+  so most days it does almost no work. **Kabaddi rebuild** re-pulls and rebuilds the
+  whole thing on demand.
 - **Deploy site** rebuilds and deploys the front end on any push under `site/`,
-  fetching the built cricket data from its release. Frontend changes go live in
-  under a minute without touching the data pipeline.
+  fetching every live sport's built data from its release. Frontend changes go live
+  in under a minute without touching the data pipeline.
 
 Production and staging are the same code, one build flag apart. Staging carries a
 banner and `noindex` and is where things are tried before promotion.
@@ -141,8 +196,10 @@ Cricsheet withholds all matches involving Afghanistan, in protest at Afghan wome
 cricketers being ignored by the ICC and most full members. Afghan players'
 records here are incomplete as a direct result.
 
+Men's and women's cricket both come from Cricsheet under the same licence.
 Biographical data is from **[Wikidata](https://www.wikidata.org)**. Football data
-is from the transfermarkt-datasets project and Understat. Flags are from
+is from the transfermarkt-datasets project and Understat. Kabaddi data is from the
+Pro Kabaddi League's own match feeds. Flags are from
 **[flag-icons](https://github.com/lipis/flag-icons)** (MIT).
 
 ---
