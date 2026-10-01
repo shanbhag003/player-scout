@@ -639,8 +639,11 @@ def emit(bat, bowl, players, roles, facts, out_dir, half_life=HALF_LIFE, facts_r
         "source": "Cricsheet (https://cricsheet.org), Open Data Commons Attribution Licence",
         # Not a gap in the data — a decision by the person who maintains it.
         # Stated plainly, with a link to his own reasoning, so a reader sees
-        # whose position it is rather than ours.
-        "withheld": {
+        # whose position it is rather than ours. Men's only: Cricsheet's protest
+        # withholds Afghanistan *men's* matches, and there is no Afghan women's
+        # T20 in the archive to withhold — so carrying this note onto the women's
+        # pool would claim 374 phantom missing matches that do not exist here.
+        "withheld": ({
             "summary": ("Cricsheet withholds all matches involving or played in "
                         "Afghanistan, so Afghan players and opponents' records "
                         "against them are incomplete."),
@@ -649,7 +652,7 @@ def emit(bat, bowl, players, roles, facts, out_dir, half_life=HALF_LIFE, facts_r
                        "cricketers being ignored by the ICC and most full members."),
             "link": ("https://cricsheet.org/article/"
                      "explanation-for-withholding-of-afghanistani-matches/"),
-        },
+        } if GENDER == "male" else None),
         "lower_is_better": sorted(LOWER_IS_BETTER),
         "limits": ("No ball tracking, shot type or fielding positions exist in the open "
                    "data, so players are compared on outcomes rather than technique."),
