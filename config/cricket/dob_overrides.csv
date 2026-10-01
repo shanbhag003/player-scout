@@ -1,0 +1,17 @@
+# Hand-seeded dates of birth, keyed on the ESPNcricinfo id (the same key the
+# Wikidata join uses). For players Wikidata has no date of birth for — mostly
+# uncapped domestic women, whom a WPL-style auction is exactly trying to scout.
+# A value here wins over Wikidata. See pipeline/cricket/build_bio.py.
+#
+# Each date was read from that player's own ESPNcricinfo profile, reached by the
+# id in column one, so there is no name-matching guesswork. dob is YYYY-MM-DD;
+# name and source are for the human reading the file and are not used by the build.
+cricinfo,dob,name,source
+544558,1994-09-30,Rebecca Burns (RM Burns),espncricinfo/544558
+1081003,2001-11-02,Melissa Banks (MJ Banks),espncricinfo/1081003
+960847,1998-01-28,Tanuja Kanwar (TP Kanwar),espncricinfo/960847
+1175115,2001-08-29,Xara Jetly (XA Jetly),espncricinfo/1175115
+597992,1996-01-07,Caitlin Blakely (CG Blakely),espncricinfo/597992
+1176518,2002-03-28,Amie Hucker (AT Hucker),espncricinfo/1176518
+1345480,2002-12-04,Marama Downes (MW Downes),espncricinfo/1345480
+1231570,2002-04-14,Anika Learoyd (A Learoyd),espncricinfo/1231570

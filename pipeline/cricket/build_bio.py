@@ -157,6 +157,7 @@ def load_aliases(path: str) -> dict:
 
 
 ALIASES = os.path.join("config", "cricket", "name_aliases.csv")
+DOB_OVERRIDES = os.path.join("config", "cricket", "dob_overrides.csv")
 
 
 def load_name_aliases(path: str = ALIASES) -> dict:
@@ -176,6 +177,33 @@ def load_name_aliases(path: str = ALIASES) -> dict:
             if ci and nm:
                 try:
                     out[float(ci)] = nm.strip()
+                except ValueError:
+                    pass
+    return out
+
+
+def load_dob_overrides(path: str = DOB_OVERRIDES) -> dict:
+    """Hand-seeded dates of birth, keyed on the Cricinfo id.
+
+    Wikidata's coverage of ages is thin for domestic players, and worst of all for
+    uncapped domestic women — the very people a WPL-style auction is scouting. The
+    date of birth itself is a plain fact on the player's own ESPNcricinfo profile,
+    so where Wikidata has no P569 it can be filled in by hand here, keyed on the
+    same Cricinfo id the rest of the join uses. A value here wins over Wikidata, so
+    a correction can be made without waiting for Wikidata to be edited.
+
+    Format: cricinfo,dob[,name,source]  — dob as YYYY-MM-DD; name/source are for
+    the human reading the file and are ignored here.
+    """
+    if not os.path.exists(path):
+        return {}
+    out = {}
+    with open(path) as fh:
+        for row in csv.DictReader(r for r in fh if not r.startswith("#")):
+            ci, dob = row.get("cricinfo"), (row.get("dob") or "").strip()
+            if ci and dob:
+                try:
+                    out[float(ci)] = dob
                 except ValueError:
                     pass
     return out
@@ -231,6 +259,14 @@ def build(register_path: str, wikidata, names_path: str = None) -> pd.DataFrame:
         out["nationality"] = out["cricinfo"].map(w["countryLabel"])
     out["dob"] = pd.to_datetime(out["cricinfo"].map(w["dob"]),
                                 errors="coerce", utc=True).dt.tz_localize(None)
+    # Hand-seeded dates of birth win over Wikidata, and fill the gaps it leaves.
+    seeded = load_dob_overrides()
+    if seeded:
+        fixed = pd.to_datetime(out["cricinfo"].map(seeded), errors="coerce")
+        before = out["dob"].notna().sum()
+        out["dob"] = fixed.where(fixed.notna(), out["dob"])
+        print(f"hand-seeded dates of birth applied: {int(fixed.notna().sum())} "
+              f"(+{int(out['dob'].notna().sum() - before)} that Wikidata lacked)")
     return out
 
 
