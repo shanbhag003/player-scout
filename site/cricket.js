@@ -55,8 +55,12 @@ try {
     withheld: meta.withheld, comps: meta.competitions,
     compNames: meta.competition_names || {},
     compNotes: meta.competition_notes || {}, matches: meta.matches,
+    gender: meta.gender, playerCount: meta.players,
+    validation: meta.validation || [], effects: meta.competition_effects || {},
+    halfLife: (meta.thresholds || {}).recency_half_life_years,
     built: meta.built_at, ready: false,
   };
+  renderMethod(D);
   // The detail arrives behind the first paint and is merged in place.
   fetch(`${BASE}/detail.json`).then(r => r.ok ? r.json() : null).then(det => {
     if (!det) return;
@@ -1838,6 +1842,74 @@ document.addEventListener("click", e => {
 });
 document.addEventListener("keydown", e => { if (e.key === "Escape"){ hintPop.close(); closeMatchLog(); } });
 
+/* ── method strip: fill the four columns from THIS pool's own meta ──────────
+   The columns used to be static men's numbers, which read as nonsense on the
+   women's page — men's competitions, a men's match count, a men's validation
+   figure. Everything here now comes from the loaded meta, so the strip says
+   whatever is true of the pool on screen: women's leagues and women's self-rank
+   when women's is loaded, men's when men's is. Column two is genuinely the same
+   for both (sixteen metrics, the shared half-life) and is only refreshed, not
+   branched. */
+function ord(n){ const s = ["th", "st", "nd", "rd"], v = n % 100;
+  return s[(v - 20) % 10] || s[v] || s[0]; }
+
+function renderMethod(D){
+  const cols = document.querySelectorAll(".method .mcol");
+  if (cols.length < 4) return;
+  const num = x => (x == null ? "—" : Number(x).toLocaleString());
+
+  cols[0].innerHTML = `<h3>Where it comes from</h3>
+    <div class="mfig"><b>${num(D.matches)}</b><span>matches, every ball</span></div>
+    <div class="mfig"><b>${num(D.playerCount)}</b><span>players ranked</span></div>
+    <p>Cricsheet for the cricket, Wikidata for ages and names, joined on an exact
+    id. No name matching anywhere.</p>`;
+
+  const hl = D.halfLife ? ((+D.halfLife % 1)
+      ? (+D.halfLife).toFixed(1) : (+D.halfLife | 0)) + " yrs" : "3 yrs";
+  cols[1].innerHTML = `<h3>What a player is measured on</h3>
+    <div class="mfig"><b>16</b><span>things counted per batter</span></div>
+    <div class="mfig"><b>${hl}</b><span>before form counts half</span></div>
+    <p>Not just runs and wickets, but when in the match they came, and against
+    which kind of bowling. Recent seasons count for more, and a player with a
+    short record is treated cautiously rather than taken at face value.</p>`;
+
+  const TIER = {international_full: "Full internationals",
+    international_established: "Est. internationals",
+    international_minor: "Minor internationals"};
+  const econ = Object.entries(((D.effects.bowling || {}).econ) || {})
+    .filter(([, v]) => isFinite(v)).sort((a, b) => b[1] - a[1]);
+  let bars = "";
+  if (econ.length){
+    const pick = econ.length >= 3
+      ? [econ[0], econ[Math.floor(econ.length / 2)], econ[econ.length - 1]] : econ;
+    const max = pick[0][1];
+    bars = pick.map(([k, v]) => {
+      const name = TIER[k] || D.compNames[k] || k.toUpperCase().replace(/_/g, " ");
+      const w = Math.max(10, Math.round(v / max * 100));
+      return `<div class="mfact"><span>${esc(name)}</span>
+        <span class="mbar"><i style="width:${w}%"></i></span><b>${v.toFixed(2)}</b></div>`;
+    }).join("");
+  }
+  cols[2].innerHTML = `<h3>Levelling competitions</h3>${bars}
+    <p>Runs conceded per ball, same bowler, different competition.</p>`;
+
+  const V = D.validation.filter(v => v.players && v.median_rank && v.chance_median_rank);
+  if (V.length){
+    let wsum = 0, nsum = 0;
+    V.forEach(v => { wsum += (v.median_rank / v.players * 100) * v.players; nsum += v.players; });
+    const pooled = wsum / nsum;                 // median self-rank, normalised to 100
+    const nth = Math.max(1, Math.round(pooled));
+    cols[3].innerHTML = `<h3>Does it work</h3>
+      <div class="mfig"><b>${(50 / pooled).toFixed(1)}&times;</b><span>better than guessing</span></div>
+      <div class="mfact"><span>This tool</span><span class="mbar"><i class="good" style="width:${Math.max(10, 100 - nth)}%"></i></span><b>${nth}${ord(nth)}</b></div>
+      <div class="mfact"><span>Guessing</span><span class="mbar"><i class="dim" style="width:50%"></i></span><b>50th</b></div>
+      <p>Take one player, split their career in half, and hide from the tool that
+      the halves are the same person. Asked to rank everyone against the first
+      half, it puts their own second half around ${nth}${ord(nth)} of 100 — random
+      would be 50th.</p>`;
+  }
+}
+
 /* ── method strip ───────────────────────────────────────
    Below 980px the four columns become a swipeable strip with a pill nav, as
    football's does. The pill follows a swipe as well as a tap, or it points at
@@ -1903,9 +1975,15 @@ document.addEventListener("click", e => {
 $("attrib").innerHTML = `Match data from <a href="https://cricsheet.org" target="_blank" rel="noopener noreferrer">Cricsheet</a>,
   under the Open Data Commons Attribution Licence. Biography from Wikidata.
   ${D.matches.toLocaleString()} matches.`;
-$("withheld").innerHTML = `<b>${D.withheld.matches} matches are missing by design.</b>
-  ${esc(D.withheld.summary)} ${esc(D.withheld.reason)}
-  <a href="${D.withheld.link}" target="_blank" rel="noopener noreferrer">His explanation</a>.`;
+// Afghanistan's matches are withheld from the men's archive only; the women's
+// pool has none to withhold, so meta.withheld is null there and the note is hidden.
+if (D.withheld && D.withheld.matches) {
+  $("withheld").innerHTML = `<b>${D.withheld.matches} matches are missing by design.</b>
+    ${esc(D.withheld.summary)} ${esc(D.withheld.reason)}
+    <a href="${D.withheld.link}" target="_blank" rel="noopener noreferrer">His explanation</a>.`;
+} else {
+  $("withheld").hidden = true;
+}
 
 renderShortlist();
 draw();

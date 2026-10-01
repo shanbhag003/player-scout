@@ -75,8 +75,7 @@ underneath differs. Kabaddi is similar-search only for now — no scouting flow.
 T20 only, for now. Test and one-day cricket are different games and belong in
 separate models rather than a shared one. Men's and women's T20 are separate pools
 too — switched with the Men's/Women's toggle in the header — since comparing across
-them would mean comparing different games; each is built by the same code from its
-own data.
+them would mean comparing different games.
 
 **Source.** Every ball of every match Cricsheet publishes. Player identity comes
 from Cricsheet's own register, so nothing depends on matching people by name.
@@ -99,15 +98,46 @@ computed on the levelled figures so an over in the IPL and an over in a domestic
 competition can be compared.
 
 **Validation.** Each player's matches are split in two and the halves treated as
-strangers. A top-order batter finds his own second half around 45th of 235, where
-guessing would put him 118th.
+strangers. In the men's pool a top-order batter finds his own second half around
+44th of 427, where guessing would put him 214th.
+
+### Men's and women's — same method, different game
+
+Both pools run through the **same code with the same settings**, and that is a
+decision, not an oversight. The things the model turns on — how many balls before a
+rate is trustworthy, how hard to shrink a thin record, how fast old form decays —
+are facts about sample size and noise, not about which game is being played. A
+strike rate off eighty balls is just as unreliable in the WPL as in the IPL. So the
+men's-tuned floors (150 balls to enter a pool), shrinkage (half weight at 250
+balls) and three-year half-life carry over unchanged, and each pool is then
+**validated on its own split halves** rather than trusted by analogy.
+
+What differs is the input, and the result earns its own numbers:
+
+| | Men's | Women's |
+|---|---:|---:|
+| Ranked profiles | 4,252 | 1,512 |
+| Players · matches | 3,526 · 10,717 | 1,157 · 3,488 |
+| Competitions in the pool | IPL, BBL, PSL, CPL, SA20, ILT20, T20 Blast, SMAT, men's T20Is… | WPL, WBB, WCL, WTB, WSL, Charlotte Edwards Cup, T20 Blaze, FairBreak, women's T20Is |
+| Cross-competition movers (fit the levelling) | 610 bat · 669 bowl | 212 bat · 250 bowl |
+| Opener self-rank (median, vs chance) | 44 of 214 | 12 of 72 |
+| Pace self-rank (median, vs chance) | 71 of 427 | 19 of 120 |
+
+The women's pool is a quarter the size and its levelling rests on fewer movers, so
+each coefficient leans on a thinner base — but on its own split-half test it clears
+chance by as wide a margin as the men's does, and often wider, because a smaller
+pool is an easier crowd to pick a player out of. The means a profile is shrunk
+toward, and the percentile a player is ranked against, are the women's pool's own —
+never the men's. And the one caveat that **does not** carry over is Afghanistan:
+Cricsheet's withholding removes Afghan *men's* matches, and there is no Afghan
+women's T20 in the archive, so the women's side shows no such note.
 
 **Known limits.** Coverage is *what happened*, not *how* — line, length, pace off
 the pitch and shot type are commercial data with no open equivalent, so two
-players with identical outcomes can be different players. Cricsheet withholds all
-matches involving Afghanistan; Afghan players therefore carry franchise cricket
-only, flagged on their profile. The sample floors are reasoned rather than
-formally tested.
+players with identical outcomes can be different players. In the men's pool
+Cricsheet withholds all matches involving Afghanistan, so Afghan players carry
+franchise cricket only, flagged on their profile. The sample floors are reasoned
+rather than formally tested.
 
 ---
 
