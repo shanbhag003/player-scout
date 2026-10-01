@@ -47,10 +47,12 @@ try {
       [c, {md:s.median_distance, n:s.players, mt:s.metrics}]))},
     labels: meta.labels || {}, cells: meta.cells || [],
     thinMatches: (meta.thresholds || {}).thin_matches || 12,
+    halfLife: (meta.thresholds || {}).half_life_years,
     seasons: meta.seasons || [], matches: meta.matches || 0,
     validation: meta.validation || [], lowerBetter: new Set(meta.lower_is_better || []),
     source: meta.source || "", built: meta.built_at, ready: false,
   };
+  renderMethod(D);
   fetch(`${BASE}/detail.json`).then(r => r.ok ? r.json() : null).then(det => {
     if (!det) return;
     DETAIL = det;
@@ -942,6 +944,62 @@ document.addEventListener("click", e => {
 
 $("attrib").innerHTML = `Data from <b>Pro Kabaddi League Official Data</b>.
   ${D.matches.toLocaleString()} matches across ${D.seasons.length} seasons.`;
+
+/* ── method strip: fill the four columns from the loaded meta ───────────────
+   These were static numbers in the HTML and had already drifted — the match
+   count read 1,258 when the pool had grown past 1,300, and the role column left
+   out all-rounders entirely. Everything here now comes from meta, so the strip
+   stays true as seasons are added, the way football's and cricket's do. */
+function ord(n){ const s = ["th", "st", "nd", "rd"], v = n % 100;
+  return s[(v - 20) % 10] || s[v] || s[0]; }
+
+function renderMethod(D){
+  const cols = document.querySelectorAll(".method .mcol");
+  if (cols.length < 4) return;
+  const num = x => (x == null ? "—" : Number(x).toLocaleString());
+  const K = (D.spaces || {}).k || {};
+
+  cols[0].innerHTML = `<h3>Where it comes from</h3>
+    <div class="mfig"><b>${num(D.matches)}</b><span>Pro Kabaddi League matches</span></div>
+    <div class="mfig"><b>${(D.seasons || []).length}</b><span>seasons, every raid and tackle</span></div>
+    <p>Pro Kabaddi League Official Data — the scorecard and the raid-by-raid event
+    stream of every match, joined on the league's own player ids. No name matching
+    anywhere.</p>`;
+
+  const mx = Math.max(0, ...Object.values(K).map(s => (s.mt || []).length)) || 8;
+  const hl = D.halfLife ? ((+D.halfLife % 1)
+      ? (+D.halfLife).toFixed(1) : (+D.halfLife | 0)) + " yrs" : "3 yrs";
+  cols[1].innerHTML = `<h3>What a player is measured on</h3>
+    <div class="mfig"><b>${mx}</b><span>metrics per role</span></div>
+    <div class="mfig"><b>${hl}</b><span>before form counts half</span></div>
+    <p>Not just points, but how they come — success rate, super raids, and the
+    do-or-die raid a raider must convert or is out. Recent seasons count for more,
+    and a player with a short record is treated cautiously rather than taken at
+    face value.</p>`;
+
+  const roles = Object.entries(K).map(([c, s]) => [c, s.n || 0]).sort((a, b) => b[1] - a[1]);
+  const max = roles.length ? roles[0][1] : 1;
+  const bars = roles.map(([c, n]) => `<div class="mfact"><span>${esc(CELL_SHORT[c] || c)}</span>
+    <span class="mbar"><i style="width:${Math.max(10, Math.round(n / max * 100))}%"></i></span><b>${n}</b></div>`).join("");
+  cols[2].innerHTML = `<h3>Compared within a role</h3>${bars}
+    <p>A raider and a cover defender play different games, so each role is a
+    separate space. A player is only ever ranked against their own.</p>`;
+
+  const V = (D.validation || []).filter(v => v.players && v.median_rank && v.chance_median_rank);
+  if (V.length){
+    const v = V.slice().sort((a, b) => b.players - a.players)[0];
+    const med = Math.round(v.median_rank), ch = Math.round(v.chance_median_rank);
+    const role = (CELL_LABEL[v.cell] || v.cell).toLowerCase();
+    cols[3].innerHTML = `<h3>Does it work</h3>
+      <div class="mfig"><b>${(v.chance_median_rank / v.median_rank).toFixed(1)}&times;</b><span>better than guessing</span></div>
+      <div class="mfact"><span>This tool</span><span class="mbar"><i class="good" style="width:${Math.max(10, Math.round(100 - med / ch * 50))}%"></i></span><b>${med}${ord(med)}</b></div>
+      <div class="mfact"><span>Guessing</span><span class="mbar"><i class="dim" style="width:50%"></i></span><b>${ch}${ord(ch)}</b></div>
+      <p>Take one ${esc(role)}, split their matches in half, and hide from the tool
+      that the halves are the same player. Asked to rank everyone against the first
+      half, it puts their own second half around ${med}${ord(med)} of ${v.players} —
+      random would be ${ch}${ord(ch)}.</p>`;
+  }
+}
 
 /* ── method strip ───────────────────────────────────────
    Below 980px the four columns become a swipeable strip with a pill nav, as
